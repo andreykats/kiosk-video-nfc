@@ -10,7 +10,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
    2. **Connect the NFC reader.** Hold any card on the reader and check that the guide shows "Reader is working".
    3. **Import configuration.**
       - On the first kiosk, choose **Start a new config**.
-      - On every other kiosk, choose **Use the published config**, or **Import a config file** with a `config.json` exported from another kiosk.
+      - On every other kiosk, choose **Import a config file** and pick the `config.json` exported from the first kiosk.
    4. **Add or copy the videos.** Insert the USB stick.
       - With a new config, choose the video files (or a folder).
       - With an existing config, choose the folder. The guide copies the videos the config lists.

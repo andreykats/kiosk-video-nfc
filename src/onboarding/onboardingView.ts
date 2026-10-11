@@ -4,12 +4,12 @@ import { errorMessage, log } from '../app/log';
 import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
-import { downloadConfig, fetchPublishedConfig, readConfigFile } from '../config/sync';
+import { downloadConfig, readConfigFile } from '../config/sync';
 import { formatUid } from '../scan/uid';
 import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
 import { confirmDialog, errorList } from '../ui/dialog';
-import { formatDate, h, replaceChildren } from '../ui/dom';
+import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
 import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
 import { readFlags, writeFlags } from './progress';
@@ -173,8 +173,6 @@ function hasContent(config: Config): boolean {
 
 function configStep(ctx: AppContext, nav: Nav): StepView {
   let errors: string[] = [];
-  let published: Config | null = null;
-  let disposed = false;
 
   const apply = async (config: Config, source: AppliedInfo['source']) => {
     const current = ctx.config.get();
@@ -241,14 +239,6 @@ function configStep(ctx: AppContext, nav: Nav): StepView {
             { class: 'options' },
             option('Import a config file', 'Use a config.json exported from another kiosk.', 'option-import', () => fileInput.click()),
             option('Start a new config', 'Add videos and pair cards on this kiosk.', 'option-new', () => void apply(emptyConfig(), 'new')),
-            published
-              ? option(
-                  'Use the published config',
-                  `${published.videos.length} video(s), ${published.cards.length} card(s), exported ${formatDate(published.updatedAt)}.`,
-                  'option-published',
-                  () => void apply(published!, 'published'),
-                )
-              : null,
           ),
           fileInput,
           errors.length > 0 ? h('div', { class: 'error', 'data-testid': 'config-errors' }, errorList(errors)) : null,
@@ -258,14 +248,7 @@ function configStep(ctx: AppContext, nav: Nav): StepView {
     );
   }
 
-  // Offer the published config only when there is one worth using.
-  void fetchPublishedConfig().then((result) => {
-    if (disposed || !result.ok || result.value.videos.length === 0) return;
-    published = result.value;
-    view.rerender();
-  });
-
-  return { el: view.el, destroy: () => (disposed = true) };
+  return view;
 }
 
 function importHost(progress: HTMLElement, onBusy: (busy: boolean) => void): ImportHost {
