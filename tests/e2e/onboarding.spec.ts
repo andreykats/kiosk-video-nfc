@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 import { ADMIN_UID, FIXTURES, LION_UID, scan, testConfig, waitForPlaying } from './helpers';
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
@@ -67,6 +68,18 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await next(page);
 
   await expect(step(page, 'done')).toContainText('3 video(s) and 1 card(s). Background loop: loop.mp4.');
+
+  // Export from the last step, for importing on other kiosks.
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('onboarding-export').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('config.json');
+  const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(exported.loopVideo).toBe('loop.mp4');
+  expect(exported.cards).toEqual([{ uid: LION_UID, fileName: 'tiger.mp4', label: '' }]);
+  expect(exported.adminCards.map((a: { uid: string }) => a.uid)).toEqual(['AABBCCDD']);
+  await expect(step(page, 'done')).toBeVisible();
+
   await page.getByTestId('onboarding-start').click();
 
   await waitForPlaying(page, 'loop-video', 'loop.mp4');

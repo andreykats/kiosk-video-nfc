@@ -4,7 +4,7 @@ import { errorMessage, log } from '../app/log';
 import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
-import { fetchPublishedConfig, readConfigFile } from '../config/sync';
+import { downloadConfig, fetchPublishedConfig, readConfigFile } from '../config/sync';
 import { formatUid } from '../scan/uid';
 import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
@@ -603,10 +603,9 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
           p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${config.loopVideo ?? 'none'}.`),
           offline.el,
           p('To open settings, hold an admin card on the reader or press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
-          nav.path() === 'new'
-            ? p('To use this setup on other kiosks, open settings → Config → Export config, and publish the file.', 'hint')
-            : null,
+          p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk, or publish it so other kiosks can use “Use the published config”.', 'hint'),
         ],
+        secondary: { label: 'Export config', testId: 'onboarding-export', onClick: () => downloadConfig(ctx.config.get()) },
         primary: {
           label: 'Start kiosk',
           testId: 'onboarding-start',
