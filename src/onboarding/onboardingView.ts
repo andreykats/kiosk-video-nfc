@@ -60,7 +60,9 @@ function stepCard(
     h(
       'div',
       { class: 'onboarding-actions' },
-      index > 0 ? button({ label: 'Back', onClick: nav.back, disabled: options.busy, testId: 'onboarding-back' }, 'link') : h('span'),
+      index > 0
+        ? button({ label: 'Back', onClick: nav.back, disabled: options.busy, testId: 'onboarding-back' }, 'link')
+        : h('span', { class: 'version', 'data-testid': 'onboarding-version' }, `v${__APP_VERSION__}`),
       h(
         'span',
         { class: 'right' },
