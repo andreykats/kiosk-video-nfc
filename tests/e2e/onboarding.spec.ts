@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ADMIN_UID, FIXTURES, LION_UID, scan, testConfig, waitForPlaying } from './helpers';
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
@@ -103,6 +105,19 @@ test('first launch: import config file → copy videos → review pairings', asy
 
   await expect(step(page, 'copyVideos')).toBeVisible();
   await expect(step(page, 'copyVideos')).toContainText('Still needed (3)');
+  // The videos can't be skipped: the only way on is to copy them.
+  await expect(page.getByTestId('onboarding-choose-folder')).toBeVisible();
+  await expect(page.getByTestId('onboarding-next')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Continue without them' })).toHaveCount(0);
+
+  // A folder with only some of the videos copies those and still blocks.
+  const partial = await mkdtemp(join(tmpdir(), 'kiosk-partial-'));
+  await copyFile(`${FIXTURES}loop.mp4`, join(partial, 'loop.mp4'));
+  await page.getByTestId('onboarding-folder-input').setInputFiles(partial);
+  await expect(step(page, 'copyVideos')).toContainText('Still needed (2)');
+  await expect(step(page, 'copyVideos')).toContainText('That folder didn’t have all of them');
+  await expect(page.getByTestId('onboarding-next')).toHaveCount(0);
+
   await page.getByTestId('onboarding-folder-input').setInputFiles(FIXTURES);
 
   await expect(step(page, 'pair')).toBeVisible();

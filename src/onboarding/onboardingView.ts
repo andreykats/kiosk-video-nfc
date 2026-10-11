@@ -320,12 +320,16 @@ function copyVideosStep(ctx: AppContext, nav: Nav): StepView {
     view.rerender();
   });
   const missing = () => ctx.config.get().videos.filter((v) => !ctx.videos.has(v.fileName));
+  /** Set after a folder that didn't contain every video. */
+  let incomplete = false;
   const folderInput = filePicker({
     folder: true,
     testId: 'onboarding-folder-input',
     onPick: (f) =>
-      void importPickedFolder(ctx, host, f).then((outcome) => {
-        if (outcome && missing().length === 0) nav.next();
+      void importPickedFolder(ctx, host, f).then(() => {
+        if (missing().length === 0) return nav.next();
+        incomplete = true;
+        view.rerender();
       }),
   });
 
@@ -352,16 +356,17 @@ function copyVideosStep(ctx: AppContext, nav: Nav): StepView {
             : total > 0
               ? p('All videos are on this kiosk ✓', 'success')
               : null,
-          absent.length > 0 ? h('button', { type: 'button', class: 'primary', disabled: busy, onclick: () => folderInput.click() }, 'Choose folder') : null,
+          incomplete && absent.length > 0
+            ? p('That folder didn’t have all of them. Choose a folder that has the videos still needed.', 'error')
+            : null,
           folderInput,
           progress,
         ],
-        primary: {
-          label: absent.length > 0 ? 'Continue without them' : 'Next',
-          onClick: nav.next,
-          disabled: busy,
-          testId: 'onboarding-next',
-        },
+        // Every video the config uses must be on the kiosk before moving on.
+        primary:
+          absent.length > 0
+            ? { label: 'Choose folder', onClick: () => folderInput.click(), disabled: busy, testId: 'onboarding-choose-folder' }
+            : { label: 'Next', onClick: nav.next, disabled: busy, testId: 'onboarding-next' },
       }),
     );
   }
