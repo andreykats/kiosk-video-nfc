@@ -118,9 +118,17 @@ test('first launch: import config file → copy videos → review pairings', asy
   await expect(step(page, 'copyVideos')).toContainText('That folder didn’t have all of them');
   await expect(page.getByTestId('onboarding-next')).toHaveCount(0);
 
-  await page.getByTestId('onboarding-folder-input').setInputFiles(FIXTURES);
+  // A folder with extra videos asks whether to add them; "Do not add" copies only the listed ones.
+  const extra = await mkdtemp(join(tmpdir(), 'kiosk-extra-'));
+  for (const name of ['loop.mp4', 'lion.mp4', 'tiger.mp4']) await copyFile(`${FIXTURES}${name}`, join(extra, name));
+  await copyFile(`${FIXTURES}lion.mp4`, join(extra, 'bonus.mp4'));
+  await page.getByTestId('onboarding-folder-input').setInputFiles(extra);
+  const ask = page.locator('dialog[open]', { hasText: 'Add new videos?' });
+  await expect(ask.getByRole('button')).toHaveText(['Do not add', 'Add additional files']);
+  await ask.getByRole('button', { name: 'Do not add' }).click();
 
   await expect(step(page, 'pair')).toBeVisible();
+  await expect(page.locator('tr[data-file="bonus.mp4"]')).toHaveCount(0);
   await expect(page.getByLabel('Use loop.mp4 as background loop')).toBeChecked();
   await expect(page.locator(`tr[data-file="lion.mp4"] .chip[data-uid="${LION_UID}"]`)).toBeVisible();
   await next(page);

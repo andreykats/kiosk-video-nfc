@@ -142,7 +142,8 @@ export async function importPickedFolder(ctx: AppContext, host: ImportHost, file
         h('p', {}, `${plan.unlisted.length} video(s) in this folder are not in the config. Add them as new videos?`),
         errorList(plan.unlisted.map((f) => f.name)),
       ],
-      confirmLabel: 'Add them too',
+      confirmLabel: 'Add additional files',
+      cancelLabel: 'Do not add',
     });
     if (addUnlisted) items.push(...plan.unlisted.map((file) => ({ file, fileName: file.name, addToConfig: true })));
   }

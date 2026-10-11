@@ -92,13 +92,14 @@ export function confirmDialog(options: {
   title: string;
   content: (HTMLElement | string)[];
   confirmLabel: string;
+  cancelLabel?: string;
   danger?: boolean;
 }): Promise<boolean> {
   const handle = openDialog<boolean>({
     title: options.title,
     content: options.content,
     actions: [
-      { label: 'Cancel', value: false },
+      { label: options.cancelLabel ?? 'Cancel', value: false },
       { label: options.confirmLabel, value: true, kind: options.danger ? 'danger' : 'primary' },
     ],
   });
