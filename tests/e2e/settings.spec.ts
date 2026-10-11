@@ -164,3 +164,28 @@ test('importing over an existing file asks first and leaves no .partial files', 
   expect(names.map((n) => n[0])).toEqual(['lion.mp4', 'loop.mp4', 'tiger.mp4']);
   expect(names.find((n) => n[0] === 'tiger.mp4')![1]).toBe(tigerSize);
 });
+
+test('with no videos the kiosk shows a centred "Setup required" card', async ({ page }) => {
+  await setUpKiosk(page);
+  // Visit the kiosk once while it can play, which completes first-launch setup.
+  await page.getByTestId('back-to-kiosk').click();
+  await expect(page.getByTestId('kiosk')).toBeVisible();
+  await page.keyboard.press('Control+Alt+Shift+KeyS');
+  for (const file of ['loop.mp4', 'lion.mp4', 'tiger.mp4']) {
+    await page.locator(`tr[data-file="${file}"]`).getByRole('button', { name: 'Delete' }).click();
+    await clickDialogButton(page, 'Delete');
+    await expect(page.locator(`tr[data-file="${file}"]`)).toHaveCount(0);
+  }
+  await page.getByTestId('back-to-kiosk').click();
+
+  const screen = page.getByTestId('setup-screen');
+  await expect(screen).toBeVisible();
+  await expect(page.getByTestId('setup-reason')).toHaveText('There are no videos on this kiosk yet.');
+  const card = (await screen.locator('.setup-card').boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(Math.abs(card.x + card.width / 2 - viewport.width / 2)).toBeLessThan(2);
+  expect(Math.abs(card.y + card.height / 2 - viewport.height / 2)).toBeLessThan(2);
+
+  await page.getByTestId('setup-open-guide').click();
+  await expect(page).toHaveURL(/#\/setup$/);
+});

@@ -71,21 +71,40 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   let state: KioskState = initialKioskState;
   let disposed = false;
 
-  setupEl.append(
-    h('p', { class: 'setup-title' }, 'Setup required — open settings'),
-    h(
-      'p',
-      { class: 'setup-hint' },
-      'Press Ctrl+Alt+Shift+S or scan an admin card. ',
-      h('button', { type: 'button', onclick: () => ctx.navigate('setup') }, 'Open setup guide'),
-      ' ',
-      h('button', { type: 'button', onclick: () => ctx.navigate('settings') }, 'Open settings'),
-    ),
-  );
+  /** Why the kiosk can't play, in the words staff will see. */
+  const setupReason = (): string => {
+    const config = ctx.config.get();
+    if (config.videos.length === 0) return 'There are no videos on this kiosk yet.';
+    if (!config.loopVideo) return 'No background loop video is selected.';
+    if (!ctx.videos.has(config.loopVideo)) return `The loop video “${config.loopVideo}” isn’t on this kiosk yet.`;
+    return `The loop video “${config.loopVideo}” can’t be played.`;
+  };
 
+  /** Centred card, like the setup guide, shown instead of the loop. */
   const setSetupVisible = (visible: boolean) => {
     setupEl.hidden = !visible;
     view.classList.toggle('needs-setup', visible);
+    if (!visible) return;
+    setupEl.replaceChildren(
+      h(
+        'div',
+        { class: 'setup-card' },
+        h('h1', {}, 'Setup required'),
+        h('p', { 'data-testid': 'setup-reason' }, setupReason()),
+        h('p', { class: 'hint' }, 'Run the setup guide to add videos and pair cards, or open settings. You can also press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac) or hold an admin card on the reader.'),
+        h(
+          'div',
+          { class: 'onboarding-actions' },
+          h('span'),
+          h(
+            'span',
+            { class: 'right' },
+            h('button', { type: 'button', 'data-testid': 'setup-open-settings', onclick: () => ctx.navigate('settings') }, 'Open settings'),
+            h('button', { type: 'button', class: 'primary', 'data-testid': 'setup-open-guide', onclick: () => ctx.navigate('setup') }, 'Open setup guide'),
+          ),
+        ),
+      ),
+    );
   };
 
   /** (Re)loads the loop video from the current config, or shows the setup screen. */
