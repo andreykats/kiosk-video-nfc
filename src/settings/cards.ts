@@ -12,7 +12,7 @@ function videoSelect(ctx: AppContext, selected: string | null, attrs: Record<str
   const select = h('select', attrs);
   if (selected === null) select.append(h('option', { value: '', disabled: true, selected: true }, 'Choose a video…'));
   for (const v of config.videos) {
-    select.append(h('option', { value: v.fileName, selected: v.fileName === selected }, v.title ? `${v.title} (${v.fileName})` : v.fileName));
+    select.append(h('option', { value: v.fileName, selected: v.fileName === selected }, v.fileName));
   }
   return select;
 }

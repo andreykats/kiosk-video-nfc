@@ -36,13 +36,6 @@ export function upsertVideo(config: Config, fileName: string, sizeBytes: number)
   };
 }
 
-export function setVideoTitle(config: Config, fileName: string, title: string): Config {
-  return {
-    ...config,
-    videos: config.videos.map((v) => (v.fileName === fileName ? { ...v, title } : v)),
-  };
-}
-
 /** Cards that would be unpaired by removing this video (for the confirm dialog). */
 export function cardsForVideo(config: Config, fileName: string): CardEntry[] {
   return config.cards.filter((c) => c.fileName === fileName);

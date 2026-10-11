@@ -52,16 +52,12 @@ test('admin cards reject video-card UIDs and vice versa', async ({ page }) => {
   await clickDialogButton(page, 'Cancel');
 });
 
-test('scans outside a scan dialog are ignored by settings and do not type into inputs', async ({ page }) => {
+test('scans outside a scan dialog are only recorded in diagnostics', async ({ page }) => {
   await setUpKiosk(page);
-  const title = page.getByLabel('Title for lion.mp4');
-  await title.fill('');
-  await title.focus();
-  await scan(page, '04A23B1C');
-  // The first key can't be distinguished from typing; the rest of the burst is swallowed.
-  await expect(title).toHaveValue('0');
+  await scan(page, LION_UID);
+  await expect(page.getByTestId('diag-last-scan')).toContainText('04 A2 3B 1C 5D 80 00');
   await expect(page.getByTestId('settings')).toBeVisible();
-  await expect(page.getByTestId('diag-last-scan')).toContainText('04 A2 3B 1C');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
 });
 
 test('export → import round-trip', async ({ page }) => {
@@ -111,8 +107,11 @@ test('update from published config fetches config.json fresh and applies it', as
   expect(requests).toBe(1);
 });
 
-test('the cards table has no label column and the videos table has no "no loop" row', async ({ page }) => {
+test('videos and cards tables show file names only: no title, label or "no loop" row', async ({ page }) => {
   await setUpKiosk(page);
+  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', '']);
+  await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
+  await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
   await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['UID', 'Video', '']);
   await expect(page.getByTestId('cards-table').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel('No loop video')).toHaveCount(0);

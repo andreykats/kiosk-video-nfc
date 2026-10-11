@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/context';
 import { saveEdit } from '../app/edits';
 import { errorMessage } from '../app/log';
-import { cardsForVideo, removeVideo, setLoopVideo, setVideoTitle, upsertVideo } from '../config/ops';
+import { cardsForVideo, removeVideo, setLoopVideo, upsertVideo } from '../config/ops';
 import { formatUid } from '../scan/uid';
 import { confirmDialog, errorList, messageDialog } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
@@ -90,16 +90,6 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
           }),
         ),
         h('td', { class: 'mono' }, v.fileName),
-        h(
-          'td',
-          {},
-          h('input', {
-            type: 'text',
-            value: v.title,
-            'aria-label': `Title for ${v.fileName}`,
-            onchange: (e: Event) => void saveEdit(ctx, (c) => setVideoTitle(c, v.fileName, (e.target as HTMLInputElement).value)),
-          }),
-        ),
         h('td', {}, formatBytes(size ?? v.sizeBytes)),
         h('td', {}, status),
         h('td', {}, h('button', { type: 'button', class: 'danger', disabled: busy, onclick: () => void deleteVideo(v.fileName) }, 'Delete')),
@@ -119,7 +109,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
         : h(
             'table',
             { 'data-testid': 'videos-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Title'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th'))),
             h(
               'tbody',
               {},

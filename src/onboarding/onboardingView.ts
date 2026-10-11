@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/context';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { addAdminCard, cardsForVideo, findAdminCard, findCard, findVideo, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
+import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { fetchPublishedConfig, readConfigFile } from '../config/sync';
@@ -384,8 +384,6 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
   });
   const filesInput = filePicker({ folder: false, testId: 'onboarding-files-input', onPick: (f) => void importPickedFiles(ctx, host, f) });
 
-  const labelFor = (fileName: string) => findVideo(ctx.config.get(), fileName)?.title || fileName;
-
   const pair = async (uid: string, fileName: string) => {
     if (await saveEdit(ctx, (c) => pairCard(c, { uid, fileName, label: '' }))) pairing = null;
     view.rerender();
@@ -416,7 +414,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     const cards = cardsForVideo(ctx.config.get(), fileName);
     if (cards.length > 0) {
       const ok = await confirmDialog({
-        title: `Use ${labelFor(fileName)} as the background loop?`,
+        title: `Use ${fileName} as the background loop?`,
         content: [`The loop plays on repeat instead of being started by a card, so its ${cards.length} card(s) will be unpaired.`],
         confirmLabel: 'Use as loop',
       });
@@ -440,7 +438,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
       return h(
         'div',
         { class: 'pairing', 'data-testid': 'pair-conflict' },
-        h('p', {}, `${formatUid(uid)} plays “${labelFor(otherFile)}”. Use it for this video instead?`),
+        h('p', {}, `${formatUid(uid)} plays “${otherFile}”. Use it for this video instead?`),
         h('button', { type: 'button', class: 'primary', onclick: () => void pair(uid, fileName) }, 'Move card here'),
         ' ',
         cancel,
@@ -489,8 +487,8 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
         h(
           'td',
           {},
-          h('div', { class: 'video-name' }, v.title || v.fileName),
-          h('div', { class: 'hint mono' }, v.fileName, ctx.videos.has(v.fileName) ? '' : ' — not on this kiosk'),
+          h('div', { class: 'video-name mono' }, v.fileName),
+          ctx.videos.has(v.fileName) ? null : h('div', { class: 'hint' }, 'Not on this kiosk'),
         ),
         h(
           'td',
@@ -545,7 +543,7 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
     const config = ctx.config.get();
     const card = findCard(config, scan.uid);
     if (card) {
-      message = { text: `${formatUid(scan.uid)} plays “${findVideo(config, card.fileName)?.title || card.fileName}”. Use a different card for admin.`, kind: 'error' };
+      message = { text: `${formatUid(scan.uid)} plays “${card.fileName}”. Use a different card for admin.`, kind: 'error' };
     } else if (findAdminCard(config, scan.uid)) {
       message = { text: `${formatUid(scan.uid)} is already an admin card.`, kind: 'error' };
     } else if (await saveEdit(ctx, (c) => addAdminCard(c, { uid: scan.uid, label: '' }))) {
@@ -597,13 +595,12 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
   void ctx.readiness.recompute();
   const view = reactiveStep((el) => {
     const config = ctx.config.get();
-    const loop = config.loopVideo ? findVideo(config, config.loopVideo) : undefined;
     replaceChildren(
       el,
       stepCard(nav, 'done', {
         title: 'You’re all set',
         body: [
-          p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${loop?.title || config.loopVideo || 'none'}.`),
+          p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${config.loopVideo ?? 'none'}.`),
           offline.el,
           p('To open settings, hold an admin card on the reader or press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
           nav.path() === 'new'

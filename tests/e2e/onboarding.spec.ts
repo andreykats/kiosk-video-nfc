@@ -49,7 +49,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await page.locator('tr[data-file="tiger.mp4"]').getByTestId('pair-card').click();
   await page.waitForTimeout(1600);
   await scan(page, LION_UID);
-  await expect(page.getByTestId('pair-conflict')).toContainText('plays “lion”');
+  await expect(page.getByTestId('pair-conflict')).toContainText('plays “lion.mp4”');
   await page.getByRole('button', { name: 'Move card here' }).click();
   await expect(page.locator(`tr[data-file="tiger.mp4"] .chip[data-uid="${LION_UID}"]`)).toBeVisible();
   await expect(page.locator('tr[data-file="lion.mp4"] .chip')).toHaveCount(0);
@@ -66,7 +66,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await expect(page.getByTestId('admin-cards').locator('[data-uid="AABBCCDD"]')).toBeVisible();
   await next(page);
 
-  await expect(step(page, 'done')).toContainText('3 video(s) and 1 card(s). Background loop: loop.');
+  await expect(step(page, 'done')).toContainText('3 video(s) and 1 card(s). Background loop: loop.mp4.');
   await page.getByTestId('onboarding-start').click();
 
   await waitForPlaying(page, 'loop-video', 'loop.mp4');

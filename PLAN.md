@@ -70,7 +70,7 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
 
 - **`fileName` is the video's identity across kiosks.** It must be unique, and it is the name of the file in OPFS. Every kiosk imports a file with the same name.
 - `sizeBytes` is used only to **warn** when a kiosk's local file size differs. It never blocks.
-- `label` on cards and admin cards stays in the schema for compatibility, but the app no longer shows or edits it and saves new cards with `""`.
+- `label` on cards and admin cards, and `title` on videos, stay in the schema for compatibility, but the app no longer shows or edits them. New cards are saved with `label: ""`, and new videos get a title derived from the file name.
 - `uid` is uppercase hex with no separators (see §6). A UID may appear in at most one of `cards` or `adminCards`.
 - Every `cards[].fileName` and `loopVideo` must reference an entry in `videos`.
 - Write a `validateConfig(json): Result<Config, string[]>` function with clear error messages. Use it for published fetches, file imports and the IndexedDB load.
@@ -176,7 +176,7 @@ Sections, each a plain TS module rendering DOM:
 
 1. **Header:** "Back to kiosk" button, app version (injected from `package.json` via Vite `define`), online/offline indicator.
 2. **Videos:**
-   - Table showing file name, title (editable), size, and status (present / missing / size mismatch).
+   - Table showing file name, size, and status (present / missing / size mismatch). There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
    - Buttons: Import files, Import folder, Delete.
    - Radio button to select the **loop video**. There is no "no loop" option: whenever there are videos, one is the loop. The first video added becomes the loop, and it can be moved but not cleared.
 3. **Cards:**
