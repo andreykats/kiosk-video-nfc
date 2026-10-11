@@ -6,7 +6,7 @@ import type { VideoStore } from '../videos/opfsStore';
 import type { Diagnostics } from './diagnostics';
 import type { ReadinessMonitor } from './readiness';
 
-export type Route = 'kiosk' | 'settings';
+export type Route = 'kiosk' | 'settings' | 'setup';
 
 /** Long-lived services shared by the kiosk and settings views. */
 export interface AppContext {

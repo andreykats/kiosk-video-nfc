@@ -54,6 +54,11 @@ export function setLoopVideo(config: Config, fileName: string | null): Config {
   return { ...config, loopVideo: fileName };
 }
 
+/** Setup guide: a video is either the background loop or played by cards, not both. */
+export function useAsLoopInstead(config: Config, fileName: string): Config {
+  return { ...config, loopVideo: fileName, cards: config.cards.filter((c) => c.fileName !== fileName) };
+}
+
 /** Pairs or reassigns a video card. Callers must reject admin UIDs first. */
 export function pairCard(config: Config, card: CardEntry): Config {
   const cards = findCard(config, card.uid)

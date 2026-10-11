@@ -1,7 +1,6 @@
 import type { AppContext } from '../app/context';
 import { errorMessage, log } from '../app/log';
 import type { Config } from '../config/schema';
-import type { AppliedInfo } from '../config/store';
 import { downloadConfig, fetchPublishedConfig, readConfigFile, summarizeConfig } from '../config/sync';
 import type { Result } from '../result';
 import { confirmDialog, errorList, messageDialog } from '../ui/dialog';
@@ -9,7 +8,7 @@ import { formatDate, h, replaceChildren } from '../ui/dom';
 import { reactiveSection, type Section } from './section';
 
 /** Validate → summarize → confirm → replace. Any failure keeps the current config. */
-async function applyConfig(ctx: AppContext, result: Result<Config, string[]>, source: AppliedInfo['source']): Promise<void> {
+async function applyConfig(ctx: AppContext, result: Result<Config, string[]>, source: 'published' | 'file'): Promise<void> {
   if (!result.ok) {
     await messageDialog(source === 'published' ? 'Could not update config' : 'Could not import config', [
       'The current config was kept.',
@@ -83,7 +82,9 @@ export function renderConfigSection(ctx: AppContext): Section {
     replaceChildren(
       status,
       applied
-        ? `Last applied: config exported ${formatDate(applied.updatedAt)}, applied ${formatDate(applied.appliedAt)} from ${applied.source === 'published' ? 'the published site' : 'a file'}.`
+        ? applied.source === 'new'
+          ? `Config started from scratch on this kiosk ${formatDate(applied.appliedAt)}.`
+          : `Last applied: config exported ${formatDate(applied.updatedAt)}, applied ${formatDate(applied.appliedAt)} from ${applied.source === 'published' ? 'the published site' : 'a file'}.`
         : 'No shared config has been applied on this kiosk yet.',
     );
   };

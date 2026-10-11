@@ -5,19 +5,26 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 ## Both Windows and macOS
 
 1. Plug in the ACR1552U reader. Its output settings must match the other kiosks (see the README).
-2. In Google Chrome, **while online**, open `<url>`. Then open settings with **Ctrl+Alt+Shift+S** (Ctrl+Option+Shift+S on a Mac).
-3. **Install the app.** Use the **Install app** button in the yellow banner. If there's no button, click the install icon at the right of the address bar, or open Chrome menu ⋮ → Cast, save, and share → Install page as app…. Chrome may only offer installing after you've clicked the page and spent about 30 seconds on it.
-4. Go to Config → **Update from published config** and confirm.
-5. Insert the USB stick with the videos. Go to Videos → **Import folder** and pick the folder. Videos that are listed in the config but missing on this kiosk are copied. If the folder has videos that aren't in the config, the app asks whether to add them too.
-6. Check that the **Setup checklist** at the top of settings is all green, and that Diagnostics shows **Ready to work offline ✓** and **Persisted: yes**. If storage isn't persisted, make sure the app is installed, then reopen settings.
-7. Scan each card once to check it, then press **Back to kiosk**.
-8. Set the launch command to run at login (see the sections below):
+2. In Google Chrome, **while online**, open `<url>`. The **setup guide** opens and shows one step at a time:
+   1. **Install the app.** Use the **Install app** button. If there's no button, click the install icon at the right of the address bar, or open Chrome menu ⋮ → Cast, save, and share → Install page as app…. Chrome may only offer to install after you've clicked the page and spent about 30 seconds on it. Chrome then opens the app in its own window, and the guide carries on there.
+   2. **Connect the NFC reader.** Hold any card on the reader and check that the guide shows "Reader is working".
+   3. **Set up the config.**
+      - On the first kiosk, choose **Start a new config**.
+      - On every other kiosk, choose **Use the published config**, or **Import a config file** with a `config.json` exported from another kiosk.
+   4. **Add or copy the videos.** Insert the USB stick.
+      - With a new config, choose the video files (or a folder).
+      - With an existing config, choose the folder. The guide copies the videos the config lists.
+   5. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Background loop** on the one video that plays on repeat.
+   6. **You're all set.** Check that it shows **Ready to work offline ✓**, then press **Start kiosk**.
+3. Open settings (**Ctrl+Alt+Shift+S**; Ctrl+Option+Shift+S on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, make sure the app is installed, then reopen settings. You can also add admin cards here.
+4. On the first kiosk, go to Config → **Export config** and publish the file (see the README), so that the other kiosks can use it.
+5. Set the launch command to run at login (see the sections below):
    ```
    chrome --kiosk --autoplay-policy=no-user-gesture-required <url>
    ```
    A kiosk-mode tab shares storage with the installed app, so it sees the same videos and config. To exit kiosk mode, press Alt+F4 (Windows) or Cmd+Q (Mac).
-9. Turn off sleep, the screen saver and notifications.
-10. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
+6. Turn off sleep, the screen saver and notifications.
+7. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
 
 ## Windows
 
@@ -44,6 +51,6 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 | A card plays nothing | The UID isn't paired, or the video isn't imported on this kiosk (Videos shows it as **missing**). |
 | Same card, different UID on two kiosks | The readers have different output settings. Reconfigure them to match. |
 | Video plays muted / Diagnostics says autoplay is blocked | Chrome was started without `--autoplay-policy=no-user-gesture-required`. Quit Chrome completely and start it with the launch command. |
-| "Setup required" on the screen | No loop video is selected, or the loop file is missing. Open settings and follow the checklist. |
+| "Setup required" on the screen | No loop video is selected, or the loop file is missing. Press **Open setup guide**, or open settings and follow the checklist. |
 | Settings says "App update available" | Press **Reload** when no one is watching. The app never reloads itself. |
 | Videos disappeared | Storage wasn't persisted and Chrome cleared it. Install the app, re-import the videos, and check **Persisted: yes**. |

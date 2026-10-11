@@ -2,11 +2,10 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testConfig } from './helpers';
 
-test('first run shows the setup screen with the checklist', async ({ page }) => {
+test('first run opens the setup guide', async ({ page }) => {
   await page.goto('./');
-  await expect(page.getByTestId('setup-screen')).toBeVisible();
-  await expect(page.getByTestId('setup-screen')).toContainText('Setup required — open settings');
-  await expect(page.getByTestId('setup-checklist').locator('[data-item="install"]')).toBeVisible();
+  await expect(page).toHaveURL(/#\/setup$/);
+  await expect(page.getByTestId('step-install')).toBeVisible();
 });
 
 test('pair a new card, then reassign it', async ({ page }) => {

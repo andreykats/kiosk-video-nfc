@@ -241,14 +241,16 @@ Sections, each a plain TS module rendering DOM:
   - If a `beforeinstallprompt` event is saved, show an **Install app** button that calls `prompt()` and awaits `userChoice`. A saved event can only be used once; if the user dismisses it, keep the banner and wait for Chrome to fire the event again.
   - If no event is available yet, show manual steps: "Click the install icon at the right of the address bar, or Chrome menu ⋮ → Cast, save, and share → Install page as app…"
   - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The banner must still work without it.
-- **First-run / "Setup required" screen:** show the same install call-to-action as step 1 of a short checklist:
-  1. Install app.
-  2. Update config.
-  3. Import videos.
-  4. Storage persisted.
-  5. **Ready to work offline ✓** (§9.3).
+- **First-launch setup guide (`#/setup`, `src/onboarding/`):** one centred card per step, with Back/Next. It opens instead of the kiosk until it's finished, unless the kiosk can already play its loop video. It resumes at the first unfinished step after a reload, including when Chrome opens the newly installed app in its own window. Steps:
+  1. **Install the app**: the install call-to-action above, or "Skip for now".
+  2. **Connect the NFC reader**: "hold any card on it". Next is enabled once a scan arrives, and the step can be skipped.
+  3. **Set up the config**: **Import a config file** or **Start a new config**. **Use the published config** is also offered when the published `config.json` has videos.
+  4. New config → **Add videos** (files or a whole folder); the import moves straight on to step 5. Imported or published config → **Copy the videos** (folder import of the listed videos that are missing).
+  5. **Pair videos with cards**: lists the videos. Each row has **Pair card** (scan inline; admin cards are rejected, and a card that already plays another video can be moved) or a **Background loop** checkbox. Only one video can be the loop, and making a video the loop unpairs its cards. Finish is enabled once a loop video is chosen.
+  6. **You're all set**: a summary plus the "Ready to work offline" indicator (§9.3), then **Start kiosk**.
 
-  Show the same checklist at the top of settings until every item is green.
+  Settings has a **Setup guide** button that reopens it. If the loop goes missing after setup, the kiosk shows "Setup required" with buttons for the guide and for settings.
+- **Settings checklist:** Install app, Update config, Import videos, Storage persisted, **Ready to work offline ✓** (§9.3). It shows at the top of settings until every item is green.
 - **Kiosk view with a configured loop:** **no install prompt.** Visitors can't install it, and it would cover the content.
 - **Diagnostics:** "Installed: yes / no / unknown".
 
@@ -309,10 +311,10 @@ Purpose: staff can confirm a kiosk will start and run with no internet before it
 
 **Both OSes:**
 
-1. Open the site in Chrome while online, and open settings with **Ctrl+Alt+Shift+S**.
-2. **Install the app** from the settings banner (or from the address-bar install icon).
-3. Run "Update from published config", then "Import folder" from the USB stick.
-4. Check that the setup checklist shows **Ready to work offline ✓** and storage persisted.
+1. Open the site in Chrome while online. The setup guide opens.
+2. Follow it: install the app, test the reader, load the config (published or from a file), copy the videos from the USB stick, and check the pairings.
+3. On the last step, check that it shows **Ready to work offline ✓**.
+4. Check in settings that storage is persisted.
 5. Set the launch command to run at login:
    ```
    chrome --kiosk --autoplay-policy=no-user-gesture-required https://<user>.github.io/<repo>/

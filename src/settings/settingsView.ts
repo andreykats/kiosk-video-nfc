@@ -32,7 +32,7 @@ function renderHeader(ctx: AppContext): Section {
   const el = h(
     'header',
     { class: 'settings-header' },
-    h('div', { class: 'header-row' }, h('button', { type: 'button', 'data-testid': 'back-to-kiosk', onclick: () => ctx.navigate('kiosk') }, '← Back to kiosk'), h('h1', {}, 'Kiosk settings'), h('span', { class: 'version' }, `v${__APP_VERSION__}`), online),
+    h('div', { class: 'header-row' }, h('button', { type: 'button', 'data-testid': 'back-to-kiosk', onclick: () => ctx.navigate('kiosk') }, '← Back to kiosk'), h('h1', {}, 'Kiosk settings'), h('button', { type: 'button', 'data-testid': 'open-setup-guide', onclick: () => ctx.navigate('setup') }, 'Setup guide'), h('span', { class: 'version' }, `v${__APP_VERSION__}`), online),
     swBanner,
   );
   return {

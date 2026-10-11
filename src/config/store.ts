@@ -8,7 +8,8 @@ const CONFIG_KEY = 'activeConfig';
 const APPLIED_KEY = 'lastApplied';
 
 export interface AppliedInfo {
-  source: 'published' | 'file';
+  /** 'new' = a blank config started on this kiosk by the setup guide. */
+  source: 'published' | 'file' | 'new';
   /** updatedAt of the config that was applied. */
   updatedAt: string | null;
   appliedAt: string;

@@ -5,7 +5,7 @@ import { confirmDialog } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { openScanDialog, scanMessage } from './scanModal';
 import { reactiveSection, type Section } from './section';
-import { saveEdit } from './videos';
+import { saveEdit } from '../app/edits';
 
 function videoSelect(ctx: AppContext, selected: string | null, attrs: Record<string, string> = {}): HTMLSelectElement {
   const config = ctx.config.get();

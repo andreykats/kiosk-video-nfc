@@ -36,12 +36,9 @@ export function renderInstallBanner(ctx: AppContext): Section {
   );
 }
 
-/**
- * First-run checklist. In settings it hides once every item is green; on the
- * kiosk "Setup required" screen (compact) it always shows.
- */
-export function renderChecklist(ctx: AppContext, options: { compact?: boolean } = {}): Section {
-  const el = h('section', { class: `checklist${options.compact ? ' compact' : ''}`, 'data-testid': 'setup-checklist' });
+/** Setup checklist at the top of settings; hides once every item is green. */
+export function renderChecklist(ctx: AppContext): Section {
+  const el = h('section', { class: 'checklist', 'data-testid': 'setup-checklist' });
   const section = reactiveSection(
     el,
     () => {
@@ -51,7 +48,7 @@ export function renderChecklist(ctx: AppContext, options: { compact?: boolean } 
         return;
       }
       const allDone = snapshot.checklist.every((i) => i.done);
-      el.hidden = allDone && !options.compact;
+      el.hidden = allDone;
       replaceChildren(
         el,
         h('h2', {}, 'Setup checklist'),

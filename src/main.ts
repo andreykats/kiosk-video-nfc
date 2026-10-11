@@ -6,6 +6,8 @@ import { captureGlobalErrors, errorMessage, log } from './app/log';
 import { ReadinessMonitor } from './app/readiness';
 import { ConfigStore } from './config/store';
 import { mountKiosk } from './kiosk/kioskView';
+import { mountOnboarding } from './onboarding/onboardingView';
+import { readFlags, writeFlags } from './onboarding/progress';
 import { InstallManager } from './pwa/install';
 import { ServiceWorkerManager } from './pwa/sw';
 import { KeyboardScanner } from './scan/keyboardScanner';
@@ -13,10 +15,12 @@ import { mountSettings } from './settings/settingsView';
 import { h } from './ui/dom';
 import { VideoStore } from './videos/opfsStore';
 
-const ROUTE_HASH: Record<Route, string> = { kiosk: '#/', settings: '#/settings' };
+const ROUTE_HASH: Record<Route, string> = { kiosk: '#/', settings: '#/settings', setup: '#/setup' };
 
 function currentRoute(): Route {
-  return location.hash.startsWith('#/settings') ? 'settings' : 'kiosk';
+  if (location.hash.startsWith('#/settings')) return 'settings';
+  if (location.hash.startsWith('#/setup')) return 'setup';
+  return 'kiosk';
 }
 
 function showFatal(root: HTMLElement, message: string): void {
@@ -64,11 +68,26 @@ async function boot(): Promise<void> {
     },
   };
 
+  /** A kiosk that can already play its loop doesn't need the first-launch guide. */
+  const isPlayable = () => {
+    const loop = config.get().loopVideo;
+    return loop !== null && videos.has(loop);
+  };
+
   const render = () => {
     unmount?.();
-    const route = currentRoute();
+    let route = currentRoute();
+    if (route === 'kiosk' && !readFlags().completed) {
+      if (isPlayable()) {
+        writeFlags({ completed: true });
+      } else {
+        history.replaceState(null, '', ROUTE_HASH.setup);
+        route = 'setup';
+      }
+    }
     document.documentElement.dataset.route = route;
-    unmount = route === 'settings' ? mountSettings(root, ctx) : mountKiosk(root, ctx);
+    const mount = { kiosk: mountKiosk, settings: mountSettings, setup: mountOnboarding }[route];
+    unmount = mount(root, ctx);
   };
 
   window.addEventListener('hashchange', render);

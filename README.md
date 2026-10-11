@@ -11,6 +11,8 @@ Full design: [PLAN.md](PLAN.md). Kiosk machine setup: [docs/kiosk-setup.md](docs
 
 ## Using it
 
+On first launch, a **setup guide** walks through each step: install the app, connect the reader, load or start a config, add videos, and pair cards / pick the background loop. You can reopen it from Settings → **Setup guide**.
+
 | | |
 |---|---|
 | Open settings | **Ctrl+Alt+Shift+S** (Ctrl+Option+Shift+S on a Mac), or scan an admin card |
@@ -87,6 +89,7 @@ src/scan/                   keyboard-wedge burst parser (pure) + DOM adapter
 src/config/                 schema/validation/migration, IndexedDB store, export/import/update
 src/videos/                 OPFS storage (streamed import, .partial + rename), import planning
 src/pwa/                    install-state detection, offline-readiness checks, SW registration
+src/onboarding/             first-launch setup guide (step logic is pure)
 src/settings/               settings sections and scan dialogs
 tests/unit, tests/e2e       Vitest and Playwright suites; tests/fixtures holds small H.264 videos
 ```

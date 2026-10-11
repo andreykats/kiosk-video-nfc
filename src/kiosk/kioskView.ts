@@ -1,7 +1,6 @@
 import type { AppContext } from '../app/context';
 import type { Diagnostics } from '../app/diagnostics';
 import { log } from '../app/log';
-import { renderChecklist } from '../settings/checklist';
 import { h } from '../ui/dom';
 import { initialKioskState, transition, type KioskEffect, type KioskEvent, type KioskState } from './stateMachine';
 
@@ -71,24 +70,22 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const feature = new VideoSlot(featureEl);
   let state: KioskState = initialKioskState;
   let disposed = false;
-  let stopChecklist: (() => void) | null = null;
+
+  setupEl.append(
+    h('p', { class: 'setup-title' }, 'Setup required — open settings'),
+    h(
+      'p',
+      { class: 'setup-hint' },
+      'Press Ctrl+Alt+Shift+S or scan an admin card. ',
+      h('button', { type: 'button', onclick: () => ctx.navigate('setup') }, 'Open setup guide'),
+      ' ',
+      h('button', { type: 'button', onclick: () => ctx.navigate('settings') }, 'Open settings'),
+    ),
+  );
 
   const setSetupVisible = (visible: boolean) => {
     setupEl.hidden = !visible;
     view.classList.toggle('needs-setup', visible);
-    if (visible && !stopChecklist) {
-      const checklist = renderChecklist(ctx, { compact: true });
-      stopChecklist = checklist.destroy;
-      setupEl.replaceChildren(
-        h('p', { class: 'setup-title' }, 'Setup required — open settings'),
-        h('p', { class: 'setup-hint' }, 'Press Ctrl+Alt+Shift+S or scan an admin card. ', h('button', { type: 'button', onclick: () => ctx.navigate('settings') }, 'Open settings')),
-        checklist.el,
-      );
-    } else if (!visible && stopChecklist) {
-      stopChecklist();
-      stopChecklist = null;
-      setupEl.replaceChildren();
-    }
   };
 
   /** (Re)loads the loop video from the current config, or shows the setup screen. */
@@ -198,7 +195,6 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   return () => {
     disposed = true;
     unsubscribers.forEach((u) => u());
-    stopChecklist?.();
     loop.clear();
     feature.clear();
     view.remove();
