@@ -1,12 +1,13 @@
 /** Setup-guide flags that can't be derived from the kiosk's state. */
 export interface OnboardingFlags {
-  installSkipped: boolean;
+  /** The user pressed Next or Skip on the install step. */
+  installStepDone: boolean;
   readerDone: boolean;
   completed: boolean;
 }
 
 const KEY = 'kiosk.onboarding';
-const DEFAULTS: OnboardingFlags = { installSkipped: false, readerDone: false, completed: false };
+const DEFAULTS: OnboardingFlags = { installStepDone: false, readerDone: false, completed: false };
 
 export function readFlags(): OnboardingFlags {
   try {
@@ -14,7 +15,8 @@ export function readFlags(): OnboardingFlags {
     if (typeof raw !== 'object' || raw === null) return { ...DEFAULTS };
     const r = raw as Record<string, unknown>;
     return {
-      installSkipped: r.installSkipped === true,
+      // installSkipped is the flag's name before the reset button existed.
+      installStepDone: r.installStepDone === true || r.installSkipped === true,
       readerDone: r.readerDone === true,
       completed: r.completed === true,
     };
@@ -31,4 +33,13 @@ export function writeFlags(patch: Partial<OnboardingFlags>): OnboardingFlags {
     // Storage disabled: the guide simply restarts next load.
   }
   return next;
+}
+
+/** Forgets all setup-guide progress, so the guide starts again at step 1. */
+export function clearFlags(): void {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    // Storage disabled: nothing was saved.
+  }
 }

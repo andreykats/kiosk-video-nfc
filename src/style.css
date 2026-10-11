@@ -128,3 +128,4 @@ button.option:hover:not(:disabled) { border-color: var(--accent); }
 .chip-remove { padding: 0 0.4rem; border: none; background: none; color: var(--muted); }
 .pairing p { margin: 0 0 0.4rem; }
 .onboarding-body .toolbar { margin-top: 1rem; }
+.settings section.danger-zone { border-color: #5a2a28; }

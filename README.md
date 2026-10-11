@@ -20,6 +20,7 @@ On first launch, a **setup guide** walks through each step: install the app, con
 | Pair a card | Settings → Cards → **Pair new card**, scan the card, pick a video |
 | Add an admin card | Settings → Admin cards → **Add admin card**, scan the card |
 | Pick the loop video | Settings → Videos → the **Loop** radio button |
+| Start over | Settings → Reset → **Reset configuration** deletes this kiosk's videos and config, then restarts the setup guide (export the config first to keep it) |
 
 Scanning a card while a card video is playing does nothing. An admin card still opens settings.
 

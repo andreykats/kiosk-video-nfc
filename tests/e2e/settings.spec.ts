@@ -188,3 +188,37 @@ test('with no videos the kiosk shows a centred "Setup required" card', async ({ 
   await page.getByTestId('setup-open-guide').click();
   await expect(page).toHaveURL(/#\/setup$/);
 });
+
+test('reset configuration wipes videos and config and restarts the setup guide', async ({ page }) => {
+  await setUpKiosk(page);
+  const reset = page.getByTestId('reset-section');
+  // It's the last section on the page.
+  await expect(page.locator('[data-testid="settings"] > section').last()).toHaveAttribute('data-testid', 'reset-section');
+
+  // Cancelling changes nothing.
+  await reset.getByTestId('reset-kiosk').click();
+  await expect(page.locator('dialog[open]')).toContainText('3 video file(s)');
+  await expect(page.locator('dialog[open]')).toContainText('2 card(s) and 1 admin card(s)');
+  await clickDialogButton(page, 'Cancel');
+  await expect(page.locator('[data-testid="cards-table"] tbody tr')).toHaveCount(2);
+
+  await reset.getByTestId('reset-kiosk').click();
+  await clickDialogButton(page, 'Reset everything');
+  await expect(page).toHaveURL(/#\/setup$/);
+  await expect(page.getByTestId('step-install')).toContainText('Step 1 of 7');
+
+  const left = await page.evaluate(async () => {
+    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('videos');
+    const names: string[] = [];
+    for await (const name of dir.keys()) names.push(name);
+    return names;
+  });
+  expect(left).toEqual([]);
+
+  // Nothing comes back after a reload: still a fresh kiosk at step 1, with an empty config.
+  await page.reload();
+  await expect(page.getByTestId('step-install')).toBeVisible();
+  await page.goto('./#/settings');
+  await expect(page.getByTestId('cards-section')).toContainText('No cards paired yet.');
+  await expect(page.getByTestId('videos-section')).toContainText('No videos yet');
+});

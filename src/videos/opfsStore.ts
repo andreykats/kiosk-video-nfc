@@ -147,6 +147,21 @@ export class VideoStore {
     await this.dir.removeEntry(partialName);
   }
 
+  /** Deletes every file in the videos directory, including stray ones. */
+  async clear(): Promise<void> {
+    const names: string[] = [];
+    for await (const name of this.dir.keys()) names.push(name);
+    const failed: string[] = [];
+    for (const name of names) {
+      await this.dir.removeEntry(name, { recursive: true }).catch((e) => {
+        log.error(`Could not delete ${name}:`, e);
+        failed.push(name);
+      });
+    }
+    await this.refresh();
+    if (failed.length > 0) throw new StorageError(`Could not delete: ${failed.join(', ')}`);
+  }
+
   async delete(fileName: string): Promise<void> {
     try {
       await this.dir.removeEntry(fileName);

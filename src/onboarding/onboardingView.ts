@@ -107,14 +107,23 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
             installed ? p('App installed ✓', 'success') : installCallToAction(ctx),
             installed ? null : p('Chrome may only offer to install after you’ve clicked the page and spent about 30 seconds on it.', 'hint'),
           ],
-          primary: installed ? { label: 'Next', onClick: nav.next, testId: 'onboarding-next' } : undefined,
+          primary: installed
+            ? {
+                label: 'Next',
+                testId: 'onboarding-next',
+                onClick: () => {
+                  writeFlags({ installStepDone: true });
+                  nav.next();
+                },
+              }
+            : undefined,
           secondary: installed
             ? undefined
             : {
                 label: 'Skip for now',
                 testId: 'onboarding-skip',
                 onClick: () => {
-                  writeFlags({ installSkipped: true });
+                  writeFlags({ installStepDone: true });
                   nav.next();
                 },
               },
@@ -671,8 +680,7 @@ export function mountOnboarding(root: HTMLElement, ctx: AppContext): () => void 
   const config = ctx.config.get();
   show(
     resumeStep({
-      installed: ctx.install.get() === 'installed',
-      installSkipped: flags.installSkipped,
+      installStepDone: flags.installStepDone,
       readerDone: flags.readerDone,
       path: nav.path(),
       videoCount: config.videos.length,

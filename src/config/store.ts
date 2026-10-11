@@ -94,6 +94,22 @@ export class ConfigStore {
     return this.write(config, applied);
   }
 
+  /** Deletes the stored config and its history; the app is back to an empty config. */
+  async clear(): Promise<void> {
+    const tx = this.db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error('Clearing config failed'));
+      tx.onabort = () => reject(tx.error ?? new Error('Clearing config was aborted'));
+    });
+    this.config = emptyConfig();
+    this.applied = null;
+    this.loadError = null;
+    this.stored = false;
+    this.changed.emit(this.config);
+  }
+
   private async write(next: Config, applied: AppliedInfo | undefined): Promise<Config> {
     const result = validateConfig(next);
     if (!result.ok) throw new Error(`Invalid config: ${result.error.join(' ')}`);

@@ -16,8 +16,8 @@ export function stepSequence(path: ConfigPath | null): StepId[] {
 }
 
 export interface ResumeInputs {
-  installed: boolean;
-  installSkipped: boolean;
+  /** Next or Skip was pressed on the install step. */
+  installStepDone: boolean;
   readerDone: boolean;
   path: ConfigPath | null;
   videoCount: number;
@@ -29,7 +29,8 @@ export interface ResumeInputs {
  * itself, so the guide resumes there at the latest; admin and done follow it.
  */
 export function resumeStep(i: ResumeInputs): StepId {
-  if (!i.installed && !i.installSkipped) return 'install';
+  // Shown even when already installed, so the guide always starts at step 1.
+  if (!i.installStepDone) return 'install';
   if (!i.readerDone) return 'reader';
   if (i.path === null) return 'config';
   if (i.path === 'new') return i.videoCount === 0 ? 'addVideos' : 'pair';

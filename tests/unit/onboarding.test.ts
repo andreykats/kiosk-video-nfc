@@ -3,7 +3,7 @@ import { useAsLoopInstead } from '../../src/config/ops';
 import { emptyConfig } from '../../src/config/schema';
 import { nextStep, previousStep, resumeStep, stepSequence, type ResumeInputs } from '../../src/onboarding/steps';
 
-const fresh: ResumeInputs = { installed: false, installSkipped: false, readerDone: false, path: null, videoCount: 0, missingCount: 0 };
+const fresh: ResumeInputs = { installStepDone: false, readerDone: false, path: null, videoCount: 0, missingCount: 0 };
 
 describe('setup guide steps', () => {
   it('orders steps by config path', () => {
@@ -15,13 +15,12 @@ describe('setup guide steps', () => {
     expect(resumeStep(fresh)).toBe('install');
   });
 
-  it('skips install once installed or skipped', () => {
-    expect(resumeStep({ ...fresh, installed: true })).toBe('reader');
-    expect(resumeStep({ ...fresh, installSkipped: true })).toBe('reader');
+  it('moves past install only once its step is done (Next or Skip)', () => {
+    expect(resumeStep({ ...fresh, installStepDone: true })).toBe('reader');
   });
 
   it('resumes at config, then at videos for the chosen path', () => {
-    const base = { ...fresh, installed: true, readerDone: true };
+    const base = { ...fresh, installStepDone: true, readerDone: true };
     expect(resumeStep(base)).toBe('config');
     expect(resumeStep({ ...base, path: 'new' })).toBe('addVideos');
     expect(resumeStep({ ...base, path: 'new', videoCount: 2 })).toBe('pair');

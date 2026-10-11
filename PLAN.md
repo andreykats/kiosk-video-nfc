@@ -195,6 +195,8 @@ Sections, each a plain TS module rendering DOM:
    - Autoplay status.
    - Service worker status, with an "App update available → Reload" button. Use vite-plugin-pwa `registerType: 'prompt'` so the app never reloads itself mid-show.
 
+7. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
+
 **Scanner in settings:** scans are only consumed while a scan modal is open. Otherwise settings ignores them, apart from preventing burst keys from typing into inputs.
 
 ## 9. PWA, deployment and kiosk setup
