@@ -1,0 +1,57 @@
+import { expect, test } from '@playwright/test';
+import { ADMIN_UID, LION_UID, scan, setUpKiosk, TIGER_UID, videoState, waitForPlaying } from './helpers';
+
+test.beforeEach(async ({ page }) => {
+  await setUpKiosk(page);
+  await page.getByTestId('back-to-kiosk').click();
+  await expect(page.getByTestId('kiosk')).toBeVisible();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+});
+
+test('paired card plays its video once, then the loop resumes where it paused', async ({ page }) => {
+  await scan(page, LION_UID);
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+  await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'feature');
+  const loop = await videoState(page, 'loop-video');
+  expect(loop.hidden).toBe(true);
+  expect(loop.paused).toBe(true);
+
+  await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop', { timeout: 10_000 });
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  const resumed = await videoState(page, 'loop-video');
+  expect(resumed.time).toBeGreaterThanOrEqual(loop.time);
+  expect((await videoState(page, 'feature-video')).hidden).toBe(true);
+  expect(resumed.muted).toBe(false);
+});
+
+test('scans during a feature video are ignored', async ({ page }) => {
+  await scan(page, LION_UID);
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+  await scan(page, TIGER_UID);
+  await page.waitForTimeout(300);
+  expect((await videoState(page, 'feature-video')).file).toBe('lion.mp4');
+});
+
+test('an unknown card does nothing', async ({ page }) => {
+  await scan(page, 'DEADBEEF');
+  await page.waitForTimeout(300);
+  await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop');
+  expect((await videoState(page, 'feature-video')).hidden).toBe(true);
+});
+
+test('an admin card opens settings, even during a feature video', async ({ page }) => {
+  await scan(page, ADMIN_UID);
+  await expect(page.getByTestId('settings')).toBeVisible();
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  await scan(page, LION_UID);
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+  await scan(page, ADMIN_UID);
+  await expect(page.getByTestId('settings')).toBeVisible();
+});
+
+test('Ctrl+Alt+Shift+S opens settings', async ({ page }) => {
+  await page.keyboard.press('Control+Alt+Shift+KeyS');
+  await expect(page.getByTestId('settings')).toBeVisible();
+  await expect(page).toHaveURL(/#\/settings$/);
+});
