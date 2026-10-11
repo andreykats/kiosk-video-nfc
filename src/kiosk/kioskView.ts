@@ -74,7 +74,12 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const loopEl = h('video', { class: 'kiosk-video', 'data-testid': 'loop-video', loop: true, playsinline: true, preload: 'auto' });
   const featureEl = h('video', { class: 'kiosk-video', 'data-testid': 'feature-video', playsinline: true, preload: 'auto', hidden: true });
   const setupEl = h('div', { class: 'setup-screen', 'data-testid': 'setup-screen', hidden: true });
-  const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl);
+  const focusEl = h(
+    'div',
+    { class: 'focus-notice', 'data-testid': 'focus-notice', role: 'status', hidden: true },
+    'Card reader paused. Tap or click the screen to resume.',
+  );
+  const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl, focusEl);
   root.replaceChildren(view);
 
   const loop = new VideoSlot(loopEl);
@@ -269,10 +274,21 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   };
   const watchdog = setInterval(checkPlayback, WATCHDOG_INTERVAL_MS);
 
-  // The reader types into whichever window has focus. Record when that stops
-  // being us, so Diagnostics explains scans that "do nothing".
-  const onBlur = () => log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
+  // The reader types into whichever window has focus. When that stops being us,
+  // every scan is lost, so say so on screen (a tap brings focus back) and record
+  // it for Diagnostics.
+  const setFocusLost = (lost: boolean) => {
+    focusEl.hidden = !lost;
+    view.classList.toggle('unfocused', lost);
+  };
+  const onBlur = () => {
+    log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
+    setFocusLost(true);
+  };
+  const onFocus = () => setFocusLost(false);
   window.addEventListener('blur', onBlur);
+  window.addEventListener('focus', onFocus);
+  setFocusLost(!document.hasFocus());
 
   const blockContextMenu = (e: Event) => e.preventDefault();
   view.addEventListener('contextmenu', blockContextMenu);
@@ -294,6 +310,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     clearInterval(watchdog);
     clearTimeout(loopRetry);
     window.removeEventListener('blur', onBlur);
+    window.removeEventListener('focus', onFocus);
     stopWakeLock();
     stopFullscreen();
     unsubscribers.forEach((u) => u());

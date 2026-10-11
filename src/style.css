@@ -18,7 +18,9 @@ html, body { margin: 0; height: 100%; background: #000; color: var(--text); }
 
 /* Kiosk view */
 .kiosk { position: fixed; inset: 0; background: #000; cursor: none; overflow: hidden; user-select: none; }
-.kiosk.needs-setup { cursor: auto; }
+.kiosk.needs-setup, .kiosk.unfocused { cursor: auto; }
+/* Clicks pass through: a tap anywhere brings focus back. */
+.focus-notice { position: absolute; left: 50%; bottom: 2rem; transform: translateX(-50%); z-index: 1; padding: 0.75rem 1.5rem; border-radius: 999px; background: rgba(0, 0, 0, 0.8); border: 1px solid var(--warn); color: #fff; font-size: 1.25rem; white-space: nowrap; pointer-events: none; }
 .kiosk-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .setup-screen { position: absolute; inset: 0; padding: 2rem 1rem; display: grid; place-items: center; background: var(--bg); line-height: 1.5; }
 

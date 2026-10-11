@@ -99,3 +99,13 @@ test('a loop that stops playing is reloaded', async ({ page }) => {
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
   await expect(page.getByTestId('setup-screen')).toBeHidden();
 });
+
+test('losing window focus shows a notice until focus comes back', async ({ page }) => {
+  const notice = page.getByTestId('focus-notice');
+  await expect(notice).toBeHidden();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('Tap or click the screen');
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(notice).toBeHidden();
+});
