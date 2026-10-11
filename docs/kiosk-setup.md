@@ -6,15 +6,15 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 1. Plug in the ACR1552U reader. Its output settings must match the other kiosks (see the README).
 2. In Google Chrome, **while online**, open `<url>`. The **setup guide** opens and shows one step at a time:
-   1. **Install the app.** Use the **Install app** button. If there's no button, click the install icon at the right of the address bar, or open Chrome menu ⋮ → Cast, save, and share → Install page as app…. Chrome may only offer to install after you've clicked the page and spent about 30 seconds on it. Chrome then opens the app in its own window, and the guide carries on there.
+   1. **Install the Topps Kiosk.** Use the **Install app** button. If there's no button, click the install icon at the right of the address bar, or open Chrome menu ⋮ → Cast, save, and share → Install page as app…. Chrome may only offer to install after you've clicked the page and spent about 30 seconds on it. Chrome then opens the app in its own window, and the guide carries on there.
    2. **Connect the NFC reader.** Hold any card on the reader and check that the guide shows "Reader is working".
-   3. **Set up the config.**
+   3. **Import configuration.**
       - On the first kiosk, choose **Start a new config**.
       - On every other kiosk, choose **Use the published config**, or **Import a config file** with a `config.json` exported from another kiosk.
    4. **Add or copy the videos.** Insert the USB stick.
       - With a new config, choose the video files (or a folder).
       - With an existing config, choose the folder. The guide copies the videos the config lists.
-   5. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Background loop** on the one video that plays on repeat.
+   5. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Loop** on the one video that plays on repeat.
    6. **Pair an admin card.** Hold the card staff will use to open settings. You can add more than one, or press Skip and use the keyboard shortcut instead.
    7. **You're all set.** Check that it shows **Ready to work offline ✓**. On the first kiosk, press **Export config** to save `config.json` for the other kiosks. Then press **Start kiosk**.
 3. Open settings (**Ctrl+Alt+Shift+S**; Ctrl+Option+Shift+S on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, make sure the app is installed, then reopen settings.

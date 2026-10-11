@@ -101,9 +101,9 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
       replaceChildren(
         el,
         stepCard(nav, 'install', {
-          title: 'Install the app',
+          title: 'Install the Topps Kiosk',
           body: [
-            p('Installing keeps the kiosk working offline and stops Chrome from clearing your videos when the disk fills up.'),
+            p('Installing keeps the kiosk working offline and stops Chrome from deleting videos when the disk fills up.'),
             installed ? p('App installed ✓', 'success') : installCallToAction(ctx),
             installed ? null : p('Chrome may only offer to install after you’ve clicked the page and spent about 30 seconds on it.', 'hint'),
           ],
@@ -226,7 +226,7 @@ function configStep(ctx: AppContext, nav: Nav): StepView {
     replaceChildren(
       el,
       stepCard(nav, 'config', {
-        title: 'Set up the config',
+        title: 'Import configuration',
         body: [
           p('The config lists the videos, which card plays which video, and the admin cards.'),
           path && applied
@@ -495,7 +495,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
               title: isLoop ? 'Tick another video to move the loop' : null,
               onchange: (e: Event) => void toggleLoop(v.fileName, (e.target as HTMLInputElement).checked),
             }),
-            ' Background loop',
+            ' Loop',
           ),
         ),
         h(
@@ -533,14 +533,14 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
         wide: true,
         busy,
         body: [
-          p('Press Pair card, then hold a card on the reader. That card will play the video. One video is the background loop and plays on repeat between cards. Tick Background loop on another video to move it.'),
+          p('Press Pair card, then hold a card on the reader. That card will play the video. One video is the background loop and plays on repeat between cards. Tick Loop on another video to move it.'),
           config.videos.length === 0
             ? p('There are no videos yet. Add some first.', 'error')
             : h('table', { class: 'pair-table', 'data-testid': 'pair-table' }, h('tbody', {}, ...rows)),
           h('div', { class: 'toolbar' }, h('button', { type: 'button', disabled: busy, onclick: () => filesInput.click() }, 'Add more videos')),
           filesInput,
           progress,
-          loopReady ? null : p('Tick Background loop on one video to continue.', 'hint'),
+          loopReady ? null : p('Tick Loop on one video to continue.', 'hint'),
         ],
         primary: { label: 'Next', onClick: nav.next, disabled: !loopReady || busy || pairing !== null, testId: 'onboarding-next' },
       }),
@@ -617,7 +617,7 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
           p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${config.loopVideo ?? 'none'}.`),
           offline.el,
           p('To open settings, hold an admin card on the reader or press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
-          p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk, or publish it so other kiosks can use “Use the published config”.', 'hint'),
+          p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk.', 'hint'),
         ],
         secondary: { label: 'Export config', testId: 'onboarding-export', onClick: () => downloadConfig(ctx.config.get()) },
         primary: {
