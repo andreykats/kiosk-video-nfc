@@ -20,7 +20,7 @@ test('becomes ready to work offline, then runs with no network', async ({ page, 
 
   // Updating while offline fails cleanly and keeps the config.
   if (PUBLISHED_CONFIG_ENABLED) {
-    await page.keyboard.press('Control+Alt+Shift+KeyS');
+    await page.keyboard.press('Control+Shift+KeyS');
     await page.getByTestId('update-published').click();
     await expect(page.locator('dialog[open]')).toContainText('The current config was kept.');
   }
@@ -44,7 +44,7 @@ test('readiness turns red when a video or the app cache is missing', async ({ pa
   });
   // Re-entering settings recomputes readiness.
   await page.getByTestId('back-to-kiosk').click();
-  await page.keyboard.press('Control+Alt+Shift+KeyS');
+  await page.keyboard.press('Control+Shift+KeyS');
   await expect(offlineReady(page).locator('[data-condition="appCached"]')).toHaveAttribute('data-status', 'fail');
 });
 

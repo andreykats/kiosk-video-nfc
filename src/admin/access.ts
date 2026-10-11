@@ -1,6 +1,9 @@
-/** Opens settings from any view. Option on macOS is altKey. */
+/**
+ * Ctrl+Shift+S opens settings from any view (Control, not Cmd, on a Mac).
+ * Chrome has no shortcut of its own on this combination on Windows or macOS.
+ */
 export function isSettingsShortcut(e: KeyboardEvent): boolean {
-  return e.ctrlKey && e.altKey && e.shiftKey && !e.metaKey && e.code === 'KeyS';
+  return e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey && e.code === 'KeyS';
 }
 
 export const SETTINGS_IDLE_MS = 3 * 60 * 1000;

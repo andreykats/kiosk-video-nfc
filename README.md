@@ -15,7 +15,7 @@ On first launch, a **setup guide** walks through each step: install the app, con
 
 | | |
 |---|---|
-| Open settings | **Ctrl+Alt+Shift+S** (Ctrl+Option+Shift+S on a Mac), or scan an admin card |
+| Open settings | **Ctrl+Shift+S** (Control, not Cmd, on a Mac), or scan an admin card |
 | Leave settings | **Back to kiosk**, or wait 3 minutes without touching anything (this timer pauses while videos import) |
 | Pair a card | Settings → Cards → **Pair new card**, scan the card, pick a video |
 | Add an admin card | Settings → Admin cards → **Add admin card**, scan the card |

@@ -153,7 +153,7 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
     │  └─ unknown UID / missing file: no-op       └─ any video-card scan: ignored
     │
     ├─ scan(uid ∈ adminCards) ─► navigate #/settings   (also allowed during PLAYING_FEATURE)
-    └─ shortcut Ctrl+Alt+Shift+S ─► navigate #/settings (any state)
+    └─ shortcut Ctrl+Shift+S ─► navigate #/settings (any state)
 ```
 
 - **Two `<video>` elements**, absolutely positioned, black background, `object-fit: contain`, no controls:
@@ -405,7 +405,7 @@ Writing to NFC cards, Web NFC/WebUSB/Bluetooth, automatic config sync, hosting o
 1. **Repo name / GitHub account**, which determines `base`.
 2. **ACR1552U config tool options:** check that hex, uppercase, Enter suffix and normal byte order are all available. Adjust §6 if the tool's terms differ.
 3. **Admin card during playback:** assumed to open settings even while a feature video plays. Change it if not wanted.
-4. **Shortcut** `Ctrl+Alt+Shift+S` and **settings idle timeout** of 3 min are defaults.
+4. **Shortcut** `Ctrl+Shift+S` and **settings idle timeout** of 3 min are defaults.
 
 ## 15. Reference docs (fetched 2026-10-11)
 

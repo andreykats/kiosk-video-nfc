@@ -574,7 +574,7 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
                   ),
                 )
               : null,
-            p('Without an admin card, settings can still be opened with Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
+            p('Without an admin card, settings can still be opened with Ctrl+Shift+S.', 'hint'),
           ],
           primary: admins.length > 0 ? { label: 'Next', onClick: nav.next, testId: 'onboarding-next' } : undefined,
           secondary: admins.length > 0 ? undefined : { label: 'Skip', onClick: nav.next, testId: 'onboarding-skip' },
@@ -599,7 +599,7 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
         body: [
           p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${config.loopVideo ?? 'none'}.`),
           offline.el,
-          p('To open settings, hold an admin card on the reader or press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
+          p('To open settings, hold an admin card on the reader or press Ctrl+Shift+S.', 'hint'),
           p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk.', 'hint'),
         ],
         secondary: { label: 'Export config', testId: 'onboarding-export', onClick: () => downloadConfig(ctx.config.get()) },

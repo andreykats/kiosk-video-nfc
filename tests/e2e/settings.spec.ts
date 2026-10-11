@@ -177,7 +177,7 @@ test('with no videos the kiosk shows a centred "Setup required" card', async ({ 
   // Visit the kiosk once while it can play, which completes first-launch setup.
   await page.getByTestId('back-to-kiosk').click();
   await expect(page.getByTestId('kiosk')).toBeVisible();
-  await page.keyboard.press('Control+Alt+Shift+KeyS');
+  await page.keyboard.press('Control+Shift+KeyS');
   for (const file of ['loop.mp4', 'lion.mp4', 'tiger.mp4']) {
     await page.locator(`tr[data-file="${file}"]`).getByRole('button', { name: 'Delete' }).click();
     await clickDialogButton(page, 'Delete');

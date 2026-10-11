@@ -92,7 +92,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
         { class: 'setup-card' },
         h('h1', {}, 'Setup required'),
         h('p', { 'data-testid': 'setup-reason' }, setupReason()),
-        h('p', { class: 'hint' }, 'Run the setup guide to add videos and pair cards, or open settings. You can also press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac) or hold an admin card on the reader.'),
+        h('p', { class: 'hint' }, 'Run the setup guide to add videos and pair cards, or open settings. You can also press Ctrl+Shift+S or hold an admin card on the reader.'),
         h(
           'div',
           { class: 'onboarding-actions' },

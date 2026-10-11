@@ -4,10 +4,12 @@ import { IdleTimer, isSettingsShortcut } from '../../src/admin/access';
 describe('isSettingsShortcut', () => {
   const key = (init: Partial<KeyboardEvent>) => ({ ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, code: '', ...init }) as KeyboardEvent;
 
-  it('matches Ctrl+Alt+Shift+S by physical key', () => {
-    expect(isSettingsShortcut(key({ ctrlKey: true, altKey: true, shiftKey: true, code: 'KeyS' }))).toBe(true);
-    expect(isSettingsShortcut(key({ ctrlKey: true, shiftKey: true, code: 'KeyS' }))).toBe(false);
-    expect(isSettingsShortcut(key({ ctrlKey: true, altKey: true, shiftKey: true, metaKey: true, code: 'KeyS' }))).toBe(false);
+  it('matches Ctrl+Shift+S by physical key', () => {
+    expect(isSettingsShortcut(key({ ctrlKey: true, shiftKey: true, code: 'KeyS' }))).toBe(true);
+    // Extra modifiers are a different shortcut (Ctrl+Alt is AltGr on many layouts).
+    expect(isSettingsShortcut(key({ ctrlKey: true, altKey: true, shiftKey: true, code: 'KeyS' }))).toBe(false);
+    expect(isSettingsShortcut(key({ ctrlKey: true, code: 'KeyS' }))).toBe(false);
+    expect(isSettingsShortcut(key({ ctrlKey: true, shiftKey: true, metaKey: true, code: 'KeyS' }))).toBe(false);
   });
 });
 

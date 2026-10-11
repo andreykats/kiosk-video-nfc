@@ -158,7 +158,7 @@ export function renderAdminCards(ctx: AppContext): Section {
       body,
       h('div', { class: 'toolbar' }, h('button', { type: 'button', onclick: () => void addNewAdminCard(ctx) }, 'Add admin card')),
       config.adminCards.length === 0
-        ? h('p', { class: 'hint' }, 'No admin cards. Settings can still be opened with Ctrl+Alt+Shift+S.')
+        ? h('p', { class: 'hint' }, 'No admin cards. Settings can still be opened with Ctrl+Shift+S.')
         : h(
             'ul',
             { 'data-testid': 'admin-list', class: 'admin-list' },

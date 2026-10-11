@@ -50,8 +50,8 @@ test('an admin card opens settings, even during a feature video', async ({ page 
   await expect(page.getByTestId('settings')).toBeVisible();
 });
 
-test('Ctrl+Alt+Shift+S opens settings', async ({ page }) => {
-  await page.keyboard.press('Control+Alt+Shift+KeyS');
+test('Ctrl+Shift+S opens settings', async ({ page }) => {
+  await page.keyboard.press('Control+Shift+KeyS');
   await expect(page.getByTestId('settings')).toBeVisible();
   await expect(page).toHaveURL(/#\/settings$/);
 });
