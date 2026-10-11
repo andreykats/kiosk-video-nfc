@@ -1,4 +1,4 @@
-# NFC Video Kiosk — Implementation Plan
+# Topps Kiosk — Implementation Plan
 
 ## 1. Goal
 

@@ -26,8 +26,8 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: false,
       manifest: {
-        name: 'NFC Video Kiosk',
-        short_name: 'Kiosk',
+        name: 'Topps Kiosk',
+        short_name: 'Topps Kiosk',
         description: 'Plays a looping video and switches to card-specific videos on NFC scans.',
         start_url: './',
         scope: './',

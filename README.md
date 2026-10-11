@@ -1,4 +1,4 @@
-# NFC Video Kiosk
+# Topps Kiosk
 
 A browser kiosk for Google Chrome on Windows and macOS. While idle it plays a loop video fullscreen. When someone scans a paired NFC card, it plays that card's video once and then goes back to the loop. Cards that aren't paired do nothing.
 
