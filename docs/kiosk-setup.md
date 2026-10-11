@@ -63,7 +63,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 | Symptom | Check |
 |---|---|
-| Scans do nothing, or the screen says "Card reader paused" | The kiosk window must have keyboard focus, because the reader types into whichever window is focused. When it loses focus, the kiosk shows **Card reader paused** at the bottom of the screen. Click or tap the kiosk once. In settings, Diagnostics → **Last scanned UID** shows whether scans are arriving, and **Recent errors and warnings** records each time the kiosk window lost focus. |
+| Scans do nothing, or the screen says "Card reader paused" | The kiosk window must have keyboard focus, because the reader types into whichever window is focused. When it loses focus, the kiosk covers the screen with **Card reader paused**. Click or tap the kiosk once. In settings, Diagnostics → **Last scanned UID** shows whether scans are arriving, and **Recent errors and warnings** records each time the kiosk window lost focus. |
 | A card plays nothing | The UID isn't paired, or the video isn't imported on this kiosk (Videos shows it as **missing**). |
 | Same card, different UID on two kiosks | The readers have different output settings. Reconfigure them to match. |
 | Video plays muted / Diagnostics says autoplay is blocked | Chrome was started without `--autoplay-policy=no-user-gesture-required`. Quit Chrome completely and start it with the launch command. |

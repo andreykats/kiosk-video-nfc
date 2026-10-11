@@ -77,7 +77,8 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const focusEl = h(
     'div',
     { class: 'focus-notice', 'data-testid': 'focus-notice', role: 'status', hidden: true },
-    'Card reader paused. Tap or click the screen to resume.',
+    h('h1', {}, 'Card reader paused'),
+    h('p', {}, 'Tap or click the screen to resume.'),
   );
   const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl, focusEl);
   root.replaceChildren(view);

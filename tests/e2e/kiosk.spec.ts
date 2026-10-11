@@ -106,6 +106,8 @@ test('losing window focus shows a notice until focus comes back', async ({ page 
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await expect(notice).toBeVisible();
   await expect(notice).toContainText('Tap or click the screen');
+  const box = await notice.boundingBox();
+  expect(box).toMatchObject({ x: 0, y: 0, width: page.viewportSize()!.width, height: page.viewportSize()!.height });
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(notice).toBeHidden();
 });
