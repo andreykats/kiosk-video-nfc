@@ -55,3 +55,18 @@ test('Ctrl+Alt+Shift+S opens settings', async ({ page }) => {
   await expect(page.getByTestId('settings')).toBeVisible();
   await expect(page).toHaveURL(/#\/settings$/);
 });
+
+test('the kiosk goes fullscreen on the first click or card scan', async ({ page }) => {
+  const isFullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
+  if (await isFullscreen()) await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(isFullscreen).toBe(false);
+
+  // A card scan is a key press, so it counts as the gesture Chrome needs.
+  await scan(page, 'DEADBEEF');
+  await expect.poll(isFullscreen).toBe(true);
+
+  await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(isFullscreen).toBe(false);
+  await page.mouse.click(10, 10);
+  await expect.poll(isFullscreen).toBe(true);
+});

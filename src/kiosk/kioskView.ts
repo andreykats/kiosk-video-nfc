@@ -2,6 +2,7 @@ import type { AppContext } from '../app/context';
 import type { Diagnostics } from '../app/diagnostics';
 import { log } from '../app/log';
 import { h } from '../ui/dom';
+import { keepFullscreen } from './fullscreen';
 import { initialKioskState, transition, type KioskEffect, type KioskEvent, type KioskState } from './stateMachine';
 
 /**
@@ -200,6 +201,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   const blockContextMenu = (e: Event) => e.preventDefault();
   view.addEventListener('contextmenu', blockContextMenu);
+  const stopFullscreen = keepFullscreen();
 
   const unsubscribers = [
     ctx.scanner.scans.subscribe((scan) => dispatch({ type: 'scan', uid: scan.uid })),
@@ -213,6 +215,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   return () => {
     disposed = true;
+    stopFullscreen();
     unsubscribers.forEach((u) => u());
     loop.clear();
     feature.clear();

@@ -24,6 +24,10 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
    chrome --kiosk --autoplay-policy=no-user-gesture-required <url>
    ```
    A kiosk-mode tab shares storage with the installed app, so it sees the same videos and config. To exit kiosk mode, press Alt+F4 (Windows) or Cmd+Q (Mac).
+
+   **Use this command for the live kiosk, not the installed app's icon.** Chrome opens the installed app in a window with its own title bar (app name, Uninstall, extensions, ⋮ menu), which the page can't hide. The app does go fullscreen on the first click or card scan, which hides the bar, but it can't do so by itself at launch. Kiosk mode starts fullscreen with no Chrome bars at all.
+
+   If you do run the installed app directly and want it fullscreen at launch without a click, set the Chrome policy `AutomaticFullscreenAllowedForUrls` to `https://topps.drey.dev` on that machine, for example through your device management.
 6. Turn off sleep, the screen saver and notifications.
 7. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
 

@@ -167,6 +167,7 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
   - On failure, retry muted, and show a small banner in settings diagnostics saying autoplay is blocked.
   - Kiosk launch flags (§9) prevent this in production.
 - Hide the cursor (`cursor: none`) and block the context menu in the kiosk view.
+- **Fullscreen:** desktop Chrome ignores `display: fullscreen` and opens the installed app in a window with Chrome's title bar, which a page can't hide. The kiosk view calls `requestFullscreen()` on mount and again on every click or key press (a card scan counts) until it succeeds (`src/kiosk/fullscreen.ts`). Without a gesture this only works if the `AutomaticFullscreenAllowedForUrls` policy lists the site. Production kiosks use the `--kiosk` launch command, which starts fullscreen with no Chrome UI.
 - Missing video file for a paired card: no-op plus a `console.warn`. The video is also listed under "Missing videos" in settings.
 - Leaving settings (button, or auto-return after **3 minutes idle**) goes back to `#/` and restarts the loop.
 
