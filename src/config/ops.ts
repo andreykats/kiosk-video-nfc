@@ -3,6 +3,9 @@ import type { AdminCardEntry, CardEntry, Config, VideoEntry } from './schema';
 /**
  * Pure edits on a Config. Each returns a new object; callers persist the result
  * through ConfigStore, which re-validates before saving.
+ *
+ * Invariant kept here: whenever there is at least one video, one of them is the
+ * loop video. The loop can be moved but never cleared.
  */
 
 export function findCard(config: Config, uid: string): CardEntry | undefined {
@@ -17,7 +20,7 @@ export function findVideo(config: Config, fileName: string): VideoEntry | undefi
   return config.videos.find((v) => v.fileName === fileName);
 }
 
-/** Adds a video entry, or updates the stored size if it already exists. */
+/** Adds a video entry, or updates the stored size if it already exists. The first video becomes the loop. */
 export function upsertVideo(config: Config, fileName: string, sizeBytes: number): Config {
   if (findVideo(config, fileName)) {
     return {
@@ -26,7 +29,11 @@ export function upsertVideo(config: Config, fileName: string, sizeBytes: number)
     };
   }
   const title = fileName.replace(/\.[^.]+$/, '');
-  return { ...config, videos: [...config.videos, { fileName, title, sizeBytes }] };
+  return {
+    ...config,
+    videos: [...config.videos, { fileName, title, sizeBytes }],
+    loopVideo: config.loopVideo ?? fileName,
+  };
 }
 
 export function setVideoTitle(config: Config, fileName: string, title: string): Config {
@@ -41,16 +48,22 @@ export function cardsForVideo(config: Config, fileName: string): CardEntry[] {
   return config.cards.filter((c) => c.fileName === fileName);
 }
 
+/**
+ * Removes a video and unpairs its cards. If it was the loop, the loop moves to
+ * a remaining video, preferring one that no card plays.
+ */
 export function removeVideo(config: Config, fileName: string): Config {
-  return {
-    ...config,
-    videos: config.videos.filter((v) => v.fileName !== fileName),
-    cards: config.cards.filter((c) => c.fileName !== fileName),
-    loopVideo: config.loopVideo === fileName ? null : config.loopVideo,
-  };
+  const videos = config.videos.filter((v) => v.fileName !== fileName);
+  const cards = config.cards.filter((c) => c.fileName !== fileName);
+  let loopVideo = config.loopVideo;
+  if (loopVideo === fileName) {
+    const unpaired = videos.find((v) => !cards.some((c) => c.fileName === v.fileName));
+    loopVideo = (unpaired ?? videos[0])?.fileName ?? null;
+  }
+  return { ...config, videos, cards, loopVideo };
 }
 
-export function setLoopVideo(config: Config, fileName: string | null): Config {
+export function setLoopVideo(config: Config, fileName: string): Config {
   return { ...config, loopVideo: fileName };
 }
 
@@ -71,10 +84,6 @@ export function setCardVideo(config: Config, uid: string, fileName: string): Con
   return { ...config, cards: config.cards.map((c) => (c.uid === uid ? { ...c, fileName } : c)) };
 }
 
-export function setCardLabel(config: Config, uid: string, label: string): Config {
-  return { ...config, cards: config.cards.map((c) => (c.uid === uid ? { ...c, label } : c)) };
-}
-
 export function removeCard(config: Config, uid: string): Config {
   return { ...config, cards: config.cards.filter((c) => c.uid !== uid) };
 }
@@ -83,13 +92,6 @@ export function removeCard(config: Config, uid: string): Config {
 export function addAdminCard(config: Config, card: AdminCardEntry): Config {
   const rest = config.adminCards.filter((c) => c.uid !== card.uid);
   return { ...config, adminCards: [...rest, card] };
-}
-
-export function setAdminCardLabel(config: Config, uid: string, label: string): Config {
-  return {
-    ...config,
-    adminCards: config.adminCards.map((c) => (c.uid === uid ? { ...c, label } : c)),
-  };
 }
 
 export function removeAdminCard(config: Config, uid: string): Config {

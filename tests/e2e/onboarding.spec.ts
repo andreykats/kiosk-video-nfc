@@ -29,8 +29,13 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await expect(step(page, 'pair')).toBeVisible();
   const rows = page.getByTestId('pair-table').locator('tr');
   await expect(rows).toHaveCount(3);
-  await expect(page.getByTestId('onboarding-next')).toBeDisabled();
 
+  // The first video added is the loop until another one is ticked; it can't be cleared.
+  await expect(page.getByLabel('Use loop.mp4 as background loop')).toBeChecked();
+  await page.getByLabel('Use lion.mp4 as background loop').check();
+  await expect(page.getByLabel('Use loop.mp4 as background loop')).not.toBeChecked();
+  await page.getByLabel('Use lion.mp4 as background loop').click();
+  await expect(page.getByLabel('Use lion.mp4 as background loop')).toBeChecked();
   await page.getByLabel('Use loop.mp4 as background loop').check();
   await expect(page.locator('tr[data-file="loop.mp4"]')).toContainText('Plays on repeat');
 

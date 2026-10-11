@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/context';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { addAdminCard, cardsForVideo, findAdminCard, findCard, findVideo, pairCard, removeAdminCard, removeCard, setLoopVideo, useAsLoopInstead } from '../config/ops';
+import { addAdminCard, cardsForVideo, findAdminCard, findCard, findVideo, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { fetchPublishedConfig, readConfigFile } from '../config/sync';
@@ -387,7 +387,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
   const labelFor = (fileName: string) => findVideo(ctx.config.get(), fileName)?.title || fileName;
 
   const pair = async (uid: string, fileName: string) => {
-    if (await saveEdit(ctx, (c) => pairCard(c, { uid, fileName, label: labelFor(fileName) }))) pairing = null;
+    if (await saveEdit(ctx, (c) => pairCard(c, { uid, fileName, label: '' }))) pairing = null;
     view.rerender();
   };
 
@@ -410,11 +410,9 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     view.rerender();
   });
 
+  /** There is always a loop video: it can be moved to another video but not cleared. */
   const toggleLoop = async (fileName: string, checked: boolean) => {
-    if (!checked) {
-      await saveEdit(ctx, (c) => setLoopVideo(c, null));
-      return;
-    }
+    if (!checked) return view.rerender();
     const cards = cardsForVideo(ctx.config.get(), fileName);
     if (cards.length > 0) {
       const ok = await confirmDialog({
@@ -482,6 +480,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
               type: 'checkbox',
               checked: isLoop,
               'aria-label': `Use ${v.fileName} as background loop`,
+              title: isLoop ? 'Tick another video to move the loop' : null,
               onchange: (e: Event) => void toggleLoop(v.fileName, (e.target as HTMLInputElement).checked),
             }),
             ' Background loop',
@@ -522,7 +521,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
         wide: true,
         busy,
         body: [
-          p('Press Pair card, then hold a card on the reader. That card will play the video. Tick Background loop for the one video that plays on repeat between cards.'),
+          p('Press Pair card, then hold a card on the reader. That card will play the video. One video is the background loop and plays on repeat between cards. Tick Background loop on another video to move it.'),
           config.videos.length === 0
             ? p('There are no videos yet. Add some first.', 'error')
             : h('table', { class: 'pair-table', 'data-testid': 'pair-table' }, h('tbody', {}, ...rows)),
@@ -549,7 +548,7 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
       message = { text: `${formatUid(scan.uid)} plays “${findVideo(config, card.fileName)?.title || card.fileName}”. Use a different card for admin.`, kind: 'error' };
     } else if (findAdminCard(config, scan.uid)) {
       message = { text: `${formatUid(scan.uid)} is already an admin card.`, kind: 'error' };
-    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { uid: scan.uid, label: `Admin card ${c.adminCards.length + 1}` }))) {
+    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { uid: scan.uid, label: '' }))) {
       message = { text: `Added ${formatUid(scan.uid)} as an admin card ✓`, kind: 'success' };
     }
     view.rerender();

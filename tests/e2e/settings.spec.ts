@@ -18,7 +18,6 @@ test('pair a new card, then reassign it', async ({ page }) => {
   await scan(page, '04A23B1C');
   await expect(page.getByTestId('pair-uid')).toHaveText('04 A2 3B 1C');
   await page.getByTestId('pair-video').selectOption('lion.mp4');
-  await page.getByTestId('pair-label').fill('Lion card');
   await clickDialogButton(page, 'Save');
   const row = page.locator('[data-testid="cards-table"] tr[data-uid="04A23B1C"]');
   await expect(row).toContainText('04 A2 3B 1C');
@@ -41,9 +40,10 @@ test('admin cards reject video-card UIDs and vice versa', async ({ page }) => {
   await scan(page, LION_UID);
   await expect(page.getByTestId('scan-status')).toContainText('is paired to video');
   await scan(page, 'AABBCCDD');
-  await page.getByTestId('admin-label').fill('Manager');
-  await clickDialogButton(page, 'Save');
+  // A valid scan saves straight away; there is no label to fill in.
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
   await expect(page.getByTestId('admin-list')).toContainText('AA BB CC DD');
+  await expect(page.getByTestId('admin-section').locator('input')).toHaveCount(0);
 
   await page.waitForTimeout(1600);
   await page.getByRole('button', { name: 'Pair new card' }).click();
@@ -76,12 +76,12 @@ test('export → import round-trip', async ({ page }) => {
   expect(Date.parse(exported.updatedAt)).toBeGreaterThan(Date.parse(testConfig.updatedAt));
 
   // Re-importing the export on a kiosk with local edits replaces them.
-  await page.getByLabel('Label for 04A23B1C5D8000').fill('Edited locally');
-  await page.getByLabel('Label for 04A23B1C5D8000').press('Tab');
+  await page.getByLabel('Video for 04A23B1C5D8000').selectOption('tiger.mp4');
+  await expect(page.getByLabel('Video for 04A23B1C5D8000')).toHaveValue('tiger.mp4');
   await page.getByTestId('import-config-input').setInputFiles({ name: 'config.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
   await expect(page.getByTestId('config-summary')).toContainText('3 video(s), 2 card(s), 1 admin card(s)');
   await clickDialogButton(page, 'Replace local config');
-  await expect(page.getByLabel('Label for 04A23B1C5D8000')).toHaveValue('Lion card');
+  await expect(page.getByLabel('Video for 04A23B1C5D8000')).toHaveValue('lion.mp4');
   await expect(page.getByTestId('config-applied')).toContainText('from a file');
 });
 
@@ -111,10 +111,30 @@ test('update from published config fetches config.json fresh and applies it', as
   expect(requests).toBe(1);
 });
 
+test('the cards table has no label column and the videos table has no "no loop" row', async ({ page }) => {
+  await setUpKiosk(page);
+  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['UID', 'Video', '']);
+  await expect(page.getByTestId('cards-table').locator('input[type="text"]')).toHaveCount(0);
+  await expect(page.getByLabel('No loop video')).toHaveCount(0);
+  await expect(page.getByTestId('videos-table').locator('input[type="radio"]')).toHaveCount(3);
+  // The UID stays on one line.
+  const uid = page.locator(`[data-testid="cards-table"] tr[data-uid="${LION_UID}"] td.uid`);
+  const lineHeight = await uid.evaluate((td) => parseFloat(getComputedStyle(td).lineHeight) || 20);
+  expect((await uid.boundingBox())!.height).toBeLessThan(lineHeight * 2 + 16);
+});
+
+test('deleting the loop video moves the loop to another video', async ({ page }) => {
+  await setUpKiosk(page);
+  await page.locator('tr[data-file="loop.mp4"]').getByRole('button', { name: 'Delete' }).click();
+  await expect(page.locator('dialog[open]')).toContainText('lion.mp4 will become the loop video');
+  await clickDialogButton(page, 'Delete');
+  await expect(page.getByLabel('Use lion.mp4 as loop video')).toBeChecked();
+});
+
 test('deleting a video lists and unpairs its cards', async ({ page }) => {
   await setUpKiosk(page);
   await page.locator('tr[data-file="lion.mp4"]').getByRole('button', { name: 'Delete' }).click();
-  await expect(page.locator('dialog[open]')).toContainText('04 A2 3B 1C 5D 80 00 Lion card');
+  await expect(page.locator('dialog[open]')).toContainText('04 A2 3B 1C 5D 80 00');
   await clickDialogButton(page, 'Delete');
   await expect(page.locator('tr[data-file="lion.mp4"]')).toHaveCount(0);
   await expect(page.locator(`[data-testid="cards-table"] tr[data-uid="${LION_UID}"]`)).toHaveCount(0);

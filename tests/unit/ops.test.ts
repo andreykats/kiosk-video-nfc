@@ -17,12 +17,29 @@ describe('config ops', () => {
     expect(c.videos).toHaveLength(2);
   });
 
-  it('removing a video unpairs its cards and clears the loop', () => {
+  it('makes the first video added the loop, and leaves an existing loop alone', () => {
+    const one = upsertVideo(emptyConfig(), 'a.mp4', 1);
+    expect(one.loopVideo).toBe('a.mp4');
+    expect(upsertVideo(one, 'b.mp4', 1).loopVideo).toBe('a.mp4');
+  });
+
+  it('removing a video unpairs its cards; removing the loop moves it to another video', () => {
     const c = removeVideo(base(), 'lion.mp4');
     expect(cardsForVideo(base(), 'lion.mp4').map((x) => x.uid)).toEqual(['04A23B1C']);
     expect(c.cards.map((x) => x.uid)).toEqual(['04A23B1D']);
-    expect(c.loopVideo).toBeNull();
+    expect(c.loopVideo).toBe('loop.mp4');
     expect(validateConfig(c).ok).toBe(true);
+  });
+
+  it('prefers a video no card plays when moving the loop', () => {
+    let c = upsertVideo(base(), 'free.mp4', 1);
+    c = removeVideo(c, 'lion.mp4');
+    expect(c.loopVideo).toBe('free.mp4');
+  });
+
+  it('only clears the loop when the last video is removed', () => {
+    const c = removeVideo(upsertVideo(emptyConfig(), 'a.mp4', 1), 'a.mp4');
+    expect(c.loopVideo).toBeNull();
   });
 
   it('reassigning a card keeps one entry', () => {

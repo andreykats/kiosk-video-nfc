@@ -70,6 +70,7 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
 
 - **`fileName` is the video's identity across kiosks.** It must be unique, and it is the name of the file in OPFS. Every kiosk imports a file with the same name.
 - `sizeBytes` is used only to **warn** when a kiosk's local file size differs. It never blocks.
+- `label` on cards and admin cards stays in the schema for compatibility, but the app no longer shows or edits it and saves new cards with `""`.
 - `uid` is uppercase hex with no separators (see §6). A UID may appear in at most one of `cards` or `adminCards`.
 - Every `cards[].fileName` and `loopVideo` must reference an entry in `videos`.
 - Write a `validateConfig(json): Result<Config, string[]>` function with clear error messages. Use it for published fetches, file imports and the IndexedDB load.
@@ -106,7 +107,7 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
   - Check `navigator.storage.estimate()` and refuse with a clear message if the total size exceeds the free quota.
   - Catch `QuotaExceededError`.
 - **Overwriting:** importing a file whose name already exists asks for confirmation, then replaces it.
-- **Delete video:** confirm first. This removes the OPFS file and the `videos[]` entry, unpairs cards that pointed to it (list them in the confirm dialog), and clears `loopVideo` if it matched.
+- **Delete video:** confirm first. This removes the OPFS file and the `videos[]` entry, unpairs cards that pointed to it (list them in the confirm dialog). If it was the loop video, the loop moves to another video, preferring one no card plays (the dialog says which).
 - **Playback:** `fileHandle.getFile()` → `URL.createObjectURL(file)` → `video.src`. Revoke the URL when it's replaced. Files are disk-backed, so 1 GB files must not be read into memory.
 - **Persistent storage:**
   - Call `navigator.storage.persist()` the first time settings opens and again after each import.
@@ -177,15 +178,15 @@ Sections, each a plain TS module rendering DOM:
 2. **Videos:**
    - Table showing file name, title (editable), size, and status (present / missing / size mismatch).
    - Buttons: Import files, Import folder, Delete.
-   - Radio button to select the **loop video**.
+   - Radio button to select the **loop video**. There is no "no loop" option: whenever there are videos, one is the loop. The first video added becomes the loop, and it can be moved but not cleared.
 3. **Cards:**
-   - Table showing UID (displayed grouped, e.g. `04 A2 3B…`), label, assigned video (dropdown), and Remove.
+   - Table showing UID (displayed grouped, e.g. `04 A2 3B…`, on one line), assigned video (dropdown), and Remove. There's no label column: the video file name identifies the card.
    - **"Pair new card"** opens a modal:
      1. "Scan card now…"
      2. Capture UID. If it's already paired, show the current assignment and offer to reassign. If it's an admin card, reject.
-     3. Pick a video and a label.
+     3. Pick a video.
      4. Save.
-4. **Admin cards:** list with label and Remove. **"Add admin card"** opens the same scan modal and rejects UIDs already used as video cards.
+4. **Admin cards:** list of UIDs with Remove (no label field). **"Add admin card"** opens the same scan modal, saves as soon as a valid card is scanned, and rejects UIDs already used as video cards.
 5. **Config:** Export config, Update from published config, Import config from file, last applied `updatedAt`.
 6. **Diagnostics:**
    - **Ready to work offline** indicator with a per-condition breakdown (see §9.3).

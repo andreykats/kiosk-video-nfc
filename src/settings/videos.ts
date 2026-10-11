@@ -27,16 +27,19 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
   };
 
   const deleteVideo = async (fileName: string) => {
-    const cards = cardsForVideo(ctx.config.get(), fileName);
-    const isLoop = ctx.config.get().loopVideo === fileName;
+    const config = ctx.config.get();
+    const cards = cardsForVideo(config, fileName);
+    const nextLoop = config.loopVideo === fileName ? removeVideo(config, fileName).loopVideo : null;
     const ok = await confirmDialog({
       title: `Delete ${fileName}?`,
       content: [
         h('p', {}, 'The file is removed from this kiosk and the video is removed from the config.'),
         cards.length > 0
-          ? h('div', {}, h('p', {}, 'These cards will be unpaired:'), errorList(cards.map((c) => `${formatUid(c.uid)} ${c.label}`)))
+          ? h('div', {}, h('p', {}, 'These cards will be unpaired:'), errorList(cards.map((c) => formatUid(c.uid))))
           : '',
-        isLoop ? h('p', {}, 'This is the loop video; no loop video will be selected.') : '',
+        config.loopVideo === fileName
+          ? h('p', {}, nextLoop ? `This is the loop video. ${nextLoop} will become the loop video.` : 'This is the loop video, and there are no other videos to loop.')
+          : '',
       ],
       confirmLabel: 'Delete',
       danger: true,
@@ -121,22 +124,6 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
               'tbody',
               {},
               ...rows,
-              h(
-                'tr',
-                {},
-                h(
-                  'td',
-                  {},
-                  h('input', {
-                    type: 'radio',
-                    name: 'loopVideo',
-                    'aria-label': 'No loop video',
-                    checked: config.loopVideo === null,
-                    onchange: () => void saveEdit(ctx, (c) => setLoopVideo(c, null)),
-                  }),
-                ),
-                h('td', { colspan: 5, class: 'hint' }, 'No loop video'),
-              ),
             ),
           ),
       orphans.length > 0

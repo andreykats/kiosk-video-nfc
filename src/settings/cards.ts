@@ -1,5 +1,5 @@
 import type { AppContext } from '../app/context';
-import { addAdminCard, findAdminCard, findCard, findVideo, pairCard, removeAdminCard, removeCard, setAdminCardLabel, setCardLabel, setCardVideo } from '../config/ops';
+import { addAdminCard, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, setCardVideo } from '../config/ops';
 import { formatUid } from '../scan/uid';
 import { confirmDialog } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
@@ -17,16 +17,15 @@ function videoSelect(ctx: AppContext, selected: string | null, attrs: Record<str
   return select;
 }
 
-/** Pair-new-card flow: scan → (reassign?) → pick video + label → save. */
+/** Pair-new-card flow: scan → (reassign?) → pick video → save. */
 async function pairNewCard(ctx: AppContext): Promise<void> {
   const dialog = openScanDialog<string>(ctx, {
     title: 'Pair new card',
     testId: 'pair-dialog',
     onScan: (uid, d) => {
       const config = ctx.config.get();
-      const admin = findAdminCard(config, uid);
-      if (admin) {
-        scanMessage(d, `${formatUid(uid)} is an admin card${admin.label ? ` (${admin.label})` : ''}. Remove it from admin cards first, or scan another card.`, 'error');
+      if (findAdminCard(config, uid)) {
+        scanMessage(d, `${formatUid(uid)} is an admin card. Remove it from admin cards first, or scan another card.`, 'error');
         return false;
       }
       showDetails(uid);
@@ -38,22 +37,20 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
     const config = ctx.config.get();
     const existing = findCard(config, uid);
     const select = videoSelect(ctx, existing?.fileName ?? null, { 'data-testid': 'pair-video', 'aria-label': 'Video' });
-    const label = h('input', { type: 'text', value: existing?.label ?? '', placeholder: 'e.g. Lion card', 'data-testid': 'pair-label', 'aria-label': 'Label' });
     const error = h('p', { class: 'scan-status error', hidden: true });
     replaceChildren(
       dialog.body,
-      h('p', {}, 'Card ', h('strong', { class: 'mono', 'data-testid': 'pair-uid' }, formatUid(uid))),
+      h('p', {}, 'Card ', h('strong', { class: 'mono uid', 'data-testid': 'pair-uid' }, formatUid(uid))),
       existing
         ? h(
             'p',
             { class: 'banner banner-warn' },
-            `Already paired to "${findVideo(config, existing.fileName)?.title || existing.fileName}"${existing.label ? ` as “${existing.label}”` : ''}. Saving will reassign it.`,
+            `Already paired to ${existing.fileName}. Saving will reassign it.`,
           )
         : null,
       config.videos.length === 0
         ? h('p', { class: 'scan-status error' }, 'There are no videos yet. Import a video first.')
         : h('label', {}, 'Video ', select),
-      h('label', {}, 'Label ', label),
       error,
     );
     dialog.setActions([
@@ -68,11 +65,11 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
             error.hidden = false;
             return false;
           }
-          return saveEdit(ctx, (c) => pairCard(c, { uid, fileName: select.value, label: label.value.trim() }));
+          return saveEdit(ctx, (c) => pairCard(c, { uid, fileName: select.value, label: '' }));
         },
       },
     ]);
-    label.focus();
+    select.focus();
   };
 
   await dialog.result;
@@ -93,13 +90,10 @@ async function addNewAdminCard(ctx: AppContext): Promise<void> {
         scanMessage(d, `${formatUid(uid)} is already an admin card. Scan another card.`, 'error');
         return false;
       }
-      const label = h('input', { type: 'text', placeholder: 'e.g. Front desk admin', 'data-testid': 'admin-label', 'aria-label': 'Label' });
-      replaceChildren(d.body, h('p', {}, 'Card ', h('strong', { class: 'mono', 'data-testid': 'admin-uid' }, formatUid(uid))), h('label', {}, 'Label ', label));
-      d.setActions([
-        { label: 'Cancel', value: null },
-        { label: 'Save', value: uid, kind: 'primary', before: () => saveEdit(ctx, (c) => addAdminCard(c, { uid, label: label.value.trim() })) },
-      ]);
-      label.focus();
+      void saveEdit(ctx, (c) => addAdminCard(c, { uid, label: '' })).then((saved) => {
+        if (saved) d.close(uid);
+        else scanMessage(d, 'Could not save. Scan the card again.', 'error');
+      });
       return true;
     },
   });
@@ -118,7 +112,7 @@ export function renderCards(ctx: AppContext): Section {
         : h(
             'table',
             { 'data-testid': 'cards-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'UID'), h('th', {}, 'Label'), h('th', {}, 'Video'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'UID'), h('th', {}, 'Video'), h('th'))),
             h(
               'tbody',
               {},
@@ -128,17 +122,7 @@ export function renderCards(ctx: AppContext): Section {
                 return h(
                   'tr',
                   { 'data-uid': card.uid },
-                  h('td', { class: 'mono' }, formatUid(card.uid)),
-                  h(
-                    'td',
-                    {},
-                    h('input', {
-                      type: 'text',
-                      value: card.label,
-                      'aria-label': `Label for ${card.uid}`,
-                      onchange: (e: Event) => void saveEdit(ctx, (c) => setCardLabel(c, card.uid, (e.target as HTMLInputElement).value.trim())),
-                    }),
-                  ),
+                  h('td', { class: 'mono uid' }, formatUid(card.uid)),
                   h('td', {}, select),
                   h(
                     'td',
@@ -149,7 +133,7 @@ export function renderCards(ctx: AppContext): Section {
                         type: 'button',
                         class: 'danger',
                         onclick: async () => {
-                          const ok = await confirmDialog({ title: 'Remove card?', content: [`${formatUid(card.uid)} ${card.label}`], confirmLabel: 'Remove', danger: true });
+                          const ok = await confirmDialog({ title: 'Remove card?', content: [`${formatUid(card.uid)} → ${card.fileName}`], confirmLabel: 'Remove', danger: true });
                           if (ok) await saveEdit(ctx, (c) => removeCard(c, card.uid));
                         },
                       },
@@ -182,14 +166,7 @@ export function renderAdminCards(ctx: AppContext): Section {
               h(
                 'li',
                 { 'data-uid': card.uid },
-                h('span', { class: 'mono' }, formatUid(card.uid)),
-                ' ',
-                h('input', {
-                  type: 'text',
-                  value: card.label,
-                  'aria-label': `Label for ${card.uid}`,
-                  onchange: (e: Event) => void saveEdit(ctx, (c) => setAdminCardLabel(c, card.uid, (e.target as HTMLInputElement).value.trim())),
-                }),
+                h('span', { class: 'mono uid' }, formatUid(card.uid)),
                 ' ',
                 h(
                   'button',
@@ -197,7 +174,7 @@ export function renderAdminCards(ctx: AppContext): Section {
                     type: 'button',
                     class: 'danger',
                     onclick: async () => {
-                      const ok = await confirmDialog({ title: 'Remove admin card?', content: [`${formatUid(card.uid)} ${card.label}`], confirmLabel: 'Remove', danger: true });
+                      const ok = await confirmDialog({ title: 'Remove admin card?', content: [formatUid(card.uid)], confirmLabel: 'Remove', danger: true });
                       if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.uid));
                     },
                   },
