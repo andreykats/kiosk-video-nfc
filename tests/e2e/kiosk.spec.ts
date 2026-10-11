@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_UID, LION_UID, scan, setUpKiosk, TIGER_UID, videoState, waitForPlaying } from './helpers';
 
 test.beforeEach(async ({ page }) => {
@@ -69,4 +69,33 @@ test('the kiosk goes fullscreen on the first click or card scan', async ({ page 
   await expect.poll(isFullscreen).toBe(false);
   await page.mouse.click(10, 10);
   await expect.poll(isFullscreen).toBe(true);
+});
+
+const loopSrc = (page: Page) => page.getByTestId('loop-video').evaluate((v: HTMLVideoElement) => v.src);
+
+test('a card video that stops playing gives way to the loop, and cards work again', async ({ page }) => {
+  await scan(page, LION_UID);
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+  // A frozen decoder fires neither `ended` nor `error`; pausing looks the same.
+  await page.getByTestId('feature-video').evaluate((v: HTMLVideoElement) => v.pause());
+  await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop', { timeout: 20_000 });
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  await scan(page, TIGER_UID);
+  await waitForPlaying(page, 'feature-video', 'tiger.mp4');
+});
+
+test('a loop media error reloads the loop instead of showing "Setup required"', async ({ page }) => {
+  const before = await loopSrc(page);
+  await page.getByTestId('loop-video').evaluate((v) => v.dispatchEvent(new Event('error')));
+  await expect.poll(() => loopSrc(page)).not.toBe(before);
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  await expect(page.getByTestId('setup-screen')).toBeHidden();
+});
+
+test('a loop that stops playing is reloaded', async ({ page }) => {
+  const before = await loopSrc(page);
+  await page.getByTestId('loop-video').evaluate((v: HTMLVideoElement) => v.pause());
+  await expect.poll(() => loopSrc(page), { timeout: 20_000 }).not.toBe(before);
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  await expect(page.getByTestId('setup-screen')).toBeHidden();
 });

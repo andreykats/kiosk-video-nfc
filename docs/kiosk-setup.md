@@ -28,8 +28,9 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
    **Use this command for the live kiosk, not the installed app's icon.** Chrome opens the installed app in a window with its own title bar (app name, Uninstall, extensions, ⋮ menu), which the page can't hide. The app does go fullscreen on the first click or card scan, which hides the bar, but it can't do so by itself at launch. Kiosk mode starts fullscreen with no Chrome bars at all.
 
    If you do run the installed app directly and want it fullscreen at launch without a click, set the Chrome policy `AutomaticFullscreenAllowedForUrls` to `https://topps.drey.dev` on that machine, for example through your device management.
-6. Turn off sleep, the screen saver and notifications.
-7. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
+6. Turn off sleep, the screen saver and notifications. (While the kiosk view is showing, the app also asks Chrome to keep the screen awake, but don't rely on that alone.)
+7. **Restart the computer every night**, outside opening hours (see the sections below). The app recovers from stalled or broken videos by itself. But if Chrome's page crashes, it shows a "sad tab" and stays like that until Chrome restarts. A nightly restart also applies any app update.
+8. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
 
 ## Windows
 
@@ -38,6 +39,11 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required <url>
   ```
 - Set Windows Update active hours, or schedule restarts, outside opening hours.
+- Nightly restart: in an administrator Command Prompt, run
+  ```
+  schtasks /create /tn "Kiosk nightly restart" /tr "shutdown /r /f /t 0" /sc daily /st 04:00 /ru SYSTEM
+  ```
+  Windows must sign in automatically, so the startup shortcut runs after the restart.
 
 ## macOS
 
@@ -46,16 +52,23 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
   open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required <url>
   ```
   The flags only take effect if Chrome isn't already running. Make sure Chrome doesn't open by itself at login first.
+- Nightly restart: macOS can't schedule a restart, so schedule a shutdown and a power-on instead (desktop Macs only):
+  ```
+  sudo pmset repeat shutdown MTWRFSU 04:00:00 poweron MTWRFSU 04:05:00
+  ```
+  Turn on automatic login (System Settings → Users & Groups), so the Login Item runs after power-on. Check the schedule with `pmset -g sched`.
 - The first time the reader is plugged in, macOS may show **Keyboard Setup Assistant**. Close it, because while it's open it takes focus and scans are lost.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---|---|
-| Scans do nothing | The kiosk window must have keyboard focus, because the reader types into whichever window is focused. Click the kiosk once. In settings, Diagnostics → **Last scanned UID** shows whether scans are arriving. |
+| Scans do nothing | The kiosk window must have keyboard focus, because the reader types into whichever window is focused. Click the kiosk once. In settings, Diagnostics → **Last scanned UID** shows whether scans are arriving, and **Recent errors and warnings** records each time the kiosk window lost focus. |
 | A card plays nothing | The UID isn't paired, or the video isn't imported on this kiosk (Videos shows it as **missing**). |
 | Same card, different UID on two kiosks | The readers have different output settings. Reconfigure them to match. |
 | Video plays muted / Diagnostics says autoplay is blocked | Chrome was started without `--autoplay-policy=no-user-gesture-required`. Quit Chrome completely and start it with the launch command. |
 | "Setup required" on the screen | No loop video is selected, or the loop file is missing. Press **Open setup guide**, or open settings and follow the checklist. |
+| A card video froze, or the loop went black for a moment | The kiosk notices playback that has stopped for 10 seconds. It returns to the loop, or reloads the loop, by itself. If it keeps happening, Diagnostics → **Recent errors and warnings** shows which file. Re-import that file. |
+| "Setup required … can't be played" | The loop video failed twice in a row. The kiosk keeps retrying (up to every 5 minutes) and clears the message once the loop plays. If it doesn't clear, re-import the loop video. |
 | Settings says "App update available" | Press **Reload** when no one is watching. The app never reloads itself. |
 | Videos disappeared | Storage wasn't persisted and Chrome cleared it. Install the app, re-import the videos, and check **Persisted: yes**. |

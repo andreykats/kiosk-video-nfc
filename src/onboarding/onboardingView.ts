@@ -1,5 +1,5 @@
 import type { AppContext } from '../app/context';
-import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
+import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
 import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
@@ -9,7 +9,7 @@ import { downloadConfig, readConfigFile } from '../config/sync';
 import { formatUid } from '../scan/uid';
 import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
-import { confirmDialog, errorList } from '../ui/dialog';
+import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
 import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
@@ -20,6 +20,8 @@ interface Nav {
   next(): void;
   back(): void;
   path(): ConfigPath | null;
+  /** Pauses the idle return to the kiosk while a long import runs. */
+  hold(): () => void;
 }
 
 interface StepView {
@@ -252,14 +254,14 @@ function configStep(ctx: AppContext, nav: Nav): StepView {
   return view;
 }
 
-function importHost(progress: HTMLElement, onBusy: (busy: boolean) => void): ImportHost {
-  return { progress, summary: 'problems', onBusyChange: onBusy };
+function importHost(nav: Nav, progress: HTMLElement, onBusy: (busy: boolean) => void): ImportHost {
+  return { progress, summary: 'problems', onBusyChange: onBusy, hold: nav.hold };
 }
 
 function addVideosStep(ctx: AppContext, nav: Nav): StepView {
   const progress = h('div', { class: 'import-progress', 'data-testid': 'import-progress', hidden: true });
   let busy = false;
-  const host = importHost(progress, (b) => {
+  const host = importHost(nav, progress, (b) => {
     busy = b;
     view.rerender();
   });
@@ -308,7 +310,7 @@ function addVideosStep(ctx: AppContext, nav: Nav): StepView {
 function copyVideosStep(ctx: AppContext, nav: Nav): StepView {
   const progress = h('div', { class: 'import-progress', 'data-testid': 'import-progress', hidden: true });
   let busy = false;
-  const host = importHost(progress, (b) => {
+  const host = importHost(nav, progress, (b) => {
     busy = b;
     view.rerender();
   });
@@ -376,7 +378,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
   let pairing: PairingState | null = null;
   let busy = false;
   const progress = h('div', { class: 'import-progress', 'data-testid': 'import-progress', hidden: true });
-  const host = importHost(progress, (b) => {
+  const host = importHost(nav, progress, (b) => {
     busy = b;
     view.rerender();
   });
@@ -639,9 +641,16 @@ export function mountOnboarding(root: HTMLElement, ctx: AppContext): () => void 
   const container = h('div', { class: 'onboarding', 'data-testid': 'onboarding' });
   root.replaceChildren(container);
   let current: StepView | null = null;
+  // Once the kiosk has been set up, a guide left open (from settings or the
+  // "Setup required" screen) goes back to the kiosk like settings does. A
+  // first-launch setup stays put: there is nothing to go back to yet.
+  const idle = new IdleTimer(SETTINGS_IDLE_MS, () => {
+    if (readFlags().completed) ctx.navigate('kiosk');
+  });
 
   const nav: Nav = {
     path: () => pathFromApplied(ctx.config.lastApplied()),
+    hold: () => idle.hold(),
     next: () => {
       const step = container.dataset.step as StepId;
       const next = nextStep(step, nav.path());
@@ -673,7 +682,9 @@ export function mountOnboarding(root: HTMLElement, ctx: AppContext): () => void 
   );
 
   return () => {
+    idle.destroy();
     current?.destroy();
+    closeAllDialogs();
     container.remove();
   };
 }
