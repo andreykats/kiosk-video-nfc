@@ -1,3 +1,6 @@
+/** How the settings shortcut is written in on-screen hints. */
+export const SETTINGS_SHORTCUT_LABEL = 'Ctrl+Shift+S (Control, not Cmd, on a Mac)';
+
 /**
  * Ctrl+Shift+S opens settings from any view (Control, not Cmd, on a Mac).
  * Chrome has no shortcut of its own on this combination on Windows or macOS.

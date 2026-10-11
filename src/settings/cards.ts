@@ -1,4 +1,5 @@
 import type { AppContext } from '../app/context';
+import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { addAdminCard, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, setCardVideo } from '../config/ops';
 import { formatUid } from '../scan/uid';
 import { confirmDialog } from '../ui/dialog';
@@ -158,7 +159,7 @@ export function renderAdminCards(ctx: AppContext): Section {
       body,
       h('div', { class: 'toolbar' }, h('button', { type: 'button', onclick: () => void addNewAdminCard(ctx) }, 'Add admin card')),
       config.adminCards.length === 0
-        ? h('p', { class: 'hint' }, 'No admin cards. Settings can still be opened with Ctrl+Shift+S.')
+        ? h('p', { class: 'hint' }, `No admin cards. Settings can still be opened with ${SETTINGS_SHORTCUT_LABEL}.`)
         : h(
             'ul',
             { 'data-testid': 'admin-list', class: 'admin-list' },

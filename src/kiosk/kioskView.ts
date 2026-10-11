@@ -1,9 +1,19 @@
 import type { AppContext } from '../app/context';
+import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import type { Diagnostics } from '../app/diagnostics';
 import { log } from '../app/log';
 import { h } from '../ui/dom';
 import { keepFullscreen } from './fullscreen';
 import { initialKioskState, transition, type KioskEffect, type KioskEvent, type KioskState } from './stateMachine';
+import { keepScreenOn } from './wakeLock';
+import { ProgressWatch, retryDelay } from './watchdog';
+
+/** How often playback is checked, and how long without progress counts as stalled. */
+const WATCHDOG_INTERVAL_MS = 2_000;
+const STALL_MS = 10_000;
+/** A broken loop is reloaded after 1 s, 2 s, 4 s … then every 5 min. */
+const LOOP_RETRY_BASE_MS = 1_000;
+const LOOP_RETRY_MAX_MS = 5 * 60_000;
 
 /**
  * Plays media, falling back to muted playback if Chrome blocks autoplay with
@@ -71,6 +81,10 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const feature = new VideoSlot(featureEl);
   let state: KioskState = initialKioskState;
   let disposed = false;
+  const watch = new ProgressWatch(STALL_MS, performance.now());
+  /** Consecutive loop failures with no playback in between. */
+  let loopFailures = 0;
+  let loopRetry: ReturnType<typeof setTimeout> | undefined;
 
   /** Why the kiosk can't play, in the words staff will see. */
   const setupReason = (): string => {
@@ -92,7 +106,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
         { class: 'setup-card' },
         h('h1', {}, 'Setup required'),
         h('p', { 'data-testid': 'setup-reason' }, setupReason()),
-        h('p', { class: 'hint' }, 'Run the setup guide to add videos and pair cards, or open settings. You can also press Ctrl+Shift+S or hold an admin card on the reader.'),
+        h('p', { class: 'hint' }, `Run the setup guide to add videos and pair cards, or open settings. You can also press ${SETTINGS_SHORTCUT_LABEL} or hold an admin card on the reader.`),
         h(
           'div',
           { class: 'onboarding-actions' },
@@ -108,18 +122,49 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     );
   };
 
+  /**
+   * Reloads the loop from storage with backoff. One glitch (decoder error, GPU
+   * process restart) must not leave visitors looking at "Setup required" for
+   * the rest of the day; the setup screen only appears once a retry fails too.
+   */
+  const scheduleLoopRetry = (...parts: unknown[]) => {
+    if (disposed || loopRetry !== undefined) return;
+    loopFailures++;
+    const delay = retryDelay(loopFailures, LOOP_RETRY_BASE_MS, LOOP_RETRY_MAX_MS);
+    log.error(...parts, `Reloading it in ${Math.round(delay / 1000)} s.`);
+    if (loopFailures > 1 && state.kind === 'loop') setSetupVisible(true);
+    loopRetry = setTimeout(() => {
+      loopRetry = undefined;
+      loop.clear();
+      void startLoop();
+    }, delay);
+  };
+
   /** (Re)loads the loop video from the current config, or shows the setup screen. */
   const startLoop = async () => {
     const name = ctx.config.get().loopVideo;
-    const file = name ? await ctx.videos.getFile(name).catch((e) => (log.error('Reading loop video failed:', e), null)) : null;
+    let file: File | null = null;
+    if (name) {
+      try {
+        file = await ctx.videos.getFile(name);
+      } catch (e) {
+        scheduleLoopRetry(`Reading loop video "${name}" failed:`, e);
+        return;
+      }
+    }
     if (disposed) return;
     if (!name || !file) {
+      // Nothing to retry: the config or the videos changing calls startLoop again.
       if (name) log.warn(`Loop video "${name}" is not imported on this kiosk.`);
+      clearTimeout(loopRetry);
+      loopRetry = undefined;
+      loopFailures = 0;
       loop.clear();
       setSetupVisible(true);
       return;
     }
-    setSetupVisible(false);
+    // After failures, the setup screen stays up until the loop is seen playing.
+    if (loopFailures === 0) setSetupVisible(false);
     if (loop.fileName !== name) loop.load(file, name);
     if (state.kind === 'loop') await resumeLoop();
   };
@@ -135,13 +180,16 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     try {
       await playWithFallback(loopEl, ctx.diagnostics);
     } catch (e) {
-      if (!isAbort(e)) log.error('Loop video failed to play:', e);
+      if (!isAbort(e)) scheduleLoopRetry(`Loop video "${loop.fileName}" failed to play:`, e);
     }
   };
 
   const playFeature = async (fileName: string) => {
+    // The watchdog may give up on this video and a new scan start another one
+    // while we wait; only the run that still owns the state may act.
+    const started = state;
     const file = await ctx.videos.getFile(fileName).catch((e) => (log.error(`Reading "${fileName}" failed:`, e), null));
-    if (disposed || state.kind !== 'feature') return;
+    if (disposed || state !== started) return;
     if (!file) {
       log.warn(`Video "${fileName}" disappeared from storage.`);
       dispatch({ type: 'featureFailed' });
@@ -155,7 +203,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     try {
       await playWithFallback(featureEl, ctx.diagnostics);
     } catch (e) {
-      if (isAbort(e)) return;
+      if (isAbort(e) || state !== started) return;
       log.error(`Video "${fileName}" failed to play:`, e);
       dispatch({ type: 'featureFailed' });
     }
@@ -181,6 +229,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const dispatch = (event: KioskEvent) => {
     if (disposed) return;
     const next = transition(state, event, { config: ctx.config.get(), hasFile: (n) => ctx.videos.has(n) });
+    if (next.state.kind !== state.kind) watch.reset(performance.now());
     state = next.state;
     view.dataset.state = state.kind;
     next.effects.forEach(run);
@@ -194,14 +243,41 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   });
   loopEl.addEventListener('error', () => {
     if (!loop.fileName) return;
-    log.error(`Loop video "${loop.fileName}" failed:`, loopEl.error?.message ?? 'media error');
-    loop.clear();
-    if (state.kind === 'loop') setSetupVisible(true);
+    scheduleLoopRetry(`Loop video "${loop.fileName}" failed:`, loopEl.error?.message || 'media error');
   });
+
+  /** Catches playback that stops without an `ended` or `error` event. */
+  const checkPlayback = () => {
+    const now = performance.now();
+    // Chrome pauses muted video in a hidden page; that isn't a stall.
+    if (document.hidden) return watch.reset(now);
+    if (state.kind === 'feature') {
+      if (watch.sample(featureEl.currentTime, now) === 'stalled') {
+        log.error(`Video "${state.fileName}" stopped playing; returning to the loop.`);
+        dispatch({ type: 'featureFailed' });
+      }
+      return;
+    }
+    if (!loop.fileName || loopRetry !== undefined) return watch.reset(now);
+    const status = watch.sample(loopEl.currentTime, now);
+    if (status === 'progress' && loopFailures > 0) {
+      loopFailures = 0;
+      setSetupVisible(false);
+    } else if (status === 'stalled') {
+      scheduleLoopRetry(`Loop video "${loop.fileName}" stopped playing.`);
+    }
+  };
+  const watchdog = setInterval(checkPlayback, WATCHDOG_INTERVAL_MS);
+
+  // The reader types into whichever window has focus. Record when that stops
+  // being us, so Diagnostics explains scans that "do nothing".
+  const onBlur = () => log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
+  window.addEventListener('blur', onBlur);
 
   const blockContextMenu = (e: Event) => e.preventDefault();
   view.addEventListener('contextmenu', blockContextMenu);
   const stopFullscreen = keepFullscreen();
+  const stopWakeLock = keepScreenOn();
 
   const unsubscribers = [
     ctx.scanner.scans.subscribe((scan) => dispatch({ type: 'scan', uid: scan.uid })),
@@ -215,6 +291,10 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   return () => {
     disposed = true;
+    clearInterval(watchdog);
+    clearTimeout(loopRetry);
+    window.removeEventListener('blur', onBlur);
+    stopWakeLock();
     stopFullscreen();
     unsubscribers.forEach((u) => u());
     loop.clear();

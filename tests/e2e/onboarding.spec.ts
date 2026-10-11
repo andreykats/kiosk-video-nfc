@@ -61,6 +61,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
 
   // Admin card: video cards are refused, a fresh card is added.
   await expect(step(page, 'admin')).toBeVisible();
+  await expect(step(page, 'admin')).toContainText('Ctrl+Shift+S (Control, not Cmd, on a Mac)');
   await expect(page.getByTestId('onboarding-skip')).toBeVisible();
   await page.waitForTimeout(1600);
   await scan(page, LION_UID);
