@@ -5,14 +5,14 @@
  * window) picks up where the user left off.
  */
 
-export type StepId = 'install' | 'reader' | 'config' | 'addVideos' | 'copyVideos' | 'pair' | 'done';
+export type StepId = 'install' | 'reader' | 'config' | 'addVideos' | 'copyVideos' | 'pair' | 'admin' | 'done';
 
 /** 'new' = config started from scratch here; 'existing' = imported or published. */
 export type ConfigPath = 'new' | 'existing';
 
 export function stepSequence(path: ConfigPath | null): StepId[] {
   const videos: StepId = path === 'existing' ? 'copyVideos' : 'addVideos';
-  return ['install', 'reader', 'config', videos, 'pair', 'done'];
+  return ['install', 'reader', 'config', videos, 'pair', 'admin', 'done'];
 }
 
 export interface ResumeInputs {
@@ -24,7 +24,10 @@ export interface ResumeInputs {
   missingCount: number;
 }
 
-/** The first step that still needs the user. Never 'done': that follows Finish. */
+/**
+ * The first step that still needs the user. Pairing is never "finished" by
+ * itself, so the guide resumes there at the latest; admin and done follow it.
+ */
 export function resumeStep(i: ResumeInputs): StepId {
   if (!i.installed && !i.installSkipped) return 'install';
   if (!i.readerDone) return 'reader';

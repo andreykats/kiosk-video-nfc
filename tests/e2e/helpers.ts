@@ -23,10 +23,24 @@ export const testConfig = {
   adminCards: [{ uid: ADMIN_UID, label: 'Front desk' }],
 };
 
-/** Simulates the reader: a fast hex burst followed by Enter. */
+/**
+ * Simulates the reader: hex keys 5 ms apart, then Enter. Each key carries its
+ * own timestamp (like OS-stamped reader input), and the whole burst is sent in
+ * one go, so a busy test machine can't stretch the gaps and drop the scan.
+ */
 export async function scan(page: Page, uid: string): Promise<void> {
-  await page.keyboard.type(uid, { delay: 5 });
-  await page.keyboard.press('Enter');
+  const cdp = await page.context().newCDPSession(page);
+  const start = Date.now() / 1000;
+  const keys = [...uid].map((ch) => ({ key: ch, code: /\d/.test(ch) ? `Digit${ch}` : `Key${ch.toUpperCase()}`, text: ch }));
+  const sends = [...keys, { key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13 }].flatMap((k, i) => {
+    const timestamp = start + i * 0.005;
+    return [
+      cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', ...k, timestamp }),
+      cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: k.key, code: k.code, timestamp: timestamp + 0.002 }),
+    ];
+  });
+  await Promise.all(sends);
+  await cdp.detach();
 }
 
 export async function openSettings(page: Page): Promise<void> {

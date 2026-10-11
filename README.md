@@ -11,7 +11,7 @@ Full design: [PLAN.md](PLAN.md). Kiosk machine setup: [docs/kiosk-setup.md](docs
 
 ## Using it
 
-On first launch, a **setup guide** walks through each step: install the app, connect the reader, load or start a config, add videos, and pair cards / pick the background loop. You can reopen it from Settings → **Setup guide**.
+On first launch, a **setup guide** walks through each step: install the app, connect the reader, load or start a config, add videos, pair cards / pick the background loop, and pair an admin card. You can reopen it from Settings → **Setup guide**.
 
 | | |
 |---|---|

@@ -246,8 +246,9 @@ Sections, each a plain TS module rendering DOM:
   2. **Connect the NFC reader**: "hold any card on it". Next is enabled once a scan arrives, and the step can be skipped.
   3. **Set up the config**: **Import a config file** or **Start a new config**. **Use the published config** is also offered when the published `config.json` has videos.
   4. New config → **Add videos** (files or a whole folder); the import moves straight on to step 5. Imported or published config → **Copy the videos** (folder import of the listed videos that are missing).
-  5. **Pair videos with cards**: lists the videos. Each row has **Pair card** (scan inline; admin cards are rejected, and a card that already plays another video can be moved) or a **Background loop** checkbox. Only one video can be the loop, and making a video the loop unpairs its cards. Finish is enabled once a loop video is chosen.
-  6. **You're all set**: a summary plus the "Ready to work offline" indicator (§9.3), then **Start kiosk**.
+  5. **Pair videos with cards**: lists the videos. Each row has **Pair card** (scan inline; admin cards are rejected, and a card that already plays another video can be moved) or a **Background loop** checkbox. Only one video can be the loop, and making a video the loop unpairs its cards. Next is enabled once a loop video is chosen.
+  6. **Pair an admin card**: hold a card on the reader and it's added as an admin card. Cards that already play a video are refused, more than one card can be added, and the step can be skipped (the keyboard shortcut still works).
+  7. **You're all set**: a summary plus the "Ready to work offline" indicator (§9.3), then **Start kiosk**.
 
   Settings has a **Setup guide** button that reopens it. If the loop goes missing after setup, the kiosk shows "Setup required" with buttons for the guide and for settings.
 - **Settings checklist:** Install app, Update config, Import videos, Storage persisted, **Ready to work offline ✓** (§9.3). It shows at the top of settings until every item is green.

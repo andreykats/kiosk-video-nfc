@@ -161,7 +161,9 @@ export class KeyboardScanner {
     clearTimeout(this.idleTimer);
     const result = this.parser.feed({
       code: event.code,
-      at: performance.now(),
+      // When the key was pressed, not when this handler ran: a busy main thread
+      // (re-render, import) must not stretch the gaps inside a reader burst.
+      at: event.timeStamp,
       repeat: event.repeat,
       ctrlKey: event.ctrlKey,
       altKey: event.altKey,

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { FIXTURES, LION_UID, scan, testConfig, waitForPlaying } from './helpers';
+import { ADMIN_UID, FIXTURES, LION_UID, scan, testConfig, waitForPlaying } from './helpers';
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
 const next = (page: Page) => page.getByTestId('onboarding-next').click();
@@ -7,7 +7,7 @@ const next = (page: Page) => page.getByTestId('onboarding-next').click();
 async function throughReader(page: Page) {
   await page.goto('./');
   await expect(step(page, 'install')).toBeVisible();
-  await expect(step(page, 'install')).toContainText('Step 1 of 6');
+  await expect(step(page, 'install')).toContainText('Step 1 of 7');
   await page.getByTestId('onboarding-skip').click();
 
   await expect(step(page, 'reader')).toBeVisible();
@@ -29,7 +29,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await expect(step(page, 'pair')).toBeVisible();
   const rows = page.getByTestId('pair-table').locator('tr');
   await expect(rows).toHaveCount(3);
-  await expect(page.getByTestId('onboarding-finish')).toBeDisabled();
+  await expect(page.getByTestId('onboarding-next')).toBeDisabled();
 
   await page.getByLabel('Use loop.mp4 as background loop').check();
   await expect(page.locator('tr[data-file="loop.mp4"]')).toContainText('Plays on repeat');
@@ -49,7 +49,18 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await expect(page.locator(`tr[data-file="tiger.mp4"] .chip[data-uid="${LION_UID}"]`)).toBeVisible();
   await expect(page.locator('tr[data-file="lion.mp4"] .chip')).toHaveCount(0);
 
-  await page.getByTestId('onboarding-finish').click();
+  await next(page);
+
+  // Admin card: video cards are refused, a fresh card is added.
+  await expect(step(page, 'admin')).toBeVisible();
+  await expect(page.getByTestId('onboarding-skip')).toBeVisible();
+  await page.waitForTimeout(1600);
+  await scan(page, LION_UID);
+  await expect(page.getByTestId('admin-message')).toContainText('Use a different card for admin');
+  await scan(page, 'AABBCCDD');
+  await expect(page.getByTestId('admin-cards').locator('[data-uid="AABBCCDD"]')).toBeVisible();
+  await next(page);
+
   await expect(step(page, 'done')).toContainText('3 video(s) and 1 card(s). Background loop: loop.');
   await page.getByTestId('onboarding-start').click();
 
@@ -57,6 +68,11 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await page.waitForTimeout(1600);
   await scan(page, LION_UID);
   await waitForPlaying(page, 'feature-video', 'tiger.mp4');
+
+  // The admin card added in the guide opens settings.
+  await scan(page, 'AABBCCDD');
+  await expect(page.getByTestId('settings')).toBeVisible();
+  await page.getByTestId('back-to-kiosk').click();
 
   // Finished: reloading goes straight to the kiosk, not the guide.
   await page.reload();
@@ -74,7 +90,11 @@ test('first launch: import config file → copy videos → review pairings', asy
   await expect(step(page, 'pair')).toBeVisible();
   await expect(page.getByLabel('Use loop.mp4 as background loop')).toBeChecked();
   await expect(page.locator(`tr[data-file="lion.mp4"] .chip[data-uid="${LION_UID}"]`)).toBeVisible();
-  await page.getByTestId('onboarding-finish').click();
+  await next(page);
+
+  // The imported config already has an admin card.
+  await expect(step(page, 'admin').locator(`[data-uid="${ADMIN_UID}"]`)).toBeVisible();
+  await next(page);
   await page.getByTestId('onboarding-start').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
 });

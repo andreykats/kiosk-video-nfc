@@ -15,8 +15,9 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
       - With a new config, choose the video files (or a folder).
       - With an existing config, choose the folder. The guide copies the videos the config lists.
    5. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Background loop** on the one video that plays on repeat.
-   6. **You're all set.** Check that it shows **Ready to work offline ✓**, then press **Start kiosk**.
-3. Open settings (**Ctrl+Alt+Shift+S**; Ctrl+Option+Shift+S on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, make sure the app is installed, then reopen settings. You can also add admin cards here.
+   6. **Pair an admin card.** Hold the card staff will use to open settings. You can add more than one, or press Skip and use the keyboard shortcut instead.
+   7. **You're all set.** Check that it shows **Ready to work offline ✓**, then press **Start kiosk**.
+3. Open settings (**Ctrl+Alt+Shift+S**; Ctrl+Option+Shift+S on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, make sure the app is installed, then reopen settings.
 4. On the first kiosk, go to Config → **Export config** and publish the file (see the README), so that the other kiosks can use it.
 5. Set the launch command to run at login (see the sections below):
    ```

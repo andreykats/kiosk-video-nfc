@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/context';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { cardsForVideo, findAdminCard, findCard, findVideo, pairCard, removeCard, setLoopVideo, useAsLoopInstead } from '../config/ops';
+import { addAdminCard, cardsForVideo, findAdminCard, findCard, findVideo, pairCard, removeAdminCard, removeCard, setLoopVideo, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { fetchPublishedConfig, readConfigFile } from '../config/sync';
@@ -529,13 +529,67 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
           h('div', { class: 'toolbar' }, h('button', { type: 'button', disabled: busy, onclick: () => filesInput.click() }, 'Add more videos')),
           filesInput,
           progress,
-          loopReady ? null : p('Tick Background loop on one video to finish.', 'hint'),
+          loopReady ? null : p('Tick Background loop on one video to continue.', 'hint'),
         ],
-        primary: { label: 'Finish', onClick: nav.next, disabled: !loopReady || busy || pairing !== null, testId: 'onboarding-finish' },
+        primary: { label: 'Next', onClick: nav.next, disabled: !loopReady || busy || pairing !== null, testId: 'onboarding-next' },
       }),
     );
   }
 
+  return view;
+}
+
+function adminStep(ctx: AppContext, nav: Nav): StepView {
+  let message: { text: string; kind: 'error' | 'success' } | null = null;
+
+  const unsubscribe = ctx.scanner.scans.subscribe(async (scan) => {
+    const config = ctx.config.get();
+    const card = findCard(config, scan.uid);
+    if (card) {
+      message = { text: `${formatUid(scan.uid)} plays “${findVideo(config, card.fileName)?.title || card.fileName}”. Use a different card for admin.`, kind: 'error' };
+    } else if (findAdminCard(config, scan.uid)) {
+      message = { text: `${formatUid(scan.uid)} is already an admin card.`, kind: 'error' };
+    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { uid: scan.uid, label: `Admin card ${c.adminCards.length + 1}` }))) {
+      message = { text: `Added ${formatUid(scan.uid)} as an admin card ✓`, kind: 'success' };
+    }
+    view.rerender();
+  });
+
+  const view = reactiveStep(
+    (el) => {
+      const admins = ctx.config.get().adminCards;
+      replaceChildren(
+        el,
+        stepCard(nav, 'admin', {
+          title: 'Pair an admin card',
+          body: [
+            p('Staff hold an admin card on the reader to open settings. Hold the card you want to use on the reader now.'),
+            h('p', { class: 'waiting', 'data-testid': 'admin-waiting' }, admins.length === 0 ? 'Waiting for a card…' : 'Hold another card to add more, or press Next.'),
+            message ? h('p', { class: message.kind, 'data-testid': 'admin-message' }, message.text) : null,
+            admins.length > 0
+              ? h(
+                  'div',
+                  { 'data-testid': 'admin-cards' },
+                  ...admins.map((a) =>
+                    h(
+                      'span',
+                      { class: 'chip mono', 'data-uid': a.uid },
+                      formatUid(a.uid),
+                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin card ${a.uid}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.uid)) }, '×'),
+                    ),
+                  ),
+                )
+              : null,
+            p('Without an admin card, settings can still be opened with Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
+          ],
+          primary: admins.length > 0 ? { label: 'Next', onClick: nav.next, testId: 'onboarding-next' } : undefined,
+          secondary: admins.length > 0 ? undefined : { label: 'Skip', onClick: nav.next, testId: 'onboarding-skip' },
+        }),
+      );
+    },
+    [(l) => ctx.config.changed.subscribe(l)],
+    unsubscribe,
+  );
   return view;
 }
 
@@ -552,7 +606,7 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
         body: [
           p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${loop?.title || config.loopVideo || 'none'}.`),
           offline.el,
-          p('Open settings any time with Ctrl+Alt+Shift+S. You can add admin cards there, so staff can open settings by holding a card on the reader.', 'hint'),
+          p('To open settings, hold an admin card on the reader or press Ctrl+Alt+Shift+S (Ctrl+Option+Shift+S on a Mac).', 'hint'),
           nav.path() === 'new'
             ? p('To use this setup on other kiosks, open settings → Config → Export config, and publish the file.', 'hint')
             : null,
@@ -578,6 +632,7 @@ const STEPS: Record<StepId, (ctx: AppContext, nav: Nav) => StepView> = {
   addVideos: addVideosStep,
   copyVideos: copyVideosStep,
   pair: pairStep,
+  admin: adminStep,
   done: doneStep,
 };
 
