@@ -19,7 +19,9 @@ function resolveBase(raw: string | undefined): string {
 export default defineConfig({
   base: resolveBase(process.env.BASE_PATH),
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    // The deploy workflow passes the release number (see deploy.yml); anything
+    // built locally is marked as a dev build.
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION?.trim() || `${pkg.version}-dev`),
   },
   plugins: [
     VitePWA({

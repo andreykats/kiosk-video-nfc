@@ -11,7 +11,7 @@ async function throughReader(page: Page) {
   await page.goto('./');
   await expect(step(page, 'install')).toBeVisible();
   await expect(step(page, 'install')).toContainText('Step 1 of 7');
-  await expect(page.getByTestId('onboarding-version')).toHaveText(/^v\d+\.\d+\.\d+$/);
+  await expect(page.getByTestId('onboarding-version')).toHaveText(/^v\d+\.\d+\.\d+(-dev)?$/);
   await page.getByTestId('onboarding-skip').click();
 
   await expect(step(page, 'reader')).toBeVisible();

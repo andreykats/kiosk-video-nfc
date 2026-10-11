@@ -116,6 +116,8 @@ window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }));
 
 `.github/workflows/deploy.yml` runs the unit tests, builds, and deploys to GitHub Pages on every push to `main`. In the repo, **Settings → Pages → Source** is set to **GitHub Actions**, with the custom domain `topps.drey.dev` and HTTPS enforced.
 
+Every deploy gets the next version number: v1.0.1, v1.0.2, and so on. The workflow finds the highest `v1.0.N` tag, builds with `1.0.(N+1)`, and pushes that tag once the deploy succeeds. The version shows in the settings header and on step 1 of the setup guide. To start a new series (e.g. v1.1.1), change `version` in `package.json` to `1.1.0`. Local builds show `<package version>-dev`.
+
 The workflow sets Vite's `base` from the Pages path, which is `/` on the custom domain. Local builds default to `/topps-nfc-kiosk/`, which you can override with `BASE_PATH=/other-name npm run build`.
 
 `config.json` is never precached by the service worker, so **Update from published config** would always fetch the latest file if it's switched back on.

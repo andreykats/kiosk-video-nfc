@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # write: to push the version tag after a successful deploy.
+  contents: write
   pages: write
   id-token: write
 
@@ -36,11 +37,21 @@ jobs:
         uses: actions/configure-pages@v6
       - name: Unit tests
         run: npm test
+      # Each deploy is the next patch number after the highest v<major>.<minor>.N
+      # tag (major.minor from package.json). The tag is only pushed once the
+      # deploy succeeds, so failed or cancelled runs don't use up a number.
+      - name: Pick version
+        id: version
+        run: |
+          base=$(node -p "require('./package.json').version.split('.').slice(0, 2).join('.')")
+          last=$(git ls-remote --tags --refs origin "v$base.*" | sed -E "s#^.*/v$base\.##" | grep -E '^[0-9]+$' | sort -n | tail -1)
+          echo "version=$base.$(( ${last:-0} + 1 ))" >> "$GITHUB_OUTPUT"
       - name: Build
         run: npm run build
         env:
           # "/<repo>" for a project site; vite.config.ts normalises it.
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          APP_VERSION: ${{ steps.version.outputs.version }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
@@ -48,3 +59,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Tag the deployed version
+        run: |
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
