@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/context';
 import { errorMessage, log } from '../app/log';
 import type { Config } from '../config/schema';
-import { downloadConfig, fetchPublishedConfig, readConfigFile, summarizeConfig } from '../config/sync';
+import { downloadConfig, fetchPublishedConfig, readConfigFile, summarizeConfig, PUBLISHED_CONFIG_ENABLED } from '../config/sync';
 import type { Result } from '../result';
 import { confirmDialog, errorList, messageDialog } from '../ui/dialog';
 import { formatDate, h, replaceChildren } from '../ui/dom';
@@ -62,8 +62,10 @@ export function renderConfigSection(ctx: AppContext): Section {
   const updateButton = h('button', {
     type: 'button',
     'data-testid': 'update-published',
+    disabled: !PUBLISHED_CONFIG_ENABLED,
+    title: PUBLISHED_CONFIG_ENABLED ? null : 'Not in use. Copy configs between kiosks with Export config and Import config from file.',
     onclick: async () => {
-      if (updating) return;
+      if (updating || !PUBLISHED_CONFIG_ENABLED) return;
       updating = true;
       updateButton.disabled = true;
       updateButton.textContent = 'Downloading…';
@@ -102,7 +104,13 @@ export function renderConfigSection(ctx: AppContext): Section {
       fileInput,
     ),
     status,
-    h('p', { class: 'hint' }, 'To share changes: Export config, upload it to public/config.json in the GitHub repo, wait for the deploy, then Update on each kiosk.'),
+    h(
+      'p',
+      { class: 'hint' },
+      PUBLISHED_CONFIG_ENABLED
+        ? 'To share changes: Export config, upload it to public/config.json in the GitHub repo, wait for the deploy, then Update on each kiosk.'
+        : 'To share changes: Export config, then use Import config from file on each kiosk.',
+    ),
   );
   return reactiveSection(el, render, [(l) => ctx.config.changed.subscribe(l)]);
 }

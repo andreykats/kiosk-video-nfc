@@ -2,6 +2,13 @@ import { errorMessage } from '../app/log';
 import { err, type Result } from '../result';
 import { validateConfig, type Config } from './schema';
 
+/**
+ * Applying the published config.json ("Update from published config") is
+ * switched off for now: configs are copied between kiosks as files. The code
+ * stays so it can be turned back on by setting this to true.
+ */
+export const PUBLISHED_CONFIG_ENABLED = false;
+
 /** Largest config file we'll parse; real configs are a few KB. */
 const MAX_CONFIG_BYTES = 5 * 1024 * 1024;
 

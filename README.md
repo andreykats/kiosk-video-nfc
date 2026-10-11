@@ -24,17 +24,18 @@ On first launch, a **setup guide** walks through each step: install the app, con
 
 Scanning a card while a card video is playing does nothing. An admin card still opens settings.
 
-## Publishing config changes
+## Sharing config changes
 
-Kiosks never apply config changes on their own. To roll out a change:
+Kiosks never apply config changes on their own. Configs are copied between kiosks as files. To roll out a change:
 
 1. On the kiosk where you made the changes, open Settings → Config → **Export config**. This downloads `config.json`.
-2. In the GitHub repo, open `public/`, choose **Add file → Upload files**, upload `config.json` to replace the old one, and commit to `main`.
-3. GitHub Actions redeploys the site, which takes about 1–2 minutes (see the **Actions** tab).
-4. On each kiosk, open Settings → Config → **Update from published config**, check the summary, and confirm.
-5. If the summary lists videos that are missing on that kiosk, use Videos → **Import folder** to copy them.
+2. Copy `config.json` to each of the other kiosks, for example on the USB stick with the videos.
+3. On each kiosk, open Settings → Config → **Import config from file**, pick the file, check the summary, and confirm.
+4. If the summary lists videos that are missing on that kiosk, use Videos → **Import folder** to copy them.
 
-"Update" and "Import config from file" replace the kiosk's config completely. Any changes made locally on that kiosk are lost, and the confirm dialog warns about this.
+**Update from published config** is shown in settings but switched off. When it's on, it applies `public/config.json` from this repo instead of a file. To turn it back on, set `PUBLISHED_CONFIG_ENABLED` to `true` in `src/config/sync.ts`.
+
+Importing a config replaces the kiosk's config completely. Any changes made locally on that kiosk are lost, and the confirm dialog warns about this.
 
 A video's `fileName` is its identity on every kiosk. Each kiosk must import a file with exactly that name.
 

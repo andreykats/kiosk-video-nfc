@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { PUBLISHED_CONFIG_ENABLED } from '../../src/config/sync';
 import { openSettings, setUpKiosk, waitForPlaying } from './helpers';
 
 const offlineReady = (page: import('@playwright/test').Page) => page.getByTestId('offline-ready');
@@ -18,9 +19,11 @@ test('becomes ready to work offline, then runs with no network', async ({ page, 
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
 
   // Updating while offline fails cleanly and keeps the config.
-  await page.keyboard.press('Control+Alt+Shift+KeyS');
-  await page.getByTestId('update-published').click();
-  await expect(page.locator('dialog[open]')).toContainText('The current config was kept.');
+  if (PUBLISHED_CONFIG_ENABLED) {
+    await page.keyboard.press('Control+Alt+Shift+KeyS');
+    await page.getByTestId('update-published').click();
+    await expect(page.locator('dialog[open]')).toContainText('The current config was kept.');
+  }
 });
 
 test('readiness turns red when a video or the app cache is missing', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { PUBLISHED_CONFIG_ENABLED } from '../../src/config/sync';
 import { readFile } from 'node:fs/promises';
 import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testConfig } from './helpers';
 
@@ -91,7 +92,14 @@ test('invalid config files are rejected and the current config is kept', async (
   await expect(page.locator('[data-testid="cards-table"] tbody tr')).toHaveCount(2);
 });
 
+test('update from published config is shown but disabled', async ({ page }) => {
+  await openSettings(page);
+  await expect(page.getByTestId('update-published')).toBeVisible();
+  await expect(page.getByTestId('update-published')).toBeDisabled();
+});
+
 test('update from published config fetches config.json fresh and applies it', async ({ page, context }) => {
+  test.skip(!PUBLISHED_CONFIG_ENABLED, 'Publishing is switched off (PUBLISHED_CONFIG_ENABLED)');
   let requests = 0;
   await context.route('**/config.json', (route) => {
     requests++;

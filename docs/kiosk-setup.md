@@ -1,6 +1,6 @@
 # Kiosk machine setup
 
-Follow these steps once on each kiosk computer. Replace `<url>` with the published site, e.g. `https://andreykats.github.io/topps-nfc-kiosk/`.
+Follow these steps once on each kiosk computer. Replace `<url>` with the published site, e.g. `https://topps.drey.dev/`.
 
 ## Both Windows and macOS
 
@@ -18,7 +18,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
    6. **Pair an admin card.** Hold the card staff will use to open settings. You can add more than one, or press Skip and use the keyboard shortcut instead.
    7. **You're all set.** Check that it shows **Ready to work offline ✓**. On the first kiosk, press **Export config** to save `config.json` for the other kiosks. Then press **Start kiosk**.
 3. Open settings (**Ctrl+Alt+Shift+S**; Ctrl+Option+Shift+S on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, make sure the app is installed, then reopen settings.
-4. On the first kiosk, publish the exported `config.json` (see the README) so the other kiosks can use it, or copy it to the USB stick for **Import a config file**. If you skipped the export, it's also in Settings → Config → **Export config**.
+4. On the first kiosk, copy the exported `config.json` to the USB stick, so the other kiosks can use **Import a config file**. If you skipped the export, it's also in Settings → Config → **Export config**.
 5. Set the launch command to run at login (see the sections below):
    ```
    chrome --kiosk --autoplay-policy=no-user-gesture-required <url>
