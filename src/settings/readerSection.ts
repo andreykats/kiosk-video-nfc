@@ -10,7 +10,6 @@ export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-br
 const MODE_LABELS: Record<ReaderMode, string> = {
   keyboard: 'Keyboard (HID) — the reader types the card UID',
   bridge: 'Bridge app — also reads card IDs; needs the NFC Browser Bridge app',
-  auto: 'Automatic — the bridge app when it’s running, otherwise keyboard',
 };
 
 /** One line describing the bridge connection, for settings and diagnostics. */
@@ -37,9 +36,8 @@ export function bridgeStatusText(ctx: AppContext): string {
 }
 
 /**
- * Mode select, bridge status and the Connect button. Connecting is always a
- * staff action here, so Chrome's "Apps on device" prompt appears while someone
- * is at the kiosk to answer it.
+ * Mode select and bridge status. Choosing Bridge app connects straight away, so
+ * Chrome's "Apps on device" prompt appears while staff are there to answer it.
  */
 export function readerControls(ctx: AppContext): Section {
   const el = h('div', { class: 'reader-controls', 'data-testid': 'reader-controls' });
@@ -54,7 +52,7 @@ export function readerControls(ctx: AppContext): Section {
     select.addEventListener('change', () => {
       if (isReaderMode(select.value)) ctx.scanner.setMode(select.value);
     });
-    const usesBridge = mode !== 'keyboard';
+    const usesBridge = mode === 'bridge';
     replaceChildren(
       el,
       h('label', {}, 'Card reader input ', select),
@@ -65,23 +63,12 @@ export function readerControls(ctx: AppContext): Section {
             h('p', {}, 'Bridge app: ', h('strong', { 'data-testid': 'bridge-status', 'data-state': status.state }, bridgeStatusText(ctx))),
             status.state === 'connected'
               ? null
-              : h(
-                  'p',
-                  {},
-                  h('button', { type: 'button', class: 'primary', 'data-testid': 'bridge-connect', onclick: () => ctx.scanner.connectBridge() }, 'Connect to bridge app'),
-                  ' ',
-                  h('a', { href: BRIDGE_DOWNLOAD_URL, target: '_blank', rel: 'noopener' }, 'Download the bridge app'),
-                ),
+              : h('p', {}, h('a', { href: BRIDGE_DOWNLOAD_URL, target: '_blank', rel: 'noopener' }, 'Download the bridge app')),
             ctx.scanner.permission === 'denied'
               ? h('p', { class: 'banner banner-warn' }, 'Chrome is blocking this site from reaching the bridge app. Click the site settings icon left of the address bar, set “Apps on device” to Allow, then reload.')
               : h('p', { class: 'hint' }, 'The first connection makes Chrome ask to allow “Apps on device”. Choose Allow.'),
           )
         : null,
-      h(
-        'p',
-        { class: 'hint', 'data-testid': 'reader-source' },
-        `Cards are read from ${ctx.scanner.activeSource === 'bridge' ? 'the bridge app' : 'the keyboard (the reader typing the UID)'}.`,
-      ),
     );
   };
   return reactiveSection(el, render, [(l) => ctx.scanner.changed.subscribe(l)]);

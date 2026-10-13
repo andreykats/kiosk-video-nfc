@@ -13,7 +13,7 @@ const AUTOPLAY_TEXT = {
   blocked: 'Blocked — videos cannot autoplay. Launch Chrome with --autoplay-policy=no-user-gesture-required.',
 } as const;
 
-const READER_MODE_TEXT = { keyboard: 'Keyboard (HID)', bridge: 'Bridge app', auto: 'Automatic' } as const;
+const READER_MODE_TEXT = { keyboard: 'Keyboard (HID)', bridge: 'Bridge app' } as const;
 
 function row(label: string, value: Node | string, testId?: string): HTMLElement {
   return h('div', { class: 'diag-row' }, h('dt', {}, label), h('dd', { 'data-testid': testId }, value));
@@ -71,7 +71,7 @@ export function renderDiagnostics(ctx: AppContext): Section {
         storage?.usage != null && storage.quota != null ? `${formatBytes(storage.usage)} used of ${formatBytes(storage.quota)}` : 'unknown',
       ),
       row('Persisted', storage?.persisted == null ? 'unknown' : storage.persisted ? 'yes' : 'no — install the app to make storage persistent', 'diag-persisted'),
-      row('Card reader', `${READER_MODE_TEXT[ctx.scanner.mode]}; reading from ${ctx.scanner.activeSource === 'bridge' ? 'the bridge app' : 'the keyboard'}`, 'diag-reader'),
+      row('Card reader', READER_MODE_TEXT[ctx.scanner.mode], 'diag-reader'),
       ctx.scanner.mode === 'keyboard' ? null : row('Bridge app', bridgeStatusText(ctx), 'diag-bridge'),
       row(
         'Last scanned UID',

@@ -149,11 +149,11 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 
 ### 6.3 Bridge app and reader modes (`src/scan/cardInput.ts`, `src/scan/bridge/`)
 
-- `CardInput` is the app's single scan source (`ctx.scanner`). Per-kiosk mode in localStorage `kiosk.readerMode`: `keyboard` (default), `bridge`, `auto`.
-- The keyboard scanner always listens, so reader bursts never type into inputs; its scans only count when the keyboard is the active source.
-- `keyboard` never opens the WebSocket. `auto` connects only once Chrome's `loopback-network` ("Apps on device") permission is `granted`, so the prompt never appears on the visitor screen; staff connect explicitly from Settings or the setup guide.
+- `CardInput` is the app's single scan source (`ctx.scanner`). Per-kiosk mode, chosen manually by staff, in localStorage `kiosk.readerMode`: `keyboard` (default) or `bridge`. There is no automatic switching between them.
+- The keyboard scanner always listens, so reader bursts never type into inputs; its scans only count in `keyboard` mode.
+- `keyboard` never opens the WebSocket. `bridge` connects as soon as staff choose it (Settings or the setup guide), so Chrome's `loopback-network` ("Apps on device") prompt appears while they're there. The permission state is only read to explain a denied permission.
 - `BridgeScanner` wraps the bridge's TypeScript client, copied into `src/scan/bridge/vendor/` (don't edit there; re-copy from the bridge repo). On each new tap on a non-SAM reader it reads the NDEF message (NFC Forum Type 2 cards only, 1.5 s timeout) and emits `{ uid, ndefKey, records, source: 'bridge' }`. Cards already on the reader when the connection opens are not taps. Same UID within 1.5 s is ignored.
-- The focus notice only shows while the keyboard is the active source. In `bridge` mode the kiosk shows "Card reader not available" while the bridge app or the reader is missing.
+- The focus notice only shows in `keyboard` mode. In `bridge` mode the kiosk shows "Card reader not available" while the bridge app or the reader is missing.
 
 ## 7. Kiosk view and playback state machine
 

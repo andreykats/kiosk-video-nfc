@@ -38,10 +38,9 @@ function setup(mode: ReaderMode, permission: PermissionState | null = 'prompt') 
 
 describe('CardInput', () => {
   it('keyboard mode never contacts the bridge', async () => {
-    const { fake, input, scans, typeUid } = setup('keyboard', 'granted');
+    const { fake, scans, typeUid } = setup('keyboard', 'granted');
     await tick(5000);
     expect(fake.connections).toBe(0);
-    expect(input.activeSource).toBe('keyboard');
     typeUid('04A23B1C');
     expect(scans.map((s) => s.uid)).toEqual(['04A23B1C']);
   });
@@ -50,57 +49,39 @@ describe('CardInput', () => {
     const { fake, input, scans, typeUid } = setup('bridge');
     await tick();
     expect(fake.connections).toBe(1);
-    expect(input.activeSource).toBe('bridge');
+    expect(input.bridgeReady).toBe(true);
     typeUid('04A23B1C');
     fake.placeCard(R, FakeTag.ntag('NTAG213'));
     await tick();
     expect(scans.map((s) => s.source)).toEqual(['bridge']);
   });
 
-  it('automatic mode does not connect until the permission is granted, so Chrome never prompts by itself', async () => {
-    const { fake, input, perm } = setup('auto', 'prompt');
-    await tick(5000);
-    expect(fake.connections).toBe(0);
-    expect(input.activeSource).toBe('keyboard');
+  it('keyboard mode stays on the keyboard even when Chrome already allows the bridge', async () => {
+    const { fake, perm, input } = setup('keyboard', 'granted');
     perm!.set('granted');
-    await tick();
-    expect(fake.connections).toBe(1);
-    expect(input.activeSource).toBe('bridge');
-  });
-
-  it('automatic mode does not connect when the permission state is unknown', async () => {
-    const { fake } = setup('auto', null);
     await tick(5000);
     expect(fake.connections).toBe(0);
+    expect(input.permission).toBe('granted');
   });
 
-  it('automatic mode uses the keyboard while the bridge is down or has no reader', async () => {
-    const { fake, input, scans, typeUid } = setup('auto', 'granted');
+  it('bridge mode stays on the bridge while it is down: keyboard scans never take over', async () => {
+    const { fake, input, scans, typeUid } = setup('bridge');
     await tick();
-    expect(input.activeSource).toBe('bridge');
+    fake.stop();
+    await tick(5000);
     typeUid('04A23B1C');
     expect(scans).toEqual([]);
-
-    fake.removeReader(R);
-    await tick();
-    expect(input.activeSource).toBe('keyboard');
-    typeUid('04A23B1C');
-    expect(scans.map((s) => s.source)).toEqual(['keyboard']);
-
-    fake.addReader(R);
-    await tick();
-    expect(input.activeSource).toBe('bridge');
-    fake.stop();
-    await tick();
-    expect(input.activeSource).toBe('keyboard');
+    expect(input.bridgeReady).toBe(false);
   });
 
-  it('connectBridge connects in automatic mode before the permission is granted (staff action)', async () => {
-    const { fake, input } = setup('auto', 'prompt');
-    await tick();
-    input.connectBridge();
+  it('reports the permission state without acting on it', async () => {
+    const { fake, input, perm } = setup('bridge', 'prompt');
     await tick();
     expect(fake.connections).toBe(1);
+    perm!.set('denied');
+    await tick();
+    expect(input.permission).toBe('denied');
+    expect(input.mode).toBe('bridge');
   });
 
   it('switching modes saves the mode and applies it live', async () => {

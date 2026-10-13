@@ -79,19 +79,18 @@ A video's `fileName` is its identity on every kiosk. Each kiosk must import a fi
 
 ## Reader configuration
 
-Choose the input in Settings → **Card reader** (the setup guide asks on its reader step). The choice is stored on each kiosk, not in the shared config.
+Staff choose the input in Settings → **Card reader** (the setup guide asks on its reader step). The kiosk never switches by itself. The choice is stored on each kiosk, not in the shared config.
 
 | Mode | When to use it |
 |---|---|
 | **Keyboard (HID)** (default) | No software can be installed on the kiosk. Cards are matched by UID only. |
 | **Bridge app** | The bridge app is installed. Cards can be matched by card ID or UID. If the bridge app or the reader is missing, the kiosk screen says so. |
-| **Automatic** | Uses the bridge app while it's running with a reader attached, otherwise the keyboard. It only connects once Chrome has been allowed to (see below), so it never pops up a prompt on the visitor screen. |
 
 ### Bridge app
 
 1. Install the bridge app from its [Releases page](https://github.com/andreykats/nfc-browser-bridge/releases) and let it start at login (see its README).
 2. Keep the reader in its factory **CCID** mode. No ACS tool needed.
-3. In Settings → **Card reader**, choose **Bridge app** and press **Connect to bridge app**. Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to `https://topps.drey.dev`.
+3. In Settings → **Card reader**, choose **Bridge app**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to `https://topps.drey.dev`.
 4. Hold a card on the reader. Settings → Diagnostics shows its UID, card ID and NDEF records.
 
 ### Card IDs
@@ -101,7 +100,7 @@ A **card ID** is the value of the card's first **URI** record (the full URL), or
 - **Card ID:** every card written with the same ID plays the same video. Use it for batches of identical cards.
 - **UID:** only that physical card. Admin cards default to the UID, so a card ID shared by visitor cards can never open settings.
 
-Cards paired by card ID only work on kiosks in Bridge app (or Automatic) mode; Settings warns on keyboard-mode kiosks. When a card matches both ways, admin cards win over video cards, and the card ID wins over the UID.
+Cards paired by card ID only work on kiosks in Bridge app mode; Settings warns on keyboard-mode kiosks. When a card matches both ways, admin cards win over video cards, and the card ID wins over the UID.
 
 ### Keyboard (HID) mode on the ACR1552U
 

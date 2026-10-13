@@ -35,7 +35,7 @@ async function tap(page: Page, fake: FakeBridge, tag: FakeTag): Promise<void> {
   fake.removeCard(READER);
 }
 
-async function setReaderMode(page: Page, mode: 'keyboard' | 'bridge' | 'auto'): Promise<void> {
+async function setReaderMode(page: Page, mode: 'keyboard' | 'bridge'): Promise<void> {
   await page.getByTestId('reader-mode').selectOption(mode);
 }
 
@@ -127,6 +127,8 @@ test('keyboard mode never opens a connection to the bridge, and the mode is kept
   const { connections } = await useFakeBridge(page);
   await setUpKiosk(page);
   await expect(page.getByTestId('reader-mode')).toHaveValue('keyboard');
+  // Reader setup is manual: only Keyboard and Bridge app are offered.
+  await expect(page.getByTestId('reader-mode').locator('option')).toHaveText([/^Keyboard \(HID\)/, /^Bridge app/]);
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
   await scan(page, LION_UID);

@@ -286,13 +286,13 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   // back) and record it for Diagnostics. Scans from the bridge app don't need focus.
   let focusLost = !document.hasFocus();
   const updateFocusNotice = () => {
-    const shown = focusLost && ctx.scanner.activeSource === 'keyboard';
+    const shown = focusLost && ctx.scanner.mode === 'keyboard';
     focusEl.hidden = !shown;
     view.classList.toggle('unfocused', shown);
   };
   const onBlur = () => {
     focusLost = true;
-    if (ctx.scanner.activeSource === 'keyboard') log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
+    if (ctx.scanner.mode === 'keyboard') log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
     updateFocusNotice();
   };
   const onFocus = () => {

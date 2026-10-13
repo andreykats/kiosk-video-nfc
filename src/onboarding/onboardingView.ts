@@ -170,7 +170,7 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
                   scanned.ndefKey !== null ? ` with card ID ${scanned.ndefKey}` : '',
                 )
               : h('p', { class: 'waiting', 'data-testid': 'reader-status' }, 'Waiting for a card…'),
-            ctx.scanner.activeSource === 'keyboard'
+            ctx.scanner.mode === 'keyboard'
               ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, card reads are lost.', 'hint')
               : null,
           ],

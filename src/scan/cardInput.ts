@@ -33,9 +33,9 @@ export interface CardInputDeps {
 }
 
 /**
- * The app's single source of card scans. The keyboard scanner always listens,
- * so a reader in HID mode never types into inputs, but its scans only count
- * when the keyboard is the active source.
+ * The app's single source of card scans, from the input staff chose for this
+ * kiosk. The keyboard scanner always listens, so a reader in HID mode never
+ * types into inputs, but its scans only count in keyboard mode.
  */
 export class CardInput {
   readonly scans = new Emitter<ScanEvent>();
@@ -56,10 +56,10 @@ export class CardInput {
     this.saveMode = deps.saveMode ?? writeReaderMode;
     this.unsubscribers = [
       this.keyboard.scans.subscribe((scan) => {
-        if (this.activeSource === 'keyboard') this.scans.emit(scan);
+        if (this.mode_ === 'keyboard') this.scans.emit(scan);
       }),
       this.bridge.scans.subscribe((scan) => {
-        if (this.activeSource === 'bridge') this.scans.emit(scan);
+        if (this.mode_ === 'bridge') this.scans.emit(scan);
       }),
       this.bridge.changed.subscribe(() => this.changed.emit()),
     ];
@@ -85,27 +85,12 @@ export class CardInput {
     return s.state === 'connected' && s.service === 'ready' && usableReaders(s.readers).length > 0;
   }
 
-  /** Where scans are taken from right now. */
-  get activeSource(): 'keyboard' | 'bridge' {
-    if (this.mode_ === 'auto') return this.bridgeReady ? 'bridge' : 'keyboard';
-    return this.mode_;
-  }
-
   setMode(mode: ReaderMode): void {
     if (mode === this.mode_) return;
     this.mode_ = mode;
     this.saveMode(mode);
     this.apply();
     this.changed.emit();
-  }
-
-  /**
-   * Connects to the bridge now, whatever the mode. For staff: in Chrome the
-   * first connection shows the "Apps on device" prompt, which must never pop
-   * up on the visitor screen by itself.
-   */
-  connectBridge(): void {
-    this.bridge.start();
   }
 
   destroy(): void {
@@ -115,20 +100,19 @@ export class CardInput {
     this.keyboard.destroy();
   }
 
+  /** Only bridge mode connects. In Chrome the first connection shows the "Apps on device" prompt. */
   private apply(): void {
-    if (this.mode_ === 'keyboard') this.bridge.stop();
-    else if (this.mode_ === 'bridge') this.bridge.start();
-    // Automatic only connects once the permission is granted, so it can't prompt by itself.
-    else if (this.permission_ === 'granted') this.bridge.start();
+    if (this.mode_ === 'bridge') this.bridge.start();
+    else this.bridge.stop();
   }
 
+  /** Tracked only to tell staff when Chrome is blocking the bridge. */
   private async watchPermission(query: () => Promise<PermissionStatusLike | null>): Promise<void> {
     const status = await query().catch(() => null);
     if (!status) return;
     this.permissionStatus = status;
     const update = () => {
       this.permission_ = status.state;
-      this.apply();
       this.changed.emit();
     };
     status.onchange = update;

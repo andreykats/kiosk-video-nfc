@@ -1,5 +1,7 @@
 # Plan: Kiosk app uses the NFC bridge, reads NDEF, and matches cards by NDEF ID
 
+> **Changed after implementation (2026-10-13):** Automatic mode was removed. Reader setup is manual: Keyboard (HID) or Bridge app, chosen by staff. See PLAN.md §6.3.
+
 ## Context
 
 **Today.** The kiosk (`andreykats/topps-nfc-kiosk`, this repo; live at https://topps.drey.dev; TypeScript + Vite PWA; Chrome on Windows and macOS) reads cards through an ACS reader in USB HID keyboard mode. `src/scan/keyboardScanner.ts` parses the typed UID. That mode only gives the UID and loses scans whenever the window isn't focused (the full-screen "Paused" notice).
