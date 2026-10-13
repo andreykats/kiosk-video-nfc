@@ -10,7 +10,7 @@ import { mountOnboarding } from './onboarding/onboardingView';
 import { readFlags, writeFlags } from './onboarding/progress';
 import { InstallManager } from './pwa/install';
 import { ServiceWorkerManager } from './pwa/sw';
-import { KeyboardScanner } from './scan/keyboardScanner';
+import { CardInput } from './scan/cardInput';
 import { mountSettings } from './settings/settingsView';
 import { h } from './ui/dom';
 import { VideoStore } from './videos/opfsStore';
@@ -35,9 +35,9 @@ async function boot(): Promise<void> {
   const install = new InstallManager();
   const sw = new ServiceWorkerManager();
   sw.start();
-  const scanner = new KeyboardScanner();
+  const scanner = new CardInput();
   const diagnostics = new Diagnostics();
-  scanner.scans.subscribe((scan) => diagnostics.recordScan(scan.uid));
+  scanner.scans.subscribe((scan) => diagnostics.recordScan(scan));
 
   let config: ConfigStore;
   let videos: VideoStore;

@@ -1,4 +1,5 @@
 import { Emitter } from '../app/emitter';
+import type { ScanEvent } from './scanEvent';
 import { UID_HEX_LENGTHS } from './uid';
 
 /**
@@ -9,7 +10,8 @@ import { UID_HEX_LENGTHS } from './uid';
  * keyboard layout (AZERTY etc.) doesn't change what we decode.
  */
 
-export interface ScanEvent {
+/** A UID typed by the reader. */
+export interface KeyboardScan {
   uid: string;
   at: number;
 }
@@ -42,7 +44,7 @@ export interface KeyInput {
 export interface FeedResult {
   /** The key belonged to a burst and should not reach the page. */
   consumed: boolean;
-  scan?: ScanEvent;
+  scan?: KeyboardScan;
 }
 
 const SEPARATOR_CODES = new Set(['Space', 'Minus', 'Semicolon']);
@@ -109,7 +111,7 @@ export class ScanParser {
   }
 
   /** Called when no key has arrived for idleFlushMs (reader without Enter suffix). */
-  flush(now: number): ScanEvent | undefined {
+  flush(now: number): KeyboardScan | undefined {
     if (!this.active) return undefined;
     if (now - this.lastKeyAt > this.options.idleFlushMs + this.options.maxInterKeyMs * 4) {
       // Timer fired far too late (e.g. tab was throttled); don't trust the burst.
@@ -119,7 +121,7 @@ export class ScanParser {
     return this.complete(now);
   }
 
-  private complete(at: number): ScanEvent | undefined {
+  private complete(at: number): KeyboardScan | undefined {
     const uid = this.buffer;
     this.reset();
     if (!UID_HEX_LENGTHS.includes(uid.length)) return undefined;
@@ -157,6 +159,10 @@ export class KeyboardScanner {
     clearTimeout(this.idleTimer);
   }
 
+  private emit(scan: KeyboardScan): void {
+    this.scans.emit({ ...scan, source: 'keyboard', ndefKey: null, records: [] });
+  }
+
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     clearTimeout(this.idleTimer);
     const result = this.parser.feed({
@@ -173,11 +179,11 @@ export class KeyboardScanner {
       event.preventDefault();
       event.stopPropagation();
     }
-    if (result.scan) this.scans.emit(result.scan);
+    if (result.scan) this.emit(result.scan);
     if (this.parser.active) {
       this.idleTimer = setTimeout(() => {
         const scan = this.parser.flush(performance.now());
-        if (scan) this.scans.emit(scan);
+        if (scan) this.emit(scan);
       }, this.options.idleFlushMs);
     }
   };

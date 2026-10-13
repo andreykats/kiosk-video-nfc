@@ -7,6 +7,7 @@ import { renderAdminCards, renderCards } from './cards';
 import { renderChecklist, renderInstallBanner } from './checklist';
 import { renderConfigSection } from './configSection';
 import { renderDiagnostics } from './diagnostics';
+import { renderReaderSection } from './readerSection';
 import { renderResetSection } from './resetSection';
 import type { Section } from './section';
 import { renderVideos } from './videos';
@@ -53,6 +54,7 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
     renderHeader(ctx),
     renderInstallBanner(ctx),
     renderChecklist(ctx),
+    renderReaderSection(ctx),
     renderVideos(ctx, env),
     renderCards(ctx),
     renderAdminCards(ctx),

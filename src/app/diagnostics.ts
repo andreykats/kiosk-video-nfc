@@ -1,3 +1,4 @@
+import type { ScanEvent } from '../scan/scanEvent';
 import { Emitter } from './emitter';
 
 export type AutoplayStatus = 'unknown' | 'ok' | 'muted' | 'blocked';
@@ -5,11 +6,12 @@ export type AutoplayStatus = 'unknown' | 'ok' | 'muted' | 'blocked';
 /** Live values shown in settings → Diagnostics. */
 export class Diagnostics {
   readonly changed = new Emitter<void>();
-  lastScan: { uid: string; at: number } | null = null;
+  /** `at` is wall-clock time here, for display. */
+  lastScan: ScanEvent | null = null;
   autoplay: AutoplayStatus = 'unknown';
 
-  recordScan(uid: string): void {
-    this.lastScan = { uid, at: Date.now() };
+  recordScan(scan: ScanEvent): void {
+    this.lastScan = { ...scan, at: Date.now() };
     this.changed.emit();
   }
 

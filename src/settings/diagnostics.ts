@@ -3,6 +3,7 @@ import { log, logChanged } from '../app/log';
 import { formatUid } from '../scan/uid';
 import { formatBytes } from '../videos/opfsStore';
 import { h, replaceChildren } from '../ui/dom';
+import { bridgeStatusText } from './readerSection';
 import { reactiveSection, type Section } from './section';
 
 const AUTOPLAY_TEXT = {
@@ -11,6 +12,8 @@ const AUTOPLAY_TEXT = {
   muted: 'Blocked with sound — playing muted. Launch Chrome with --autoplay-policy=no-user-gesture-required.',
   blocked: 'Blocked — videos cannot autoplay. Launch Chrome with --autoplay-policy=no-user-gesture-required.',
 } as const;
+
+const READER_MODE_TEXT = { keyboard: 'Keyboard (HID)', bridge: 'Bridge app', auto: 'Automatic' } as const;
 
 function row(label: string, value: Node | string, testId?: string): HTMLElement {
   return h('div', { class: 'diag-row' }, h('dt', {}, label), h('dd', { 'data-testid': testId }, value));
@@ -68,11 +71,34 @@ export function renderDiagnostics(ctx: AppContext): Section {
         storage?.usage != null && storage.quota != null ? `${formatBytes(storage.usage)} used of ${formatBytes(storage.quota)}` : 'unknown',
       ),
       row('Persisted', storage?.persisted == null ? 'unknown' : storage.persisted ? 'yes' : 'no — install the app to make storage persistent', 'diag-persisted'),
+      row('Card reader', `${READER_MODE_TEXT[ctx.scanner.mode]}; reading from ${ctx.scanner.activeSource === 'bridge' ? 'the bridge app' : 'the keyboard'}`, 'diag-reader'),
+      ctx.scanner.mode === 'keyboard' ? null : row('Bridge app', bridgeStatusText(ctx), 'diag-bridge'),
       row(
         'Last scanned UID',
-        scan ? h('span', {}, h('strong', { class: 'mono' }, formatUid(scan.uid)), ` (${scan.uid}) at ${new Date(scan.at).toLocaleTimeString()}`) : 'none yet — scan a card to test the reader',
+        scan
+          ? h(
+              'span',
+              {},
+              h('strong', { class: 'mono' }, formatUid(scan.uid)),
+              ` (${scan.uid}) at ${new Date(scan.at).toLocaleTimeString()} via ${scan.source === 'bridge' ? 'the bridge app' : 'the keyboard'}`,
+            )
+          : 'none yet — scan a card to test the reader',
         'diag-last-scan',
       ),
+      scan?.source === 'bridge'
+        ? row(
+            'Card ID (NDEF)',
+            h(
+              'div',
+              {},
+              h('strong', { class: 'mono' }, scan.ndefKey ?? 'none — the card has no URI or Text record'),
+              scan.records.length > 0
+                ? h('ol', { class: 'ndef-records' }, ...scan.records.map((r) => h('li', {}, `${r.tnf} ${r.type}: `, h('span', { class: 'mono' }, r.value))))
+                : null,
+            ),
+            'diag-ndef',
+          )
+        : null,
       row(
         'Autoplay',
         h('span', { class: ctx.diagnostics.autoplay === 'ok' || ctx.diagnostics.autoplay === 'unknown' ? '' : 'banner banner-warn' }, AUTOPLAY_TEXT[ctx.diagnostics.autoplay]),
@@ -109,6 +135,7 @@ export function renderDiagnostics(ctx: AppContext): Section {
     (l) => ctx.sw.changed.subscribe(l),
     (l) => ctx.install.changed.subscribe(l),
     (l) => logChanged.subscribe(l),
+    (l) => ctx.scanner.changed.subscribe(l),
   ]);
   return { el, destroy: () => (offline.destroy(), section.destroy()) };
 }

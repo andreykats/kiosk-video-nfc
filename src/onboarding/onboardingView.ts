@@ -2,13 +2,16 @@ import type { AppContext } from '../app/context';
 import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, useAsLoopInstead } from '../config/ops';
-import { emptyConfig, type Config } from '../config/schema';
+import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, scanMatches, useAsLoopInstead } from '../config/ops';
+import { emptyConfig, type CardMatch, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
-import { formatUid } from '../scan/uid';
+import type { ScanEvent } from '../scan/scanEvent';
+import { formatMatch, formatUid } from '../scan/uid';
 import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
+import { matchAttrs } from '../settings/matchChooser';
+import { readerControls } from '../settings/readerSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
@@ -140,13 +143,14 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
 }
 
 function readerStep(ctx: AppContext, nav: Nav): StepView {
-  let scanned: string | null = null;
+  let scanned: ScanEvent | null = null;
   const done = () => {
     writeFlags({ readerDone: true });
     nav.next();
   };
+  const controls = readerControls(ctx);
   const unsubscribe = ctx.scanner.scans.subscribe((scan) => {
-    scanned = scan.uid;
+    scanned = scan;
     view.rerender();
   });
   const view = reactiveStep(
@@ -156,18 +160,29 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
         stepCard(nav, 'reader', {
           title: 'Connect the NFC reader',
           body: [
-            p('Plug the NFC reader into a USB port, then hold any card on it.'),
+            p('Plug the NFC reader into a USB port. Choose how this kiosk reads cards, then hold any card on the reader.'),
+            controls.el,
             scanned
-              ? h('p', { class: 'success', 'data-testid': 'reader-status' }, `Reader is working ✓ Read card ${formatUid(scanned)}`)
+              ? h(
+                  'p',
+                  { class: 'success', 'data-testid': 'reader-status' },
+                  `Reader is working ✓ Read card ${formatUid(scanned.uid)}`,
+                  scanned.ndefKey !== null ? ` with card ID ${scanned.ndefKey}` : '',
+                )
               : h('p', { class: 'waiting', 'data-testid': 'reader-status' }, 'Waiting for a card…'),
-            p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, card reads are lost.', 'hint'),
+            ctx.scanner.activeSource === 'keyboard'
+              ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, card reads are lost.', 'hint')
+              : null,
           ],
           primary: { label: 'Next', onClick: done, disabled: scanned === null && !readFlags().readerDone, testId: 'onboarding-next' },
           secondary: scanned ? undefined : { label: 'Skip', onClick: done, testId: 'onboarding-skip' },
         }),
       ),
-    [],
-    unsubscribe,
+    [(l) => ctx.scanner.changed.subscribe(l)],
+    () => {
+      unsubscribe();
+      controls.destroy();
+    },
   );
   return view;
 }
@@ -373,7 +388,7 @@ interface PairingState {
   fileName: string;
   message: { text: string; kind: 'error' | 'info' } | null;
   /** Card already plays another video; waiting for the user to move it. */
-  conflict: { uid: string; otherFile: string } | null;
+  conflict: { match: CardMatch; otherFile: string } | null;
 }
 
 function pairStep(ctx: AppContext, nav: Nav): StepView {
@@ -386,25 +401,29 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
   });
   const filesInput = filePicker({ folder: false, testId: 'onboarding-files-input', onPick: (f) => void importPickedFiles(ctx, host, f) });
 
-  const pair = async (uid: string, fileName: string) => {
-    if (await saveEdit(ctx, (c) => pairCard(c, { uid, fileName, label: '' }))) pairing = null;
+  const pair = async (match: CardMatch, fileName: string) => {
+    if (await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '' }))) pairing = null;
     view.rerender();
   };
 
+  // A card with a card ID is paired by it (any card written with the same ID
+  // plays the same video); Settings → Cards can pair by UID instead.
   const unsubscribeScans = ctx.scanner.scans.subscribe((scan) => {
     if (!pairing || pairing.conflict) return;
     const config = ctx.config.get();
-    const admin = findAdminCard(config, scan.uid);
-    const existing = findCard(config, scan.uid);
+    const matches = scanMatches(scan);
+    const match = matches[0]!;
+    const admin = matches.map((m) => findAdminCard(config, m)).find((a) => a !== undefined);
+    const existing = findCard(config, match);
     if (admin) {
-      pairing.message = { text: `${formatUid(scan.uid)} is an admin card. Use a different card.`, kind: 'error' };
+      pairing.message = { text: `${formatMatch(admin.match)} is an admin card. Use a different card.`, kind: 'error' };
     } else if (existing?.fileName === pairing.fileName) {
-      pairing.message = { text: `${formatUid(scan.uid)} already plays this video. Hold another card on the reader, or press Cancel.`, kind: 'info' };
+      pairing.message = { text: `${formatMatch(match)} already plays this video. Hold another card on the reader, or press Cancel.`, kind: 'info' };
     } else if (existing) {
-      pairing.conflict = { uid: scan.uid, otherFile: existing.fileName };
+      pairing.conflict = { match, otherFile: existing.fileName };
       pairing.message = null;
     } else {
-      void pair(scan.uid, pairing.fileName);
+      void pair(match, pairing.fileName);
       return;
     }
     view.rerender();
@@ -436,12 +455,12 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     }
     const cancel = h('button', { type: 'button', class: 'link', onclick: () => ((pairing = null), view.rerender()) }, 'Cancel');
     if (pairing.conflict) {
-      const { uid, otherFile } = pairing.conflict;
+      const { match, otherFile } = pairing.conflict;
       return h(
         'div',
         { class: 'pairing', 'data-testid': 'pair-conflict' },
-        h('p', {}, `${formatUid(uid)} plays “${otherFile}”. Use it for this video instead?`),
-        h('button', { type: 'button', class: 'primary', onclick: () => void pair(uid, fileName) }, 'Move card here'),
+        h('p', {}, `${formatMatch(match)} plays “${otherFile}”. Use it for this video instead?${match.kind === 'ndef' ? ' This moves every card with this card ID.' : ''}`),
+        h('button', { type: 'button', class: 'primary', onclick: () => void pair(match, fileName) }, 'Move card here'),
         ' ',
         cancel,
       );
@@ -503,9 +522,9 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
                 ...cards.map((c) =>
                   h(
                     'span',
-                    { class: 'chip mono', 'data-uid': c.uid },
-                    formatUid(c.uid),
-                    h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Unpair ${c.uid}`, onclick: () => void saveEdit(ctx, (cfg) => removeCard(cfg, c.uid)) }, '×'),
+                    { class: 'chip mono', ...matchAttrs(c.match) },
+                    formatMatch(c.match),
+                    h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Unpair ${c.match.value}`, onclick: () => void saveEdit(ctx, (cfg) => removeCard(cfg, c.match)) }, '×'),
                   ),
                 ),
                 cards.length === 0 && pairing?.fileName !== v.fileName ? h('span', { class: 'hint' }, 'No card yet ') : null,
@@ -541,14 +560,19 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
 function adminStep(ctx: AppContext, nav: Nav): StepView {
   let message: { text: string; kind: 'error' | 'success' } | null = null;
 
+  // Admin cards are always paired by UID here: a card ID may be shared by many
+  // visitor cards, and none of those may open settings.
   const unsubscribe = ctx.scanner.scans.subscribe(async (scan) => {
     const config = ctx.config.get();
-    const card = findCard(config, scan.uid);
+    const match: CardMatch = { kind: 'uid', value: scan.uid };
+    const card = scanMatches(scan)
+      .map((m) => findCard(config, m))
+      .find((c) => c !== undefined);
     if (card) {
-      message = { text: `${formatUid(scan.uid)} plays “${card.fileName}”. Use a different card for admin.`, kind: 'error' };
-    } else if (findAdminCard(config, scan.uid)) {
+      message = { text: `${formatMatch(card.match)} plays “${card.fileName}”. Use a different card for admin.`, kind: 'error' };
+    } else if (findAdminCard(config, match)) {
       message = { text: `${formatUid(scan.uid)} is already an admin card.`, kind: 'error' };
-    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { uid: scan.uid, label: '' }))) {
+    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { match, label: '' }))) {
       message = { text: `Added ${formatUid(scan.uid)} as an admin card ✓`, kind: 'success' };
     }
     view.rerender();
@@ -572,9 +596,9 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
                   ...admins.map((a) =>
                     h(
                       'span',
-                      { class: 'chip mono', 'data-uid': a.uid },
-                      formatUid(a.uid),
-                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin card ${a.uid}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.uid)) }, '×'),
+                      { class: 'chip mono', ...matchAttrs(a.match) },
+                      formatMatch(a.match),
+                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin card ${a.match.value}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.match)) }, '×'),
                     ),
                   ),
                 )

@@ -4,10 +4,12 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 ## Both Windows and macOS
 
-1. Plug in the ACR1552U reader. Its output settings must match the other kiosks (see the README).
+1. Plug in the NFC reader. Decide how this kiosk reads cards (README → Reader configuration):
+   - **Keyboard (HID):** the reader's output settings must match the other kiosks.
+   - **Bridge app:** install the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge/releases) app first and turn on **Start at login** in its menu. The reader stays in its factory CCID mode.
 2. In Google Chrome, **while online**, open `<url>`. The **setup guide** opens and shows one step at a time:
    1. **Install the Topps Kiosk.** Use the **Install app** button. If there's no button, click the install icon at the right of the address bar, or open Chrome menu ⋮ → Cast, save, and share → Install page as app…. Chrome may only offer to install after you've clicked the page and spent about 30 seconds on it. Chrome then opens the app in its own window, and the guide carries on there.
-   2. **Connect the NFC reader.** Hold any card on the reader and check that the guide shows "Reader is working".
+   2. **Connect the NFC reader.** Choose **Keyboard (HID)**, **Bridge app** or **Automatic**. For the bridge app, press **Connect to bridge app** and choose **Allow** when Chrome asks about **Apps on device**. Then hold any card on the reader and check that the guide shows "Reader is working" (with its card ID, if it has one).
    3. **Import configuration.**
       - On the first kiosk, choose **Start a new config**.
       - On every other kiosk, choose **Import a config file** and pick the `config.json` exported from the first kiosk.
@@ -64,7 +66,8 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 | Symptom | Check |
 |---|---|
 | Scans do nothing, or the screen says "Paused" | The kiosk window must have keyboard focus, because the reader types into whichever window is focused. When it loses focus, the kiosk covers the screen with **Paused**. Click or tap the kiosk once. In settings, Diagnostics → **Last scanned UID** shows whether scans are arriving, and **Recent errors and warnings** records each time the kiosk window lost focus. |
-| A card plays nothing | The UID isn't paired, or the video isn't imported on this kiosk (Videos shows it as **missing**). |
+| A card plays nothing | The card isn't paired, or the video isn't imported on this kiosk (Videos shows it as **missing**). Cards paired by **card ID** only work in Bridge app or Automatic mode. |
+| "Card reader not available" on the screen (bridge mode) | The bridge app isn't running, or the reader isn't plugged in. Start the bridge app from its tray/menu-bar icon, or check the reader. Settings → Card reader shows the bridge status. If it says Chrome is blocking the connection, set **Apps on device** to Allow in the site settings (icon left of the address bar) and reload. |
 | Same card, different UID on two kiosks | The readers have different output settings. Reconfigure them to match. |
 | Video plays muted / Diagnostics says autoplay is blocked | Chrome was started without `--autoplay-policy=no-user-gesture-required`. Quit Chrome completely and start it with the launch command. |
 | "Setup required" on the screen | No loop video is selected, or the loop file is missing. Press **Open setup guide**, or open settings and follow the checklist. |

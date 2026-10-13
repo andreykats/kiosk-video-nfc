@@ -1,0 +1,137 @@
+import { Emitter } from '../app/emitter';
+import { BridgeScanner, usableReaders, type BridgeStatus } from './bridge/bridgeScanner';
+import { KeyboardScanner } from './keyboardScanner';
+import { readReaderMode, writeReaderMode, type ReaderMode } from './readerMode';
+import type { ScanEvent } from './scanEvent';
+
+/** Chrome's "Apps on device" permission, which an https page needs to reach the bridge on 127.0.0.1. */
+export type LoopbackPermission = PermissionState | 'unknown';
+
+export interface PermissionStatusLike {
+  readonly state: PermissionState;
+  onchange: ((this: PermissionStatus, ev: Event) => unknown) | null;
+}
+
+/** "loopback-network" is the current name (Chrome 146+); "local-network-access" is the older alias. */
+export async function queryLoopbackPermission(): Promise<PermissionStatusLike | null> {
+  for (const name of ['loopback-network', 'local-network-access']) {
+    try {
+      return await navigator.permissions.query({ name: name as PermissionName });
+    } catch {
+      // Unknown permission name in this Chrome; try the next.
+    }
+  }
+  return null;
+}
+
+export interface CardInputDeps {
+  keyboard?: { scans: Emitter<ScanEvent>; destroy(): void };
+  bridge?: BridgeScanner;
+  mode?: ReaderMode;
+  saveMode?: (mode: ReaderMode) => void;
+  queryPermission?: () => Promise<PermissionStatusLike | null>;
+}
+
+/**
+ * The app's single source of card scans. The keyboard scanner always listens,
+ * so a reader in HID mode never types into inputs, but its scans only count
+ * when the keyboard is the active source.
+ */
+export class CardInput {
+  readonly scans = new Emitter<ScanEvent>();
+  /** Mode, permission or bridge status changed. */
+  readonly changed = new Emitter<void>();
+  private mode_: ReaderMode;
+  private permission_: LoopbackPermission = 'unknown';
+  private readonly keyboard: NonNullable<CardInputDeps['keyboard']>;
+  private readonly bridge: BridgeScanner;
+  private readonly saveMode: (mode: ReaderMode) => void;
+  private readonly unsubscribers: (() => void)[];
+  private permissionStatus: PermissionStatusLike | null = null;
+
+  constructor(deps: CardInputDeps = {}) {
+    this.keyboard = deps.keyboard ?? new KeyboardScanner();
+    this.bridge = deps.bridge ?? new BridgeScanner();
+    this.mode_ = deps.mode ?? readReaderMode();
+    this.saveMode = deps.saveMode ?? writeReaderMode;
+    this.unsubscribers = [
+      this.keyboard.scans.subscribe((scan) => {
+        if (this.activeSource === 'keyboard') this.scans.emit(scan);
+      }),
+      this.bridge.scans.subscribe((scan) => {
+        if (this.activeSource === 'bridge') this.scans.emit(scan);
+      }),
+      this.bridge.changed.subscribe(() => this.changed.emit()),
+    ];
+    this.apply();
+    void this.watchPermission(deps.queryPermission ?? queryLoopbackPermission);
+  }
+
+  get mode(): ReaderMode {
+    return this.mode_;
+  }
+
+  get permission(): LoopbackPermission {
+    return this.permission_;
+  }
+
+  get bridgeStatus(): BridgeStatus {
+    return this.bridge.status;
+  }
+
+  /** The bridge is connected and has a reader that can take a visitor's card. */
+  get bridgeReady(): boolean {
+    const s = this.bridge.status;
+    return s.state === 'connected' && s.service === 'ready' && usableReaders(s.readers).length > 0;
+  }
+
+  /** Where scans are taken from right now. */
+  get activeSource(): 'keyboard' | 'bridge' {
+    if (this.mode_ === 'auto') return this.bridgeReady ? 'bridge' : 'keyboard';
+    return this.mode_;
+  }
+
+  setMode(mode: ReaderMode): void {
+    if (mode === this.mode_) return;
+    this.mode_ = mode;
+    this.saveMode(mode);
+    this.apply();
+    this.changed.emit();
+  }
+
+  /**
+   * Connects to the bridge now, whatever the mode. For staff: in Chrome the
+   * first connection shows the "Apps on device" prompt, which must never pop
+   * up on the visitor screen by itself.
+   */
+  connectBridge(): void {
+    this.bridge.start();
+  }
+
+  destroy(): void {
+    this.unsubscribers.forEach((u) => u());
+    if (this.permissionStatus) this.permissionStatus.onchange = null;
+    this.bridge.stop();
+    this.keyboard.destroy();
+  }
+
+  private apply(): void {
+    if (this.mode_ === 'keyboard') this.bridge.stop();
+    else if (this.mode_ === 'bridge') this.bridge.start();
+    // Automatic only connects once the permission is granted, so it can't prompt by itself.
+    else if (this.permission_ === 'granted') this.bridge.start();
+  }
+
+  private async watchPermission(query: () => Promise<PermissionStatusLike | null>): Promise<void> {
+    const status = await query().catch(() => null);
+    if (!status) return;
+    this.permissionStatus = status;
+    const update = () => {
+      this.permission_ = status.state;
+      this.apply();
+      this.changed.emit();
+    };
+    status.onchange = update;
+    update();
+  }
+}

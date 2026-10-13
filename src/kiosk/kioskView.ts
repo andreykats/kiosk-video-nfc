@@ -80,7 +80,13 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     h('h1', {}, 'Paused'),
     h('p', {}, 'Tap or click the screen to resume.'),
   );
-  const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl, focusEl);
+  const bridgeEl = h(
+    'div',
+    { class: 'focus-notice', 'data-testid': 'bridge-notice', role: 'status', hidden: true },
+    h('h1', {}, 'Card reader not available'),
+    h('p', { 'data-testid': 'bridge-notice-detail' }),
+  );
+  const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl, focusEl, bridgeEl);
   root.replaceChildren(view);
 
   const loop = new VideoSlot(loopEl);
@@ -275,21 +281,47 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   };
   const watchdog = setInterval(checkPlayback, WATCHDOG_INTERVAL_MS);
 
-  // The reader types into whichever window has focus. When that stops being us,
-  // every scan is lost, so say so on screen (a tap brings focus back) and record
-  // it for Diagnostics.
-  const setFocusLost = (lost: boolean) => {
-    focusEl.hidden = !lost;
-    view.classList.toggle('unfocused', lost);
+  // A reader in keyboard mode types into whichever window has focus. When that
+  // stops being us, every scan is lost, so say so on screen (a tap brings focus
+  // back) and record it for Diagnostics. Scans from the bridge app don't need focus.
+  let focusLost = !document.hasFocus();
+  const updateFocusNotice = () => {
+    const shown = focusLost && ctx.scanner.activeSource === 'keyboard';
+    focusEl.hidden = !shown;
+    view.classList.toggle('unfocused', shown);
   };
   const onBlur = () => {
-    log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
-    setFocusLost(true);
+    focusLost = true;
+    if (ctx.scanner.activeSource === 'keyboard') log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
+    updateFocusNotice();
   };
-  const onFocus = () => setFocusLost(false);
+  const onFocus = () => {
+    focusLost = false;
+    updateFocusNotice();
+  };
   window.addEventListener('blur', onBlur);
   window.addEventListener('focus', onFocus);
-  setFocusLost(!document.hasFocus());
+
+  // In bridge mode there is no fallback: if the bridge app or the reader is
+  // missing, cards can't play, so say so instead of silently ignoring taps.
+  const updateBridgeNotice = () => {
+    const status = ctx.scanner.bridgeStatus;
+    const problem =
+      ctx.scanner.mode !== 'bridge' || ctx.scanner.bridgeReady || status.state === 'off' || status.state === 'connecting'
+        ? null
+        : status.state === 'connected'
+          ? 'Plug in the NFC reader.'
+          : status.state === 'protocol-mismatch'
+            ? 'The bridge app needs updating.'
+            : 'Start the NFC Browser Bridge app on this computer.';
+    bridgeEl.hidden = problem === null;
+    bridgeEl.querySelector('[data-testid="bridge-notice-detail"]')!.textContent = problem ?? '';
+  };
+  const onReaderChange = () => {
+    updateFocusNotice();
+    updateBridgeNotice();
+  };
+  onReaderChange();
 
   const blockContextMenu = (e: Event) => e.preventDefault();
   view.addEventListener('contextmenu', blockContextMenu);
@@ -297,7 +329,8 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const stopWakeLock = keepScreenOn();
 
   const unsubscribers = [
-    ctx.scanner.scans.subscribe((scan) => dispatch({ type: 'scan', uid: scan.uid })),
+    ctx.scanner.scans.subscribe((scan) => dispatch({ type: 'scan', card: scan })),
+    ctx.scanner.changed.subscribe(onReaderChange),
     ctx.config.changed.subscribe(() => void startLoop()),
     ctx.videos.changed.subscribe(() => {
       if (!loop.fileName || !ctx.videos.has(loop.fileName)) void startLoop();

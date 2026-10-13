@@ -80,8 +80,8 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   expect(download.suggestedFilename()).toBe('config.json');
   const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
   expect(exported.loopVideo).toBe('loop.mp4');
-  expect(exported.cards).toEqual([{ uid: LION_UID, fileName: 'tiger.mp4', label: '' }]);
-  expect(exported.adminCards.map((a: { uid: string }) => a.uid)).toEqual(['AABBCCDD']);
+  expect(exported.cards).toEqual([{ match: { kind: 'uid', value: LION_UID }, fileName: 'tiger.mp4', label: '' }]);
+  expect(exported.adminCards.map((a: { match: { value: string } }) => a.match.value)).toEqual(['AABBCCDD']);
   await expect(step(page, 'done')).toBeVisible();
 
   await page.getByTestId('onboarding-start').click();

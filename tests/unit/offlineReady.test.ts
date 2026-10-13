@@ -12,8 +12,8 @@ const config: Config = {
     { fileName: 'tiger.mp4', title: '', sizeBytes: 1 },
   ],
   cards: [
-    { uid: '04A23B1C', fileName: 'lion.mp4', label: '' },
-    { uid: '04A23B1D', fileName: 'tiger.mp4', label: '' },
+    { match: { kind: 'uid', value: '04A23B1C' }, fileName: 'lion.mp4', label: '' },
+    { match: { kind: 'uid', value: '04A23B1D' }, fileName: 'tiger.mp4', label: '' },
   ],
 };
 

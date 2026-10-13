@@ -1,7 +1,7 @@
 import { err, ok, type Result } from '../result';
 import { isCanonicalUid, UID_HEX_LENGTHS } from '../scan/uid';
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export interface VideoEntry {
   fileName: string;
@@ -9,15 +9,36 @@ export interface VideoEntry {
   sizeBytes: number;
 }
 
+/**
+ * What identifies a card: its UID, or the card ID stored in its NDEF data (the
+ * first URI or Text record, read through the bridge app). Keyboard-mode readers
+ * only ever see the UID.
+ */
+export interface CardMatch {
+  kind: 'uid' | 'ndef';
+  value: string;
+}
+
 export interface CardEntry {
-  uid: string;
+  match: CardMatch;
   fileName: string;
   label: string;
 }
 
 export interface AdminCardEntry {
-  uid: string;
+  match: CardMatch;
   label: string;
+}
+
+export const NDEF_KEY_MAX_LENGTH = 256;
+
+/** Returns why `value` can't be an NDEF card ID, or null if it can. */
+export function ndefKeyError(value: string): string | null {
+  if (value === '') return 'is empty';
+  if (value.length > NDEF_KEY_MAX_LENGTH) return `is longer than ${NDEF_KEY_MAX_LENGTH} characters`;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(value)) return 'contains control characters';
+  return null;
 }
 
 export interface Config {
@@ -41,6 +62,20 @@ export function emptyConfig(): Config {
   };
 }
 
+/** One string per match, for maps and equality ("uid:04A2…", "ndef:https://…"). */
+export function matchId(match: CardMatch): string {
+  return `${match.kind}:${match.value}`;
+}
+
+export function sameMatch(a: CardMatch, b: CardMatch): boolean {
+  return a.kind === b.kind && a.value === b.value;
+}
+
+/** For messages: "UID 04A23B1C" or "card ID "https://…"". */
+export function describeMatch(match: CardMatch): string {
+  return match.kind === 'uid' ? `UID ${match.value}` : `card ID ${JSON.stringify(match.value)}`;
+}
+
 const PARTIAL_SUFFIX = '.partial';
 
 /**
@@ -60,11 +95,21 @@ export function fileNameError(name: string): string | null {
   return null;
 }
 
-/**
- * Upgrades older configs to the current schema. Each entry upgrades version N to
- * N + 1. There is only v1 today, so the table is empty.
- */
-const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {};
+/** v1 identified every card by `uid`; v2 wraps it in `match`. Malformed entries pass through for validation to report. */
+function migrateV1Card(card: unknown): unknown {
+  if (typeof card !== 'object' || card === null || Array.isArray(card) || !('uid' in card)) return card;
+  const { uid, ...rest } = card as Record<string, unknown>;
+  return { match: { kind: 'uid', value: uid }, ...rest };
+}
+
+/** Upgrades older configs to the current schema. Each entry upgrades version N to N + 1. */
+const MIGRATIONS: Record<number, (raw: Record<string, unknown>) => Record<string, unknown>> = {
+  1: (raw) => ({
+    ...raw,
+    cards: Array.isArray(raw.cards) ? raw.cards.map(migrateV1Card) : raw.cards,
+    adminCards: Array.isArray(raw.adminCards) ? raw.adminCards.map(migrateV1Card) : raw.adminCards,
+  }),
+};
 
 export function migrate(raw: unknown): Result<Record<string, unknown>, string[]> {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -139,20 +184,37 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
     videos.push({ fileName, title, sizeBytes });
   });
 
-  const uids = new Map<string, string>(); // uid → where it was first seen
-  const checkUid = (uid: unknown, at: string): uid is string => {
-    if (typeof uid !== 'string' || !isCanonicalUid(uid)) {
-      errors.push(
-        `${at}.uid must be uppercase hex with no separators, ${UID_HEX_LENGTHS.join('/')} characters long (got ${JSON.stringify(uid)}).`,
-      );
+  const matches = new Map<string, string>(); // matchId → where it was first seen
+  const checkMatch = (match: unknown, at: string): match is CardMatch => {
+    if (!isObj(match)) {
+      errors.push(`${at}.match must be an object with "kind" and "value".`);
       return false;
     }
-    const seen = uids.get(uid);
+    const { kind, value } = match;
+    if (kind === 'uid') {
+      if (typeof value !== 'string' || !isCanonicalUid(value)) {
+        errors.push(
+          `${at}.match.value must be a UID: uppercase hex with no separators, ${UID_HEX_LENGTHS.join('/')} characters long (got ${JSON.stringify(value)}).`,
+        );
+        return false;
+      }
+    } else if (kind === 'ndef') {
+      const problem = typeof value === 'string' ? ndefKeyError(value) : 'must be a string';
+      if (problem) {
+        errors.push(`${at}.match.value (card ID) ${problem}.`);
+        return false;
+      }
+    } else {
+      errors.push(`${at}.match.kind must be "uid" or "ndef" (got ${JSON.stringify(kind)}).`);
+      return false;
+    }
+    const id = matchId({ kind, value: value as string });
+    const seen = matches.get(id);
     if (seen) {
-      errors.push(`${at}.uid ${uid} is already used by ${seen}.`);
+      errors.push(`${at}: ${describeMatch({ kind, value: value as string })} is already used by ${seen}.`);
       return false;
     }
-    uids.set(uid, at);
+    matches.set(id, at);
     return true;
   };
 
@@ -160,23 +222,23 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
   arrayField('cards').forEach((c, i) => {
     const at = `cards[${i}]`;
     if (!isObj(c)) return void errors.push(`${at} must be an object.`);
-    const { uid, fileName, label } = c;
-    if (!checkUid(uid, at)) return;
+    const { match, fileName, label } = c;
+    if (!checkMatch(match, at)) return;
     if (typeof fileName !== 'string' || !fileNames.has(fileName)) {
       return void errors.push(`${at}.fileName ${JSON.stringify(fileName)} does not match any entry in "videos".`);
     }
     if (typeof label !== 'string') return void errors.push(`${at}.label must be a string.`);
-    cards.push({ uid, fileName, label });
+    cards.push({ match: { kind: match.kind, value: match.value }, fileName, label });
   });
 
   const adminCards: AdminCardEntry[] = [];
   arrayField('adminCards').forEach((c, i) => {
     const at = `adminCards[${i}]`;
     if (!isObj(c)) return void errors.push(`${at} must be an object.`);
-    const { uid, label } = c;
-    if (!checkUid(uid, at)) return;
+    const { match, label } = c;
+    if (!checkMatch(match, at)) return;
     if (typeof label !== 'string') return void errors.push(`${at}.label must be a string.`);
-    adminCards.push({ uid, label });
+    adminCards.push({ match: { kind: match.kind, value: match.value }, label });
   });
 
   let loopVideo: string | null = null;

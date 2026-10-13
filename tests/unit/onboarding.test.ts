@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { useAsLoopInstead } from '../../src/config/ops';
-import { emptyConfig } from '../../src/config/schema';
+import { emptyConfig, type Config } from '../../src/config/schema';
 import { nextStep, previousStep, resumeStep, stepSequence, type ResumeInputs } from '../../src/onboarding/steps';
 
 const fresh: ResumeInputs = { installStepDone: false, readerDone: false, path: null, videoCount: 0, missingCount: 0 };
@@ -41,19 +41,19 @@ describe('setup guide steps', () => {
 
 describe('useAsLoopInstead', () => {
   it('sets the loop and unpairs that video’s cards only', () => {
-    const config = {
+    const config: Config = {
       ...emptyConfig(),
       videos: [
         { fileName: 'a.mp4', title: 'A', sizeBytes: 1 },
         { fileName: 'b.mp4', title: 'B', sizeBytes: 1 },
       ],
       cards: [
-        { uid: '04A23B1C', fileName: 'a.mp4', label: '' },
-        { uid: '04A23B1D', fileName: 'b.mp4', label: '' },
+        { match: { kind: 'uid', value: '04A23B1C' }, fileName: 'a.mp4', label: '' },
+        { match: { kind: 'uid', value: '04A23B1D' }, fileName: 'b.mp4', label: '' },
       ],
     };
     const next = useAsLoopInstead(config, 'a.mp4');
     expect(next.loopVideo).toBe('a.mp4');
-    expect(next.cards.map((c) => c.uid)).toEqual(['04A23B1D']);
+    expect(next.cards.map((c) => c.match.value)).toEqual(['04A23B1D']);
   });
 });

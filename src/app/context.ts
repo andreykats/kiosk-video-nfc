@@ -1,5 +1,5 @@
 import type { ConfigStore } from '../config/store';
-import type { KeyboardScanner } from '../scan/keyboardScanner';
+import type { CardInput } from '../scan/cardInput';
 import type { InstallManager } from '../pwa/install';
 import type { ServiceWorkerManager } from '../pwa/sw';
 import type { VideoStore } from '../videos/opfsStore';
@@ -12,7 +12,7 @@ export type Route = 'kiosk' | 'settings' | 'setup';
 export interface AppContext {
   config: ConfigStore;
   videos: VideoStore;
-  scanner: KeyboardScanner;
+  scanner: CardInput;
   install: InstallManager;
   sw: ServiceWorkerManager;
   diagnostics: Diagnostics;

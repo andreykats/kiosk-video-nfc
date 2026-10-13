@@ -2,7 +2,7 @@ import type { AppContext } from '../app/context';
 import { saveEdit } from '../app/edits';
 import { errorMessage } from '../app/log';
 import { cardsForVideo, removeVideo, setLoopVideo, upsertVideo } from '../config/ops';
-import { formatUid } from '../scan/uid';
+import { formatMatch } from '../scan/uid';
 import { confirmDialog, errorList, messageDialog } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
@@ -35,7 +35,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
       content: [
         h('p', {}, 'The file is removed from this kiosk and the video is removed from the config.'),
         cards.length > 0
-          ? h('div', {}, h('p', {}, 'These cards will be unpaired:'), errorList(cards.map((c) => formatUid(c.uid))))
+          ? h('div', {}, h('p', {}, 'These cards will be unpaired:'), errorList(cards.map((c) => formatMatch(c.match))))
           : '',
         config.loopVideo === fileName
           ? h('p', {}, nextLoop ? `This is the loop video. ${nextLoop} will become the loop video.` : 'This is the loop video, and there are no other videos to loop.')

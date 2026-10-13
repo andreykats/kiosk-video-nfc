@@ -14,8 +14,8 @@ Build an offline-capable browser kiosk app:
 
 | Topic | Decision |
 |---|---|
-| NFC reader | **ACS ACR1552U in USB keyboard-emulation mode.** The reader "types" the card UID followed by Enter. The browser only sees key presses: no WebUSB, Web NFC, Web Serial or helper app. |
-| Card identity | The card's **UID** is the identifier. **No writing to cards.** |
+| NFC reader | **ACS ACR1552U or ACR1255U-J1**, read per kiosk either in **USB keyboard-emulation mode** (the reader "types" the UID; no helper app) or through the **NFC Browser Bridge** app (`ws://127.0.0.1:38241/v1`, see §6.3). No WebUSB, Web NFC or Web Serial. |
+| Card identity | The card's **UID**, or its **card ID** (first URI or Text NDEF record, bridge only). **The kiosk never writes to cards.** |
 | Browser / OS | **Google Chrome** on **Windows and macOS**. |
 | Stack | **TypeScript + Vite**, no UI framework. **vite-plugin-pwa** for the service worker and manifest. |
 | Hosting | **GitHub Pages** project site (`https://<user>.github.io/<repo>/`), deployed with the official GitHub Actions Pages workflow. The repo is **public**. |
@@ -47,31 +47,35 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
 
 ## 4. Config file
 
-### 4.1 Schema (v1)
+### 4.1 Schema (v2)
 
 ```jsonc
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "updatedAt": "2026-10-11T15:00:00Z",        // set on export
   "loopVideo": "attract-loop.mp4",            // fileName or null
   "videos": [
     { "fileName": "lion.mp4", "title": "Lion", "sizeBytes": 1048576000 }
   ],
   "cards": [
-    { "uid": "04A23B1C5D8000", "fileName": "lion.mp4", "label": "Lion card" }
+    { "match": { "kind": "uid", "value": "04A23B1C5D8000" }, "fileName": "lion.mp4", "label": "Lion card" },
+    { "match": { "kind": "ndef", "value": "https://topps.drey.dev/c/BRONCOS-12" }, "fileName": "broncos.mp4", "label": "" }
   ],
   "adminCards": [
-    { "uid": "04FF001122AA80", "label": "Front desk admin" }
+    { "match": { "kind": "uid", "value": "04FF001122AA80" }, "label": "Front desk admin" }
   ]
 }
 ```
+
+v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 
 ### 4.2 Rules
 
 - **`fileName` is the video's identity across kiosks.** It must be unique, and it is the name of the file in OPFS. Every kiosk imports a file with the same name.
 - `sizeBytes` is used only to **warn** when a kiosk's local file size differs. It never blocks.
 - `label` on cards and admin cards, and `title` on videos, stay in the schema for compatibility, but the app no longer shows or edits them. New cards are saved with `label: ""`, and new videos get a title derived from the file name.
-- `uid` is uppercase hex with no separators (see §6). A UID may appear in at most one of `cards` or `adminCards`.
+- A `uid` match value is uppercase hex with no separators (see §6). An `ndef` match value (card ID) is 1–256 characters with no control characters. Each (kind, value) pair may appear at most once across `cards` and `adminCards`.
+- Scans resolve in this order: admin card by card ID, admin card by UID, video card by card ID, video card by UID (`resolveScan` in `src/config/ops.ts`).
 - Every `cards[].fileName` and `loopVideo` must reference an entry in `videos`.
 - Write a `validateConfig(json): Result<Config, string[]>` function with clear error messages. Use it for published fetches, file imports and the IndexedDB load.
 - Include a `migrate()` hook keyed on `schemaVersion` so future versions can upgrade v1 configs.
@@ -142,6 +146,14 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
 - Call `preventDefault()` on keys consumed by an active burst, so they don't type into focused inputs or trigger browser shortcuts.
 - Debounce identical UIDs within ~1.5 s, because readers can re-emit while a card rests on the reader.
 - Unit-test this heavily (§10).
+
+### 6.3 Bridge app and reader modes (`src/scan/cardInput.ts`, `src/scan/bridge/`)
+
+- `CardInput` is the app's single scan source (`ctx.scanner`). Per-kiosk mode in localStorage `kiosk.readerMode`: `keyboard` (default), `bridge`, `auto`.
+- The keyboard scanner always listens, so reader bursts never type into inputs; its scans only count when the keyboard is the active source.
+- `keyboard` never opens the WebSocket. `auto` connects only once Chrome's `loopback-network` ("Apps on device") permission is `granted`, so the prompt never appears on the visitor screen; staff connect explicitly from Settings or the setup guide.
+- `BridgeScanner` wraps the bridge's TypeScript client, copied into `src/scan/bridge/vendor/` (don't edit there; re-copy from the bridge repo). On each new tap on a non-SAM reader it reads the NDEF message (NFC Forum Type 2 cards only, 1.5 s timeout) and emits `{ uid, ndefKey, records, source: 'bridge' }`. Cards already on the reader when the connection opens are not taps. Same UID within 1.5 s is ignored.
+- The focus notice only shows while the keyboard is the active source. In `bridge` mode the kiosk shows "Card reader not available" while the bridge app or the reader is missing.
 
 ## 7. Kiosk view and playback state machine
 

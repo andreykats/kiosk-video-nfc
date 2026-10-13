@@ -7,6 +7,7 @@ export const LION_UID = '04A23B1C5D8000';
 export const TIGER_UID = '04A23B1C5D8011';
 export const ADMIN_UID = '04FF001122AA80';
 
+/** A v1 config (cards keyed by `uid`), so imports also exercise the upgrade to v2. */
 export const testConfig = {
   schemaVersion: 1,
   updatedAt: '2026-10-11T15:00:00.000Z',
@@ -22,6 +23,11 @@ export const testConfig = {
   ],
   adminCards: [{ uid: ADMIN_UID, label: 'Front desk' }],
 };
+
+/** `testConfig`'s cards as the app stores and exports them (schema v2). */
+export const uidMatch = (value: string) => ({ kind: 'uid', value });
+export const testCardsV2 = testConfig.cards.map(({ uid, ...rest }) => ({ match: uidMatch(uid), ...rest }));
+export const testAdminCardsV2 = testConfig.adminCards.map(({ uid, ...rest }) => ({ match: uidMatch(uid), ...rest }));
 
 /**
  * Simulates the reader: hex keys 5 ms apart, then Enter. Each key carries its

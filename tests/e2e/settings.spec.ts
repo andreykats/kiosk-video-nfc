@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PUBLISHED_CONFIG_ENABLED } from '../../src/config/sync';
 import { readFile } from 'node:fs/promises';
-import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testConfig } from './helpers';
+import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig } from './helpers';
 
 test('first run opens the setup guide', async ({ page }) => {
   await page.goto('./');
@@ -68,8 +68,9 @@ test('export → import round-trip', async ({ page }) => {
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('config.json');
   const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
-  expect(exported.cards).toEqual(testConfig.cards);
-  expect(exported.adminCards).toEqual(testConfig.adminCards);
+  expect(exported.schemaVersion).toBe(2);
+  expect(exported.cards).toEqual(testCardsV2);
+  expect(exported.adminCards).toEqual(testAdminCardsV2);
   expect(Date.parse(exported.updatedAt)).toBeGreaterThan(Date.parse(testConfig.updatedAt));
 
   // Re-importing the export on a kiosk with local edits replaces them.
@@ -120,7 +121,7 @@ test('videos and cards tables show file names only: no title, label or "no loop"
   await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', '']);
   await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
-  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['UID', 'Video', '']);
+  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['Card', 'Video', '']);
   await expect(page.getByTestId('cards-table').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel('No loop video')).toHaveCount(0);
   await expect(page.getByTestId('videos-table').locator('input[type="radio"]')).toHaveCount(3);

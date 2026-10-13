@@ -1,10 +1,10 @@
-import { findAdminCard, findCard } from '../config/ops';
-import type { Config } from '../config/schema';
+import { resolveScan, type CardIdentity } from '../config/ops';
+import { describeMatch, type Config } from '../config/schema';
 
 export type KioskState = { kind: 'loop' } | { kind: 'feature'; fileName: string };
 
 export type KioskEvent =
-  | { type: 'scan'; uid: string }
+  | { type: 'scan'; card: CardIdentity }
   | { type: 'featureEnded' }
   | { type: 'featureFailed' };
 
@@ -38,15 +38,15 @@ export function transition(state: KioskState, event: KioskEvent, ctx: KioskConte
       return { state: { kind: 'loop' }, effects: [{ type: 'resumeLoop' }] };
 
     case 'scan': {
+      const match = resolveScan(ctx.config, event.card);
       // Admin cards open settings from any state.
-      if (findAdminCard(ctx.config, event.uid)) return { state, effects: [{ type: 'openSettings' }] };
-      if (state.kind === 'feature') return { state, effects: [] };
-      const card = findCard(ctx.config, event.uid);
-      if (!card) return { state, effects: [] };
+      if (match?.kind === 'admin') return { state, effects: [{ type: 'openSettings' }] };
+      if (state.kind === 'feature' || !match) return { state, effects: [] };
+      const card = match.entry;
       if (!ctx.hasFile(card.fileName)) {
         return {
           state,
-          effects: [{ type: 'warn', message: `Card ${event.uid} is paired to "${card.fileName}", which is not imported on this kiosk.` }],
+          effects: [{ type: 'warn', message: `Card with ${describeMatch(card.match)} is paired to "${card.fileName}", which is not imported on this kiosk.` }],
         };
       }
       return { state: { kind: 'feature', fileName: card.fileName }, effects: [{ type: 'playFeature', fileName: card.fileName }] };

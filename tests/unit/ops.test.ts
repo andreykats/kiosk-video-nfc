@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAdminCard, cardsForVideo, pairCard, removeVideo, upsertVideo } from '../../src/config/ops';
+import { addAdminCard, cardsForVideo, findCard, ndefCardCount, pairCard, removeCard, removeVideo, resolveScan, scanMatches, setCardVideo, upsertVideo } from '../../src/config/ops';
 import { emptyConfig, validateConfig } from '../../src/config/schema';
 
 describe('config ops', () => {
@@ -7,8 +7,8 @@ describe('config ops', () => {
     let c = upsertVideo(emptyConfig(), 'loop.mp4', 10);
     c = upsertVideo(c, 'lion.mp4', 20);
     c = { ...c, loopVideo: 'lion.mp4' };
-    c = pairCard(c, { uid: '04A23B1C', fileName: 'lion.mp4', label: 'Lion' });
-    return pairCard(c, { uid: '04A23B1D', fileName: 'loop.mp4', label: 'Other' });
+    c = pairCard(c, { match: { kind: 'uid', value: '04A23B1C' }, fileName: 'lion.mp4', label: 'Lion' });
+    return pairCard(c, { match: { kind: 'uid', value: '04A23B1D' }, fileName: 'loop.mp4', label: 'Other' });
   };
 
   it('derives a title from the file name and updates size on re-import', () => {
@@ -25,8 +25,8 @@ describe('config ops', () => {
 
   it('removing a video unpairs its cards; removing the loop moves it to another video', () => {
     const c = removeVideo(base(), 'lion.mp4');
-    expect(cardsForVideo(base(), 'lion.mp4').map((x) => x.uid)).toEqual(['04A23B1C']);
-    expect(c.cards.map((x) => x.uid)).toEqual(['04A23B1D']);
+    expect(cardsForVideo(base(), 'lion.mp4').map((x) => x.match.value)).toEqual(['04A23B1C']);
+    expect(c.cards.map((x) => x.match.value)).toEqual(['04A23B1D']);
     expect(c.loopVideo).toBe('loop.mp4');
     expect(validateConfig(c).ok).toBe(true);
   });
@@ -43,14 +43,62 @@ describe('config ops', () => {
   });
 
   it('reassigning a card keeps one entry', () => {
-    const c = pairCard(base(), { uid: '04A23B1C', fileName: 'loop.mp4', label: 'Moved' });
+    const c = pairCard(base(), { match: { kind: 'uid', value: '04A23B1C' }, fileName: 'loop.mp4', label: 'Moved' });
     expect(c.cards).toHaveLength(2);
-    expect(c.cards[0]).toEqual({ uid: '04A23B1C', fileName: 'loop.mp4', label: 'Moved' });
+    expect(c.cards[0]).toEqual({ match: { kind: 'uid', value: '04A23B1C' }, fileName: 'loop.mp4', label: 'Moved' });
   });
 
   it('adds admin cards without duplicates', () => {
-    let c = addAdminCard(base(), { uid: 'AABBCCDD', label: 'A' });
-    c = addAdminCard(c, { uid: 'AABBCCDD', label: 'B' });
-    expect(c.adminCards).toEqual([{ uid: 'AABBCCDD', label: 'B' }]);
+    let c = addAdminCard(base(), { match: { kind: 'uid', value: 'AABBCCDD' }, label: 'A' });
+    c = addAdminCard(c, { match: { kind: 'uid', value: 'AABBCCDD' }, label: 'B' });
+    expect(c.adminCards).toEqual([{ match: { kind: 'uid', value: 'AABBCCDD' }, label: 'B' }]);
+  });
+});
+
+describe('matching scans to cards', () => {
+  const ID = 'https://topps.drey.dev/c/BRONCOS-12';
+  const config = () => {
+    let c = upsertVideo(emptyConfig(), 'loop.mp4', 1);
+    c = upsertVideo(c, 'lion.mp4', 1);
+    c = upsertVideo(c, 'tiger.mp4', 1);
+    c = pairCard(c, { match: { kind: 'uid', value: '04A23B1C' }, fileName: 'lion.mp4', label: '' });
+    c = pairCard(c, { match: { kind: 'ndef', value: ID }, fileName: 'tiger.mp4', label: '' });
+    return addAdminCard(c, { match: { kind: 'uid', value: 'ADADADAD' }, label: '' });
+  };
+
+  it('lists the card ID before the UID', () => {
+    expect(scanMatches({ uid: '04A23B1C', ndefKey: ID })).toEqual([
+      { kind: 'ndef', value: ID },
+      { kind: 'uid', value: '04A23B1C' },
+    ]);
+    expect(scanMatches({ uid: '04A23B1C', ndefKey: null })).toEqual([{ kind: 'uid', value: '04A23B1C' }]);
+  });
+
+  it('prefers the card ID over the UID', () => {
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: ID })).toMatchObject({ kind: 'video', entry: { fileName: 'tiger.mp4' } });
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: null })).toMatchObject({ kind: 'video', entry: { fileName: 'lion.mp4' } });
+    expect(resolveScan(config(), { uid: '11111111', ndefKey: ID })).toMatchObject({ kind: 'video', entry: { fileName: 'tiger.mp4' } });
+  });
+
+  it('falls back to the UID when the card ID is not paired', () => {
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: 'https://example.com/other' })).toMatchObject({ entry: { fileName: 'lion.mp4' } });
+    expect(resolveScan(config(), { uid: '11111111', ndefKey: null })).toBeNull();
+  });
+
+  it('lets an admin card win over a video card ID', () => {
+    expect(resolveScan(config(), { uid: 'ADADADAD', ndefKey: ID })).toMatchObject({ kind: 'admin' });
+  });
+
+  it('edits and removes cards by match', () => {
+    let c = setCardVideo(config(), { kind: 'ndef', value: ID }, 'lion.mp4');
+    expect(findCard(c, { kind: 'ndef', value: ID })?.fileName).toBe('lion.mp4');
+    c = removeCard(c, { kind: 'ndef', value: ID });
+    expect(findCard(c, { kind: 'ndef', value: ID })).toBeUndefined();
+    expect(c.cards).toHaveLength(1);
+    expect(validateConfig(c).ok).toBe(true);
+  });
+
+  it('counts cards that need the bridge', () => {
+    expect(ndefCardCount(config())).toBe(1);
   });
 });
