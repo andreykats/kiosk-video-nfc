@@ -9,7 +9,7 @@ export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-br
 
 const MODE_LABELS: Record<ReaderMode, string> = {
   keyboard: 'HID Keyboard - Read card’s UID only',
-  bridge: 'NFC Browser Bridge (install separately) - Read card’s NDEF payload',
+  bridge: 'NFC Browser Bridge - Read card’s NDEF payload',
 };
 
 /** One line describing the bridge connection, for settings and diagnostics. */

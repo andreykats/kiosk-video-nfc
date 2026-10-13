@@ -128,7 +128,7 @@ test('keyboard mode never opens a connection to the bridge, and the mode is kept
   await setUpKiosk(page);
   await expect(page.getByTestId('reader-mode')).toHaveValue('keyboard');
   // Reader setup is manual: only HID Keyboard and the bridge are offered.
-  await expect(page.getByTestId('reader-mode').locator('option')).toHaveText(['HID Keyboard - Read card’s UID only', 'NFC Browser Bridge (install separately) - Read card’s NDEF payload']);
+  await expect(page.getByTestId('reader-mode').locator('option')).toHaveText(['HID Keyboard - Read card’s UID only', 'NFC Browser Bridge - Read card’s NDEF payload']);
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
   await scan(page, LION_UID);
