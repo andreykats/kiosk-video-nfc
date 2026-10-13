@@ -8,8 +8,8 @@ import { reactiveSection, type Section } from './section';
 export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-bridge/releases';
 
 const MODE_LABELS: Record<ReaderMode, string> = {
-  keyboard: 'Keyboard (HID) — the reader types the card UID',
-  bridge: 'Bridge app — also reads card IDs; needs the NFC Browser Bridge app',
+  keyboard: 'HID Keyboard - Read card’s UID only',
+  bridge: 'NFC Browser Bridge (install separately) - Read card’s NDEF payload',
 };
 
 /** One line describing the bridge connection, for settings and diagnostics. */
@@ -46,7 +46,7 @@ export function readerControls(ctx: AppContext): Section {
     const status = ctx.scanner.bridgeStatus;
     const select = h(
       'select',
-      { 'data-testid': 'reader-mode', 'aria-label': 'Card reader input' },
+      { 'data-testid': 'reader-mode', 'aria-label': 'Card reader input method' },
       ...(Object.keys(MODE_LABELS) as ReaderMode[]).map((m) => h('option', { value: m, selected: m === mode }, MODE_LABELS[m])),
     );
     select.addEventListener('change', () => {
@@ -55,7 +55,7 @@ export function readerControls(ctx: AppContext): Section {
     const usesBridge = mode === 'bridge';
     replaceChildren(
       el,
-      h('label', {}, 'Card reader input ', select),
+      h('label', {}, 'Card reader input method: ', select),
       usesBridge
         ? h(
             'div',

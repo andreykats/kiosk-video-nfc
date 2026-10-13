@@ -13,7 +13,7 @@ const AUTOPLAY_TEXT = {
   blocked: 'Blocked — videos cannot autoplay. Launch Chrome with --autoplay-policy=no-user-gesture-required.',
 } as const;
 
-const READER_MODE_TEXT = { keyboard: 'Keyboard (HID)', bridge: 'Bridge app' } as const;
+const READER_MODE_TEXT = { keyboard: 'HID Keyboard', bridge: 'NFC Browser Bridge' } as const;
 
 function row(label: string, value: Node | string, testId?: string): HTMLElement {
   return h('div', { class: 'diag-row' }, h('dt', {}, label), h('dd', { 'data-testid': testId }, value));

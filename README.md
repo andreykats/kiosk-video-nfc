@@ -3,8 +3,8 @@
 A browser kiosk for Google Chrome on Windows and macOS. While idle it plays a loop video fullscreen. When someone scans a paired NFC card, it plays that card's video once and then goes back to the loop. Cards that aren't paired do nothing.
 
 - **Reader:** an ACS NFC reader (ACR1552U or ACR1255U-J1), read one of two ways, chosen per kiosk in Settings → **Card reader**:
-  - **Keyboard (HID):** the reader types the card UID and then Enter. Nothing to install.
-  - **Bridge app:** the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge) app, running in the tray or menu bar, passes cards to the page. It also reads the card's **card ID** (NDEF), and taps work even when the kiosk window isn't focused.
+  - **HID Keyboard:** the reader types the card UID and then Enter. Nothing to install.
+  - **NFC Browser Bridge:** the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge) app, running in the tray or menu bar, passes cards to the page. It also reads the card's **card ID** (NDEF), and taps work even when the kiosk window isn't focused.
 - **Hosting:** GitHub Pages at **https://topps.drey.dev/**. After the first load, the app works offline (it's an installable PWA).
 - **Videos:** each kiosk imports its own copies into browser storage (the origin private file system). Videos are never uploaded to GitHub.
 - **Config:** a `config.json` file lists the videos, card pairings and admin cards. You set it up on one kiosk, export it, and import it on the others (see [Sharing config changes](#sharing-config-changes)).
@@ -79,18 +79,18 @@ A video's `fileName` is its identity on every kiosk. Each kiosk must import a fi
 
 ## Reader configuration
 
-Staff choose the input in Settings → **Card reader** (the setup guide asks on its reader step). The kiosk never switches by itself. The choice is stored on each kiosk, not in the shared config.
+Staff choose the **Card reader input method** in Settings → **Card reader** (the setup guide asks on its reader step). The kiosk never switches by itself. The choice is stored on each kiosk, not in the shared config.
 
 | Mode | When to use it |
 |---|---|
-| **Keyboard (HID)** (default) | No software can be installed on the kiosk. Cards are matched by UID only. |
-| **Bridge app** | The bridge app is installed. Cards can be matched by card ID or UID. If the bridge app or the reader is missing, the kiosk screen says so. |
+| **HID Keyboard** (default) | No software can be installed on the kiosk. Cards are matched by UID only. |
+| **NFC Browser Bridge** | The bridge app is installed. Cards can be matched by card ID or UID. If the bridge app or the reader is missing, the kiosk screen says so. |
 
-### Bridge app
+### NFC Browser Bridge
 
 1. Install the bridge app from its [Releases page](https://github.com/andreykats/nfc-browser-bridge/releases) and let it start at login (see its README).
 2. Keep the reader in its factory **CCID** mode. No ACS tool needed.
-3. In Settings → **Card reader**, choose **Bridge app**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to `https://topps.drey.dev`.
+3. In Settings → **Card reader**, choose **NFC Browser Bridge**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to `https://topps.drey.dev`.
 4. Hold a card on the reader. Settings → Diagnostics shows its UID, card ID and NDEF records.
 
 ### Card IDs
@@ -100,9 +100,9 @@ A **card ID** is the value of the card's first **URI** record (the full URL), or
 - **Card ID:** every card written with the same ID plays the same video. Use it for batches of identical cards.
 - **UID:** only that physical card. Admin cards default to the UID, so a card ID shared by visitor cards can never open settings.
 
-Cards paired by card ID only work on kiosks in Bridge app mode; Settings warns on keyboard-mode kiosks. When a card matches both ways, admin cards win over video cards, and the card ID wins over the UID.
+Cards paired by card ID only work on kiosks using the NFC Browser Bridge; Settings warns on keyboard-mode kiosks. When a card matches both ways, admin cards win over video cards, and the card ID wins over the UID.
 
-### Keyboard (HID) mode on the ACR1552U
+### HID Keyboard mode on the ACR1552U
 
 Use ACS's configuration tool (Windows only) **once per reader**:
 
