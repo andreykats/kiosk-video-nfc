@@ -60,7 +60,7 @@ export function readerControls(ctx: AppContext): Section {
         ? h(
             'div',
             { class: 'bridge-status' },
-            h('p', {}, 'Bridge app: ', h('strong', { 'data-testid': 'bridge-status', 'data-state': status.state }, bridgeStatusText(ctx))),
+            h('p', {}, h('strong', { 'data-testid': 'bridge-status', 'data-state': status.state }, bridgeStatusText(ctx))),
             status.state === 'connected'
               ? null
               : h('p', {}, h('a', { href: BRIDGE_DOWNLOAD_URL, target: '_blank', rel: 'noopener' }, 'Download the bridge app')),
