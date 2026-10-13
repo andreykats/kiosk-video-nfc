@@ -8,8 +8,8 @@ import { reactiveSection, type Section } from './section';
 export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-bridge/releases';
 
 const MODE_LABELS: Record<ReaderMode, string> = {
-  keyboard: 'HID Keyboard - Read card’s UID only',
-  bridge: 'NFC Browser Bridge - Read card’s NDEF payload',
+  keyboard: 'HID Keyboard (Read card’s UID only)',
+  bridge: 'NFC Browser Bridge (Read card’s NDEF payload)',
 };
 
 /** One line describing the bridge connection, for settings and diagnostics. */
