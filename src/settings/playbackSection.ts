@@ -10,11 +10,9 @@ export function renderPlaybackSection(): Section {
     { 'data-testid': 'playback-section' },
     h('h2', {}, 'Playback'),
     h('label', {}, toggle, ' Tag scans interrupt the playing video'),
-    h(
-      'p',
-      { class: 'hint' },
-      'Off: a tag’s video plays to the end, and other scans are ignored until it does. On: a scanned tag starts its video right away, even while another plays. Scanning the same tag again starts its video over. Admin tags open settings either way.',
-    ),
+    h('p', { class: 'hint' }, 'Off: a tag’s video plays to the end, and other scans are ignored until it does.'),
+    h('p', { class: 'hint' }, 'On: a scanned tag starts its video right away, even while another plays. Scanning the same tag again starts its video over.'),
+    h('p', { class: 'hint' }, 'Admin tags open settings either way.'),
   );
   return { el, destroy: () => undefined };
 }
