@@ -15,6 +15,7 @@ import { CardInput } from './scan/cardInput';
 import { mountSettings } from './settings/settingsView';
 import { h } from './ui/dom';
 import { VideoStore } from './videos/opfsStore';
+import { PlayCounts } from './videos/playCounts';
 
 const ROUTE_HASH: Record<Route, string> = { kiosk: '#/', settings: '#/settings', setup: '#/setup' };
 
@@ -59,6 +60,7 @@ async function boot(): Promise<void> {
   const ctx: AppContext = {
     config,
     videos,
+    playCounts: new PlayCounts(),
     scanner,
     install,
     sw,

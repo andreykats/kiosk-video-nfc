@@ -60,6 +60,16 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
     await ctx.videos.delete(fileName).catch((e) => messageDialog('Could not delete', [errorMessage(e)]));
   };
 
+  const resetPlayCounts = async () => {
+    const ok = await confirmDialog({
+      title: 'Reset play counts?',
+      content: ['Every video’s play count on this kiosk goes back to 0.'],
+      confirmLabel: 'Reset play count',
+      danger: true,
+    });
+    if (ok) ctx.playCounts.clear();
+  };
+
   const filesInput = filePicker({ folder: false, testId: 'import-files-input', onPick: (f) => void importPickedFiles(ctx, host, f) });
   const folderInput = filePicker({ folder: true, testId: 'import-folder-input', onPick: (f) => void importPickedFolder(ctx, host, f) });
 
@@ -94,6 +104,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
         h('td', { class: 'mono' }, v.fileName),
         h('td', {}, formatBytes(size ?? v.sizeBytes)),
         h('td', {}, status),
+        h('td', { class: 'play-count', 'data-testid': 'play-count' }, String(ctx.playCounts.get(v.fileName))),
         h(
           'td',
           { class: 'actions' },
@@ -122,13 +133,14 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
         { class: 'toolbar' },
         h('button', { type: 'button', disabled: busy, onclick: () => filesInput.click() }, 'Import files'),
         h('button', { type: 'button', disabled: busy, onclick: () => folderInput.click() }, 'Import folder'),
+        h('button', { type: 'button', 'data-testid': 'reset-play-counts', disabled: busy, onclick: () => void resetPlayCounts() }, 'Reset play count'),
       ),
       config.videos.length === 0
         ? h('p', { class: 'hint' }, 'No videos yet. Update from the published config, then Import folder.')
         : h(
             'table',
             { 'data-testid': 'videos-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th', { title: 'Times a tag played this video on this kiosk' }, 'Play count'), h('th'))),
             h(
               'tbody',
               {},
@@ -161,5 +173,9 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
   }
 
   const el = h('section', { 'data-testid': 'videos-section' }, h('h2', {}, 'Videos'), filesInput, folderInput, progress, body);
-  return reactiveSection(el, render, [(l) => ctx.config.changed.subscribe(l), (l) => ctx.videos.changed.subscribe(l)]);
+  return reactiveSection(el, render, [
+    (l) => ctx.config.changed.subscribe(l),
+    (l) => ctx.videos.changed.subscribe(l),
+    (l) => ctx.playCounts.changed.subscribe(l),
+  ]);
 }

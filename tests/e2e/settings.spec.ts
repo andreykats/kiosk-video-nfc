@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PUBLISHED_CONFIG_ENABLED } from '../../src/config/sync';
 import { readFile } from 'node:fs/promises';
-import { ADMIN_UID, clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig, TIGER_UID } from './helpers';
+import { ADMIN_UID, clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig, TIGER_UID, waitForPlaying } from './helpers';
 
 test('first run opens the setup guide', async ({ page }) => {
   await page.goto('./');
@@ -118,6 +118,34 @@ test('an admin tag closes settings, except while a dialog is waiting for a tag',
   await expect(page.getByTestId('kiosk')).toBeVisible();
 });
 
+test('videos show how many times a tag played them, kept across reloads until Reset play count', async ({ page }) => {
+  await setUpKiosk(page);
+  const count = (file: string) => page.locator(`[data-testid="videos-table"] tr[data-file="${file}"]`).getByTestId('play-count');
+  await expect(page.getByTestId('videos-table').locator('thead th').nth(4)).toHaveText('Play count');
+  await expect(count('lion.mp4')).toHaveText('0');
+
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  await scan(page, LION_UID);
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+
+  await openSettings(page);
+  await expect(count('lion.mp4')).toHaveText('1');
+  await expect(count('tiger.mp4')).toHaveText('0');
+  // The loop's repeats don't count.
+  await expect(count('loop.mp4')).toHaveText('0');
+
+  // Cancelling keeps the counts.
+  await page.getByTestId('reset-play-counts').click();
+  await clickDialogButton(page, 'Cancel');
+  await expect(count('lion.mp4')).toHaveText('1');
+  await page.getByTestId('reset-play-counts').click();
+  await clickDialogButton(page, 'Reset play count');
+  await expect(count('lion.mp4')).toHaveText('0');
+  await page.reload();
+  await expect(count('lion.mp4')).toHaveText('0');
+});
+
 test('export → import round-trip', async ({ page }) => {
   await setUpKiosk(page);
   const downloadPromise = page.waitForEvent('download');
@@ -175,7 +203,7 @@ test('update from published config fetches config.json fresh and applies it', as
 
 test('videos and tags tables show file names only: no title, label or "no loop" row', async ({ page }) => {
   await setUpKiosk(page);
-  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', '']);
+  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', 'Play count', '']);
   await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
   await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['Tag', 'Video', '']);

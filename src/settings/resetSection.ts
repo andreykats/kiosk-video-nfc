@@ -22,7 +22,7 @@ export async function resetKiosk(ctx: AppContext): Promise<boolean> {
       h(
         'p',
         {},
-        `This deletes all ${files.size} video file(s) (${formatBytes(bytes)}) from this kiosk, and the config: ${config.videos.length} video(s), ${config.cards.length} tag(s) and ${config.adminCards.length} admin tag(s).`,
+        `This deletes all ${files.size} video file(s) (${formatBytes(bytes)}) from this kiosk, their play counts, and the config: ${config.videos.length} video(s), ${config.cards.length} tag(s) and ${config.adminCards.length} admin tag(s).`,
       ),
       h('p', {}, 'The setup guide then starts again from step 1. This can’t be undone. Export the config first if you want to keep it.'),
     ],
@@ -34,6 +34,7 @@ export async function resetKiosk(ctx: AppContext): Promise<boolean> {
   try {
     await ctx.videos.clear();
     await ctx.config.clear();
+    ctx.playCounts.clear();
   } catch (e) {
     log.error('Reset failed:', e);
     await messageDialog('Reset didn’t finish', ['Some data could not be deleted. Try again.', errorMessage(e)]);

@@ -218,7 +218,9 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
       if (isAbort(e) || state !== started) return;
       log.error(`Video "${fileName}" failed to play:`, e);
       dispatch({ type: 'featureFailed' });
+      return;
     }
+    ctx.playCounts.increment(fileName);
   };
 
   const run = (effect: KioskEffect) => {
