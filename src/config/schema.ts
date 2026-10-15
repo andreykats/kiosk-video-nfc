@@ -23,11 +23,18 @@ export interface CardEntry {
   match: CardMatch;
   fileName: string;
   label: string;
+  /**
+   * The tag's other identifier (NDEF payload for a UID match, or the reverse),
+   * when it was read at pairing. Shown in settings only: never used to match.
+   */
+  otherId?: CardMatch;
 }
 
 export interface AdminCardEntry {
   match: CardMatch;
   label: string;
+  /** As for CardEntry: display only, so a shared NDEF payload can't open settings. */
+  otherId?: CardMatch;
 }
 
 export const NDEF_KEY_MAX_LENGTH = 256;
@@ -184,38 +191,57 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
     videos.push({ fileName, title, sizeBytes });
   });
 
-  const matches = new Map<string, string>(); // matchId → where it was first seen
-  const checkMatch = (match: unknown, at: string): match is CardMatch => {
+  /** Checks the shape of a CardMatch at `at` (e.g. "cards[0].match"). */
+  const checkMatchShape = (match: unknown, at: string): match is CardMatch => {
     if (!isObj(match)) {
-      errors.push(`${at}.match must be an object with "kind" and "value".`);
+      errors.push(`${at} must be an object with "kind" and "value".`);
       return false;
     }
     const { kind, value } = match;
     if (kind === 'uid') {
       if (typeof value !== 'string' || !isCanonicalUid(value)) {
         errors.push(
-          `${at}.match.value must be a UID: uppercase hex with no separators, ${UID_HEX_LENGTHS.join('/')} characters long (got ${JSON.stringify(value)}).`,
+          `${at}.value must be a UID: uppercase hex with no separators, ${UID_HEX_LENGTHS.join('/')} characters long (got ${JSON.stringify(value)}).`,
         );
         return false;
       }
     } else if (kind === 'ndef') {
       const problem = typeof value === 'string' ? ndefKeyError(value) : 'must be a string';
       if (problem) {
-        errors.push(`${at}.match.value (tag ID) ${problem}.`);
+        errors.push(`${at}.value (tag ID) ${problem}.`);
         return false;
       }
     } else {
-      errors.push(`${at}.match.kind must be "uid" or "ndef" (got ${JSON.stringify(kind)}).`);
+      errors.push(`${at}.kind must be "uid" or "ndef" (got ${JSON.stringify(kind)}).`);
       return false;
     }
-    const id = matchId({ kind, value: value as string });
+    return true;
+  };
+
+  const matches = new Map<string, string>(); // matchId → where it was first seen
+  const checkMatch = (match: unknown, at: string): match is CardMatch => {
+    if (!checkMatchShape(match, `${at}.match`)) return false;
+    const { kind, value } = match;
+    const id = matchId({ kind, value });
     const seen = matches.get(id);
     if (seen) {
-      errors.push(`${at}: ${describeMatch({ kind, value: value as string })} is already used by ${seen}.`);
+      errors.push(`${at}: ${describeMatch({ kind, value })} is already used by ${seen}.`);
       return false;
     }
     matches.set(id, at);
     return true;
+  };
+
+  /** The optional display-only otherId: the kind the match isn't. Undefined when absent or invalid. */
+  const checkOtherId = (entry: Obj, match: CardMatch, at: string): CardMatch | undefined | false => {
+    const other = entry.otherId;
+    if (other === undefined) return undefined;
+    if (!checkMatchShape(other, `${at}.otherId`)) return false;
+    if (other.kind === match.kind) {
+      errors.push(`${at}.otherId.kind must differ from match.kind.`);
+      return false;
+    }
+    return { kind: other.kind, value: other.value };
   };
 
   const cards: CardEntry[] = [];
@@ -228,7 +254,9 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
       return void errors.push(`${at}.fileName ${JSON.stringify(fileName)} does not match any entry in "videos".`);
     }
     if (typeof label !== 'string') return void errors.push(`${at}.label must be a string.`);
-    cards.push({ match: { kind: match.kind, value: match.value }, fileName, label });
+    const otherId = checkOtherId(c, match, at);
+    if (otherId === false) return;
+    cards.push({ match: { kind: match.kind, value: match.value }, fileName, label, ...(otherId && { otherId }) });
   });
 
   const adminCards: AdminCardEntry[] = [];
@@ -238,7 +266,9 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
     const { match, label } = c;
     if (!checkMatch(match, at)) return;
     if (typeof label !== 'string') return void errors.push(`${at}.label must be a string.`);
-    adminCards.push({ match: { kind: match.kind, value: match.value }, label });
+    const otherId = checkOtherId(c, match, at);
+    if (otherId === false) return;
+    adminCards.push({ match: { kind: match.kind, value: match.value }, label, ...(otherId && { otherId }) });
   });
 
   let loopVideo: string | null = null;

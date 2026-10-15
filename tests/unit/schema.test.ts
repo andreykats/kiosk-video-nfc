@@ -31,6 +31,24 @@ describe('validateConfig', () => {
     expect(r.ok && Object.keys(r.value.videos[0]!)).toEqual(['fileName', 'title', 'sizeBytes']);
   });
 
+  it('keeps a tag’s display-only otherId, and checks it', () => {
+    const otherId = { kind: 'ndef', value: 'https://topps.drey.dev/c/LION' } as const;
+    const c = valid();
+    const withOther = { ...c, cards: [{ ...c.cards[0]!, otherId }], adminCards: [{ ...c.adminCards[0]!, otherId: { kind: 'ndef', value: 'STAFF' } }] };
+    const r = validateConfig(withOther);
+    expect(r.ok && r.value.cards[0]!.otherId).toEqual(otherId);
+    expect(r.ok && r.value.adminCards[0]!.otherId).toEqual({ kind: 'ndef', value: 'STAFF' });
+    // Absent stays absent, not undefined.
+    expect(validateConfig(c).ok && Object.keys((validateConfig(c) as { value: Config }).value.cards[0]!)).toEqual(['match', 'fileName', 'label']);
+    // It must be the other kind, and a valid value.
+    expect(errorsOf({ ...c, cards: [{ ...c.cards[0]!, otherId: { kind: 'uid', value: '04A23B1C' } }] })).toEqual(['cards[0].otherId.kind must differ from match.kind.']);
+    expect(errorsOf({ ...c, cards: [{ ...c.cards[0]!, otherId: { kind: 'ndef', value: '' } }] })).toEqual(['cards[0].otherId.value (tag ID) is empty.']);
+    // It isn't an identity: another tag may use the same value as its match.
+    const shared = { ...c, cards: [{ ...c.cards[0]!, otherId: { kind: 'uid', value: '04FF001122AA80' } }] };
+    shared.cards[0]!.match = { kind: 'ndef', value: 'X' };
+    expect(validateConfig(shared).ok).toBe(true);
+  });
+
   it('rejects non-objects', () => {
     expect(errorsOf(null)).toEqual(['Config must be a JSON object.']);
     expect(errorsOf([])).toEqual(['Config must be a JSON object.']);

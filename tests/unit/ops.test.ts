@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAdminCard, cardMatch, cardsForVideo, checkPairing, findCard, pairCard, removeCard, removeVideo, resolveScan, scanMatches, setCardVideo, unrecognisedCardCount, upsertVideo } from '../../src/config/ops';
+import { addAdminCard, cardMatch, cardsForVideo, checkPairing, findCard, otherIdOf, pairCard, removeCard, removeVideo, resolveScan, scanMatches, setCardVideo, unrecognisedCardCount, upsertVideo } from '../../src/config/ops';
 import { emptyConfig, validateConfig } from '../../src/config/schema';
 
 describe('config ops', () => {
@@ -114,5 +114,23 @@ describe('matching scans to cards', () => {
     expect(unrecognisedCardCount(c, 'uid', true)).toBe(1); // the card-ID video card
     expect(unrecognisedCardCount(c, 'ndef', true)).toBe(1); // the UID video card
     expect(unrecognisedCardCount(c, 'uid', false)).toBe(2); // plus the card-ID admin card, without the bridge
+  });
+});
+
+describe('otherIdOf and pairCard', () => {
+  const lion = { kind: 'uid', value: '04A23B1C' } as const;
+  it('records the identifier the match doesn’t use, when the scan read it', () => {
+    expect(otherIdOf({ uid: '04A23B1C', ndefKey: 'https://x/c/1' }, lion)).toEqual({ kind: 'ndef', value: 'https://x/c/1' });
+    expect(otherIdOf({ uid: '04A23B1C', ndefKey: null }, lion)).toBeUndefined();
+    expect(otherIdOf({ uid: '04A23B1C', ndefKey: 'x'.repeat(300) }, lion)).toBeUndefined();
+    expect(otherIdOf({ uid: '04A23B1C', ndefKey: 'https://x/c/1' }, { kind: 'ndef', value: 'https://x/c/1' })).toEqual(lion);
+  });
+
+  it('keeps a recorded otherId when the tag is reassigned by a scan that didn’t read one', () => {
+    let c = upsertVideo(upsertVideo(emptyConfig(), 'loop.mp4', 1), 'lion.mp4', 1);
+    c = pairCard(c, { match: lion, fileName: 'lion.mp4', label: '', otherId: { kind: 'ndef', value: 'ID' } });
+    c = pairCard(c, { match: lion, fileName: 'loop.mp4', label: '' });
+    expect(findCard(c, lion)).toEqual({ match: lion, fileName: 'loop.mp4', label: '', otherId: { kind: 'ndef', value: 'ID' } });
+    expect(validateConfig(c).ok).toBe(true);
   });
 });

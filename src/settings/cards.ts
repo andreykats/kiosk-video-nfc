@@ -1,11 +1,11 @@
 import type { AppContext } from '../app/context';
 import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
-import { addAdminCard, checkPairing, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, scanMatches, setCardVideo } from '../config/ops';
+import { addAdminCard, checkPairing, findAdminCard, findCard, otherIdOf, pairCard, removeAdminCard, removeCard, scanMatches, setCardVideo } from '../config/ops';
 import { matchId, type CardEntry, type CardMatch } from '../config/schema';
 import { formatMatch, matchKindLabel } from '../scan/uid';
 import { confirmDialog, type DialogAction, type DialogHandle } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
-import { CARD_KEY_LABELS, matchAttrs, pairingError, reassignText } from './pairing';
+import { CARD_KEY_LABELS, identifierCells, matchAttrs, pairingError, reassignText } from './pairing';
 import { openScanDialog, scanMessage } from './scanModal';
 import { reactiveSection, type Section } from './section';
 import { saveEdit } from '../app/edits';
@@ -34,12 +34,12 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
         scanMessage(d, pairingError(check), 'error');
         return false;
       }
-      showDetails(check.match, check.existing);
+      showDetails(check.match, check.existing, otherIdOf(scan, check.match));
       return true;
     },
   });
 
-  const showDetails = (match: CardMatch, existing: CardEntry | undefined) => {
+  const showDetails = (match: CardMatch, existing: CardEntry | undefined, otherId: CardMatch | undefined) => {
     const config = ctx.config.get();
     const select = videoSelect(ctx, existing?.fileName ?? null, { 'data-testid': 'pair-video', 'aria-label': 'Video' });
     const error = h('p', { class: 'scan-status error', hidden: true });
@@ -72,7 +72,7 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
             error.hidden = false;
             return false;
           }
-          return saveEdit(ctx, (c) => pairCard(c, { match, fileName: select.value, label: '' }));
+          return saveEdit(ctx, (c) => pairCard(c, { match, fileName: select.value, label: '', ...(otherId && { otherId }) }));
         },
       },
     ]);
@@ -92,9 +92,9 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
   const keep = h('input', { type: 'checkbox', 'data-testid': 'keep-pairing' });
   let paired = false;
   const idle = (): DialogAction<string>[] => [{ label: paired ? 'Done' : 'Cancel', value: null }];
-  const save = async (d: DialogHandle<string>, match: CardMatch) => {
+  const save = async (d: DialogHandle<string>, match: CardMatch, otherId: CardMatch | undefined) => {
     d.setActions(idle());
-    if (!(await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '' })))) {
+    if (!(await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '', ...(otherId && { otherId }) })))) {
       scanMessage(d, 'Could not save. Scan the tag again.', 'error');
       return;
     }
@@ -115,6 +115,7 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
         scanMessage(d, `${formatMatch(check.match)} already plays this video. Scan another tag.`);
       } else if (check.existing) {
         const { match, existing } = check;
+        const otherId = otherIdOf(scan, match);
         scanMessage(d, `${reassignText(match, existing.fileName)} Reassign it to this video?`);
         d.setActions([
           ...idle(),
@@ -123,13 +124,13 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
             value: null,
             kind: 'primary',
             before: async () => {
-              await save(d, match);
+              await save(d, match, otherId);
               return false; // save() closes the dialog unless Keep pairing is ticked
             },
           },
         ]);
       } else {
-        void save(d, check.match);
+        void save(d, check.match, otherIdOf(scan, check.match));
       }
       return false; // closing the dialog stops listening
     },
@@ -162,7 +163,8 @@ async function addNewAdminCard(ctx: AppContext): Promise<void> {
         scanMessage(d, `${formatMatch(match)} is already an admin tag. Scan another tag.`, 'error');
         return false;
       }
-      void saveEdit(ctx, (c) => addAdminCard(c, { match, label: '' })).then((saved) => {
+      const otherId = otherIdOf(scan, match);
+      void saveEdit(ctx, (c) => addAdminCard(c, { match, label: '', ...(otherId && { otherId }) })).then((saved) => {
         if (saved) d.close(matchId(match));
         else scanMessage(d, 'Could not save. Scan the tag again.', 'error');
       });
@@ -178,14 +180,14 @@ export function renderCards(ctx: AppContext): Section {
     const config = ctx.config.get();
     replaceChildren(
       body,
-      h('div', { class: 'toolbar' }, h('button', { type: 'button', class: 'primary', onclick: () => void pairNewCard(ctx) }, 'Pair new tag')),
+      h('div', { class: 'toolbar' }, h('button', { type: 'button', onclick: () => void pairNewCard(ctx) }, 'Pair new tag')),
       h('p', { class: 'hint', 'data-testid': 'card-key-hint' }, `This kiosk identifies tags by ${CARD_KEY_LABELS[ctx.scanner.cardKey]}. Change it under Tag reader.`),
       config.cards.length === 0
         ? h('p', { class: 'hint' }, 'No tags paired yet.')
         : h(
             'table',
             { 'data-testid': 'cards-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', {}, 'Video'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'UID'), h('th', {}, 'NDEF'), h('th', {}, 'Video file'), h('th'))),
             h(
               'tbody',
               {},
@@ -195,12 +197,8 @@ export function renderCards(ctx: AppContext): Section {
                 return h(
                   'tr',
                   matchAttrs(card.match),
-                  // UIDs stay on one line; long card IDs (URLs) may wrap.
-                  h(
-                    'td',
-                    { class: card.match.kind === 'uid' ? 'uid' : 'card-id' },
-                    h('span', { class: 'hint' }, `${matchKindLabel(card.match)} `),
-                    h('span', { class: 'mono' }, formatMatch(card.match)),
+                  ...identifierCells(
+                    card,
                     card.match.kind === ctx.scanner.cardKey ? null : h('div', { class: 'status warn', 'data-testid': 'card-unused' }, 'Not recognised on this kiosk'),
                   ),
                   h('td', {}, select),
@@ -240,25 +238,33 @@ export function renderAdminCards(ctx: AppContext): Section {
       config.adminCards.length === 0
         ? h('p', { class: 'hint' }, `No admin tags. Settings can still be opened with ${SETTINGS_SHORTCUT_LABEL}.`)
         : h(
-            'ul',
-            { 'data-testid': 'admin-list', class: 'admin-list' },
-            ...config.adminCards.map((card) =>
-              h(
-                'li',
-                matchAttrs(card.match),
-                card.match.kind === 'ndef' ? h('span', { class: 'hint' }, 'Tag ID ') : null,
-                h('span', { class: 'mono uid' }, formatMatch(card.match)),
+            'table',
+            { 'data-testid': 'admin-list' },
+            h('thead', {}, h('tr', {}, h('th', {}, 'UID'), h('th', {}, 'NDEF'), h('th'))),
+            h(
+              'tbody',
+              {},
+              ...config.adminCards.map((card) =>
                 h(
-                  'button',
-                  {
-                    type: 'button',
-                    class: 'danger push-right',
-                    onclick: async () => {
-                      const ok = await confirmDialog({ title: 'Remove admin tag?', content: [formatMatch(card.match)], confirmLabel: 'Remove', danger: true });
-                      if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.match));
-                    },
-                  },
-                  'Remove',
+                  'tr',
+                  matchAttrs(card.match),
+                  ...identifierCells(card),
+                  h(
+                    'td',
+                    { class: 'actions' },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        class: 'danger',
+                        onclick: async () => {
+                          const ok = await confirmDialog({ title: 'Remove admin tag?', content: [formatMatch(card.match)], confirmLabel: 'Remove', danger: true });
+                          if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.match));
+                        },
+                      },
+                      'Remove',
+                    ),
+                  ),
                 ),
               ),
             ),

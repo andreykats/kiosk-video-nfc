@@ -103,6 +103,8 @@ Each kiosk identifies video cards one way, chosen under **Card identifier** in S
 - **NDEF payload (card ID):** the value of the card's first **URI** record (the full URL), or, if it has none, its first **Text** record (without the language code), compared exactly. Every card written with the same ID plays the same video. Use it for batches of identical cards. Needs the NFC Browser Bridge; cards without a URI or Text record can't be paired.
 - **UID:** only that physical card. HID Keyboard mode always uses the UID.
 
+The Tags and Admin tags tables in settings have a **UID** and an **NDEF** column. When a tag is paired through the NFC Browser Bridge, the kiosk also records the identifier it doesn't pair by, just for display. Tags paired with an HID keyboard reader show a dash under NDEF.
+
 A kiosk ignores pairings of the other kind, so a shared config can hold both. Settings → Card reader warns when the config has cards this kiosk won't recognise, and the Cards list marks them. Admin cards are always added by UID, so a card ID shared by visitor cards can never open settings; they win over video cards.
 
 ### HID Keyboard mode on the ACR1552U

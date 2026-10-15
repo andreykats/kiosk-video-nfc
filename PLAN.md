@@ -58,7 +58,7 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
     { "fileName": "lion.mp4", "title": "Lion", "sizeBytes": 1048576000 }
   ],
   "cards": [
-    { "match": { "kind": "uid", "value": "04A23B1C5D8000" }, "fileName": "lion.mp4", "label": "Lion card" },
+    { "match": { "kind": "uid", "value": "04A23B1C5D8000" }, "fileName": "lion.mp4", "label": "Lion card", "otherId": { "kind": "ndef", "value": "https://topps.drey.dev/c/LION" } },
     { "match": { "kind": "ndef", "value": "https://topps.drey.dev/c/BRONCOS-12" }, "fileName": "broncos.mp4", "label": "" }
   ],
   "adminCards": [
@@ -75,6 +75,7 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 - `sizeBytes` is used only to **warn** when a kiosk's local file size differs. It never blocks.
 - `label` on cards and admin cards, and `title` on videos, stay in the schema for compatibility, but the app no longer shows or edits them. New cards are saved with `label: ""`, and new videos get a title derived from the file name.
 - A `uid` match value is uppercase hex with no separators (see §6). An `ndef` match value (card ID) is 1–256 characters with no control characters. Each (kind, value) pair may appear at most once across `cards` and `adminCards`.
+- `otherId` (optional, on cards and admin cards): the tag's other identifier, recorded at pairing when the scan read it (the bridge reads both; keyboard readers only the UID). Its kind must differ from `match.kind`. It's shown in settings only and never used to match, so it isn't checked for uniqueness, and a shared NDEF payload recorded on an admin tag can't open settings. Older app versions drop it on import.
 - Each kiosk has one **card identifier** (UID, the default, or NDEF card ID, stored per kiosk; keyboard mode is always UID). Scans resolve as: admin card by card ID or UID, then video card by the kiosk's card identifier only (`resolveScan` in `src/config/ops.ts`). Pairing uses the card identifier without asking; admin cards are always added by UID.
 - Every `cards[].fileName` and `loopVideo` must reference an entry in `videos`.
 - Write a `validateConfig(json): Result<Config, string[]>` function with clear error messages. Use it for published fetches, file imports and the IndexedDB load.
@@ -194,13 +195,13 @@ Sections, each a plain TS module rendering DOM:
    - **Plays** (`src/videos/playCounts.ts`): how many times a tag started each video on this kiosk, counted once the video actually plays. The loop's repeats don't count. Stored per kiosk in `localStorage` (`kiosk.playCounts`, by file name), not in the shared config. Reset counter and Reset configuration clear it.
    - Radio button to select the **loop video**. There is no "no loop" option: whenever there are videos, one is the loop. The first video added becomes the loop, and it can be moved but not cleared.
 3. **Cards:**
-   - Table showing UID (displayed grouped, e.g. `04 A2 3B…`, on one line), assigned video (dropdown), and Remove. There's no label column: the video file name identifies the card.
+   - Table with **UID** (grouped, e.g. `04 A2 3B…`, on one line), **NDEF** (payload, may wrap), **Video file** (dropdown), and Remove on the right. Each tag shows its `match` and, if recorded, its `otherId`; a dash where an identifier wasn't read. There's no label column: the video file name identifies the card. **Pair new tag** is a plain button, like Import files.
    - **"Pair new card"** opens a modal:
      1. "Scan card now…"
      2. Capture UID. If it's already paired, show the current assignment and offer to reassign. If it's an admin card, reject.
      3. Pick a video.
      4. Save.
-4. **Admin cards:** list of UIDs with Remove (no label field). **"Add admin card"** opens the same scan modal, saves as soon as a valid card is scanned, and rejects UIDs already used as video cards.
+4. **Admin cards:** a table like Videos: **UID**, **NDEF** (the `otherId`, if recorded) and Remove on the right (no label field). **"Add admin card"** opens the same scan modal, saves as soon as a valid card is scanned, and rejects UIDs already used as video cards.
 5. **Config:** Export config, Update from published config, Import config from file, last applied `updatedAt`.
 6. **Diagnostics:**
    - **Ready to work offline** indicator with a per-condition breakdown (see §9.3).

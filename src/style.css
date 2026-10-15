@@ -99,9 +99,8 @@ span.banner { display: inline-block; margin: 0; padding: 0.2rem 0.5rem; }
 .scan-status { font-size: 1.1rem; }
 .scan-status.error { color: var(--bad); }
 .error-list { margin: 0.25rem 0; padding-left: 1.25rem; max-height: 14rem; overflow: auto; }
-.admin-list { list-style: none; padding: 0; }
 .orphans ul { list-style: none; padding: 0; }
-.admin-list li, .orphans li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
+.orphans li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
 
 .fatal { padding: 2rem; color: var(--text); }
 

@@ -50,13 +50,16 @@ test('bridge mode: pair a tag by its tag ID, then tapping any tag with that ID p
   await expect(page.getByTestId('card-key')).toHaveValue('uid');
   await page.getByTestId('card-key').selectOption('ndef');
   await page.getByRole('button', { name: 'Pair new tag' }).click();
-  fake.placeCard(READER, ntag().withNdef([uriRecord(CARD_ID)]));
+  fake.placeCard(READER, ntag('04A1B2C3D4E5F6').withNdef([uriRecord(CARD_ID)]));
   await expect(page.getByTestId('match-chooser')).toHaveCount(0);
   await expect(page.getByTestId('pair-uid')).toHaveText(CARD_ID);
   await page.getByTestId('pair-video').selectOption('tiger.mp4');
   await clickDialogButton(page, 'Save');
   fake.removeCard(READER);
-  await expect(page.locator(`[data-testid="cards-table"] tr[data-match="ndef:${CARD_ID}"]`)).toBeVisible();
+  // Both identifiers show: the NDEF payload it's paired by, and the UID read with it.
+  const row = page.locator(`[data-testid="cards-table"] tr[data-match="ndef:${CARD_ID}"]`);
+  await expect(row.locator('[data-col="ndef"]')).toHaveText(CARD_ID);
+  await expect(row.locator('[data-col="uid"]')).toHaveText('04 A1 B2 C3 D4 E5 F6');
 
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
@@ -122,6 +125,9 @@ test('admin tags are added by UID even on an NDEF kiosk, and open settings', asy
   await expect(page.locator('dialog[open]')).toHaveCount(0);
   fake.removeCard(READER);
   await expect(page.locator('[data-testid="admin-list"] [data-match^="uid:"]')).toHaveCount(2);
+  // The admin table shows the NDEF payload read with it; the config's admin tag (added by UID only) has a dash.
+  await expect(page.getByTestId('admin-list').locator('th')).toHaveText(['UID', 'NDEF', '']);
+  await expect(page.getByTestId('admin-list').locator('[data-col="ndef"]')).toHaveText(['—', 'STAFF']);
 
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');

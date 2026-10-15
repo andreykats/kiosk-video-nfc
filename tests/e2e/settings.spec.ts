@@ -212,7 +212,11 @@ test('videos and tags tables show file names only: no title, label or "no loop" 
   await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', 'Plays', '']);
   await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
-  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['Tag', 'Video', '']);
+  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['UID', 'NDEF', 'Video file', '']);
+  // Keyboard readers only read UIDs, so the NDEF column has a dash.
+  const lionRow = page.locator(`[data-testid="cards-table"] tr[data-uid="${LION_UID}"]`);
+  await expect(lionRow.locator('[data-col="uid"]')).toHaveText('04 A2 3B 1C 5D 80 00');
+  await expect(lionRow.locator('[data-col="ndef"]')).toHaveText('—');
   await expect(page.getByTestId('cards-table').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel('No loop video')).toHaveCount(0);
   await expect(page.getByTestId('videos-table').locator('input[type="radio"]')).toHaveCount(3);

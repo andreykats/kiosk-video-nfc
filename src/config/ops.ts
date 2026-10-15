@@ -1,4 +1,4 @@
-import { sameMatch, type AdminCardEntry, type CardEntry, type CardMatch, type Config, type VideoEntry } from './schema';
+import { ndefKeyError, sameMatch, type AdminCardEntry, type CardEntry, type CardMatch, type Config, type VideoEntry } from './schema';
 
 /**
  * Pure edits on a Config. Each returns a new object; callers persist the result
@@ -35,6 +35,16 @@ export function scanMatches(card: CardIdentity): CardMatch[] {
 export function cardMatch(card: CardIdentity, key: CardMatch['kind']): CardMatch | null {
   if (key === 'uid') return { kind: 'uid', value: card.uid };
   return card.ndefKey === null ? null : { kind: 'ndef', value: card.ndefKey };
+}
+
+/**
+ * The scanned tag's identifier that isn't `match`, to record next to a pairing
+ * for display. Undefined when the scan didn't read it (keyboard readers have no
+ * NDEF payload) or it isn't a valid tag ID.
+ */
+export function otherIdOf(card: CardIdentity, match: CardMatch): CardMatch | undefined {
+  if (match.kind === 'ndef') return { kind: 'uid', value: card.uid };
+  return card.ndefKey !== null && ndefKeyError(card.ndefKey) === null ? { kind: 'ndef', value: card.ndefKey } : undefined;
 }
 
 export type ResolvedScan = { kind: 'admin'; entry: AdminCardEntry } | { kind: 'video'; entry: CardEntry };
@@ -119,12 +129,16 @@ export function useAsLoopInstead(config: Config, fileName: string): Config {
   return { ...config, loopVideo: fileName, cards: config.cards.filter((c) => c.fileName !== fileName) };
 }
 
-/** Pairs or reassigns a video card. Callers must reject admin matches first. */
+/**
+ * Pairs or reassigns a video card. Callers must reject admin matches first. A
+ * reassigned card keeps its recorded otherId if this scan didn't read one.
+ */
 export function pairCard(config: Config, card: CardEntry): Config {
-  const cards = findCard(config, card.match)
-    ? config.cards.map((c) => (sameMatch(c.match, card.match) ? card : c))
-    : [...config.cards, card];
-  return { ...config, cards };
+  const existing = findCard(config, card.match);
+  if (!existing) return { ...config, cards: [...config.cards, card] };
+  const otherId = card.otherId ?? existing.otherId;
+  const updated: CardEntry = { ...card, ...(otherId && { otherId }) };
+  return { ...config, cards: config.cards.map((c) => (c === existing ? updated : c)) };
 }
 
 export function setCardVideo(config: Config, match: CardMatch, fileName: string): Config {

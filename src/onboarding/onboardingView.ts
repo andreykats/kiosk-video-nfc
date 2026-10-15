@@ -3,7 +3,7 @@ import type { AppContext } from '../app/context';
 import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { addAdminCard, cardsForVideo, findAdminCard, findCard, removeAdminCard, scanMatches, useAsLoopInstead } from '../config/ops';
+import { addAdminCard, otherIdOf, cardsForVideo, findAdminCard, findCard, removeAdminCard, scanMatches, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type CardMatch, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
@@ -554,6 +554,7 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
   const unsubscribe = ctx.scanner.scans.subscribe(async (scan) => {
     const config = ctx.config.get();
     const match: CardMatch = { kind: 'uid', value: scan.uid };
+    const otherId = otherIdOf(scan, match);
     const card = scanMatches(scan)
       .map((m) => findCard(config, m))
       .find((c) => c !== undefined);
@@ -561,7 +562,7 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
       message = { text: `${formatMatch(card.match)} plays “${card.fileName}”. Use a different tag for admin.`, kind: 'error' };
     } else if (findAdminCard(config, match)) {
       message = { text: `${formatUid(scan.uid)} is already an admin tag.`, kind: 'error' };
-    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { match, label: '' }))) {
+    } else if (await saveEdit(ctx, (c) => addAdminCard(c, { match, label: '', ...(otherId && { otherId }) }))) {
       message = { text: `Added ${formatUid(scan.uid)} as an admin tag ✓`, kind: 'success' };
     }
     view.rerender();
