@@ -6,7 +6,17 @@ import { h, replaceChildren } from '../ui/dom';
 import { CARD_KEY_LABELS } from './pairing';
 import { reactiveSection, type Section } from './section';
 
-export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-bridge/releases';
+const BRIDGE_RELEASES_URL = 'https://github.com/andreykats/nfc-browser-bridge/releases';
+
+/**
+ * The installer for this computer from the latest bridge release, so the link
+ * downloads it straight away. Other platforms get the releases page.
+ */
+export function bridgeDownloadUrl(platform = navigator.platform): string {
+  if (platform.startsWith('Mac')) return `${BRIDGE_RELEASES_URL}/latest/download/NFC-Browser-Bridge-macos.dmg`;
+  if (platform.startsWith('Win')) return `${BRIDGE_RELEASES_URL}/latest/download/NFC-Browser-Bridge-windows-setup.exe`;
+  return BRIDGE_RELEASES_URL;
+}
 
 const MODE_LABELS: Record<ReaderMode, string> = {
   keyboard: 'HID Keyboard (Read tag’s UID only)',
@@ -84,7 +94,7 @@ export function readerControls(ctx: AppContext): Section {
             h('p', {}, h('strong', { 'data-testid': 'bridge-status', 'data-state': status.state }, bridgeStatusText(ctx))),
             status.state === 'connected'
               ? null
-              : h('p', {}, h('a', { href: BRIDGE_DOWNLOAD_URL, target: '_blank', rel: 'noopener' }, 'Download the bridge app')),
+              : h('p', {}, h('a', { href: bridgeDownloadUrl(), 'data-testid': 'bridge-download' }, 'Download the bridge app')),
             ctx.scanner.permission === 'denied'
               ? h('p', { class: 'banner banner-warn' }, 'Chrome is blocking this site from reaching the bridge app. Click the site settings icon left of the address bar, set “Apps on device” to Allow, then reload.')
               : h('p', { class: 'hint' }, 'The first connection makes Chrome ask to allow “Apps on device”. Choose Allow.'),
