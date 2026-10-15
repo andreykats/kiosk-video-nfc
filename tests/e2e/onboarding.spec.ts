@@ -19,7 +19,7 @@ async function throughReader(page: Page) {
   await expect(step(page, 'reader')).toBeVisible();
   await expect(page.getByTestId('onboarding-next')).toBeDisabled();
   await scan(page, '04A23B1C');
-  await expect(page.getByTestId('reader-status')).toContainText('Reader is working ✓ Read tag 04 A2 3B 1C');
+  await expect(page.getByTestId('reader-status')).toHaveText('Reader is working ✓');
   await next(page);
   await expect(step(page, 'config')).toBeVisible();
 }

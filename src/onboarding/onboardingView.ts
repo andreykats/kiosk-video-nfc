@@ -225,12 +225,7 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
             p('Plug the NFC reader into a USB port. Choose how this kiosk reads tags, then hold any tag on the reader.'),
             controls.el,
             scanned
-              ? h(
-                  'p',
-                  { class: 'success', 'data-testid': 'reader-status' },
-                  `Reader is working ✓ Read tag ${formatUid(scanned.uid)}`,
-                  scanned.ndefKey !== null ? ` with tag ID ${scanned.ndefKey}` : '',
-                )
+              ? h('p', { class: 'success', 'data-testid': 'reader-status' }, 'Reader is working ✓')
               : h('p', { class: 'waiting', 'data-testid': 'reader-status' }, 'Waiting for a tag…'),
             ctx.scanner.mode === 'keyboard'
               ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, tag reads are lost.', 'hint')
