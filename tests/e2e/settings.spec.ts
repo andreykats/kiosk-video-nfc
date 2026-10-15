@@ -118,10 +118,16 @@ test('an admin tag closes settings, except while a dialog is waiting for a tag',
   await expect(page.getByTestId('kiosk')).toBeVisible();
 });
 
-test('videos show how many times a tag played them, kept across reloads until Reset play count', async ({ page }) => {
+test('videos show how many times a tag played them, kept across reloads until Reset counter', async ({ page }) => {
   await setUpKiosk(page);
   const count = (file: string) => page.locator(`[data-testid="videos-table"] tr[data-file="${file}"]`).getByTestId('play-count');
-  await expect(page.getByTestId('videos-table').locator('thead th').nth(4)).toHaveText('Play count');
+  await expect(page.getByTestId('videos-table').locator('thead th').nth(4)).toHaveText('Plays');
+  // Reset counter sits at the right end of the toolbar, away from the import buttons.
+  const resetBox = (await page.getByTestId('reset-play-counts').boundingBox())!;
+  const folderBox = (await page.getByRole('button', { name: 'Import folder' }).boundingBox())!;
+  const sectionBox = (await page.getByTestId('videos-section').boundingBox())!;
+  expect(resetBox.x - (folderBox.x + folderBox.width)).toBeGreaterThan(100);
+  expect(sectionBox.x + sectionBox.width - (resetBox.x + resetBox.width)).toBeLessThan(40);
   await expect(count('lion.mp4')).toHaveText('0');
 
   await page.getByTestId('back-to-kiosk').click();
@@ -140,7 +146,7 @@ test('videos show how many times a tag played them, kept across reloads until Re
   await clickDialogButton(page, 'Cancel');
   await expect(count('lion.mp4')).toHaveText('1');
   await page.getByTestId('reset-play-counts').click();
-  await clickDialogButton(page, 'Reset play count');
+  await clickDialogButton(page, 'Reset counter');
   await expect(count('lion.mp4')).toHaveText('0');
   await page.reload();
   await expect(count('lion.mp4')).toHaveText('0');
@@ -203,7 +209,7 @@ test('update from published config fetches config.json fresh and applies it', as
 
 test('videos and tags tables show file names only: no title, label or "no loop" row', async ({ page }) => {
   await setUpKiosk(page);
-  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', 'Play count', '']);
+  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', 'Plays', '']);
   await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
   await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['Tag', 'Video', '']);

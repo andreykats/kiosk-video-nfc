@@ -62,9 +62,9 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
 
   const resetPlayCounts = async () => {
     const ok = await confirmDialog({
-      title: 'Reset play counts?',
+      title: 'Reset the play counter?',
       content: ['Every video’s play count on this kiosk goes back to 0.'],
-      confirmLabel: 'Reset play count',
+      confirmLabel: 'Reset counter',
       danger: true,
     });
     if (ok) ctx.playCounts.clear();
@@ -133,14 +133,14 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
         { class: 'toolbar' },
         h('button', { type: 'button', disabled: busy, onclick: () => filesInput.click() }, 'Import files'),
         h('button', { type: 'button', disabled: busy, onclick: () => folderInput.click() }, 'Import folder'),
-        h('button', { type: 'button', 'data-testid': 'reset-play-counts', disabled: busy, onclick: () => void resetPlayCounts() }, 'Reset play count'),
+        h('button', { type: 'button', class: 'push-right', 'data-testid': 'reset-play-counts', disabled: busy, onclick: () => void resetPlayCounts() }, 'Reset counter'),
       ),
       config.videos.length === 0
         ? h('p', { class: 'hint' }, 'No videos yet. Update from the published config, then Import folder.')
         : h(
             'table',
             { 'data-testid': 'videos-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th', { title: 'Times a tag played this video on this kiosk' }, 'Play count'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th', { title: 'Times a tag played this video on this kiosk' }, 'Plays'), h('th'))),
             h(
               'tbody',
               {},

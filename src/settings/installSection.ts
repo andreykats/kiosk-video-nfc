@@ -8,7 +8,7 @@ const MANUAL_INSTALL_STEPS =
 /** Install button when Chrome has offered install, manual steps otherwise. */
 function installCallToAction(ctx: AppContext): HTMLElement {
   if (!ctx.install.canPrompt()) return h('p', { class: 'hint', 'data-testid': 'install-manual' }, MANUAL_INSTALL_STEPS);
-  return h('button', { type: 'button', 'data-testid': 'install-button', onclick: () => void ctx.install.prompt() }, 'Install app');
+  return h('button', { type: 'button', 'data-testid': 'install-button', onclick: () => void ctx.install.prompt() }, 'Install');
 }
 
 /**
@@ -24,10 +24,9 @@ export function renderInstallSection(ctx: AppContext): Section {
       const installed = ctx.install.get() === 'installed';
       replaceChildren(
         el,
-        h('h2', {}, 'Install app'),
+        h('h2', {}, 'Install as Chrome App'),
         h('p', { class: 'hint' }, 'Optional. Installing makes Chrome much less likely to delete the videos when the disk fills up. The kiosk itself opens in Chrome kiosk mode either way.'),
         installed ? h('p', { class: 'success', 'data-testid': 'install-done' }, 'App installed ✓') : installCallToAction(ctx),
-        installed ? null : h('p', { class: 'hint' }, 'Chrome may only offer to install after you’ve clicked the page and spent about 30 seconds on it.'),
       );
     },
     [(l) => ctx.install.changed.subscribe(l)],

@@ -51,7 +51,7 @@ test('readiness turns red when a video or the app cache is missing', async ({ pa
   await expect(offlineReady(page).locator('[data-condition="appCached"]')).toHaveAttribute('data-status', 'fail');
 });
 
-test('Install app in settings is optional, sits just above Reset, and follows beforeinstallprompt and appinstalled', async ({ page }) => {
+test('Install as Chrome App in settings is optional, sits just above Reset, and follows beforeinstallprompt and appinstalled', async ({ page }) => {
   await openSettings(page);
   const section = page.getByTestId('install-section');
   await expect(page.locator('[data-testid="settings"] > section').nth(-2)).toHaveAttribute('data-testid', 'install-section');
@@ -71,6 +71,9 @@ test('Install app in settings is optional, sits just above Reset, and follows be
   });
   await expect(page.getByTestId('diag-installed')).toHaveText('no');
   const button = section.getByTestId('install-button');
+  await expect(section.locator('h2')).toHaveText('Install as Chrome App');
+  await expect(button).toHaveText('Install');
+  await expect(section).not.toContainText('30 seconds');
   await expect(button).toBeVisible();
   await button.click();
   expect(await page.evaluate(() => (window as unknown as { promptCalls: number }).promptCalls)).toBe(1);

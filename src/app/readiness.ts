@@ -34,7 +34,7 @@ export function computeChecklist(i: ChecklistInputs): ChecklistItem[] {
       done: i.videoCount > 0 && i.missingVideos === 0,
       hint: i.videoCount === 0 ? 'No videos in the config yet.' : `${i.missingVideos} video(s) missing → Import folder.`,
     },
-    { id: 'persisted', label: 'Storage persisted', done: i.persisted === true, hint: 'Install the app (Settings → Install app), then reopen settings.' },
+    { id: 'persisted', label: 'Storage persisted', done: i.persisted === true, hint: 'Install the app (Settings → Install as Chrome App), then reopen settings.' },
     { id: 'offline', label: 'Ready to work offline', done: i.readiness.ready, hint: 'See Diagnostics for details.' },
     {
       id: 'autostart',

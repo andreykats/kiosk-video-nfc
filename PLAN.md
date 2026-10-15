@@ -26,7 +26,7 @@ Build an offline-capable browser kiosk app:
 | Card UIDs in public config | **Plain text is acceptable**, including admin cards. |
 | Scan while a paired video plays | **Ignored** until the video finishes and the loop resumes. |
 | Settings access | **Keyboard shortcut OR scanning an admin card.** No PIN. Admin cards are paired in settings, and multiple admin cards are allowed. |
-| PWA install | Optional: **Install app** at the bottom of settings (see §9.2). The kiosk runs in a Chrome `--kiosk` tab, which shares the installed app's storage; installing mainly helps Chrome grant persistent storage. |
+| PWA install | Optional: **Install as Chrome App** at the bottom of settings (see §9.2). The kiosk runs in a Chrome `--kiosk` tab, which shares the installed app's storage; installing mainly helps Chrome grant persistent storage. |
 
 ## 3. Architecture overview
 
@@ -189,9 +189,9 @@ Sections, each a plain TS module rendering DOM:
 
 1. **Header:** "Back to kiosk" button, app version (injected from `package.json` via Vite `define`). No online/offline indicator (removed at the user's request).
 2. **Videos:**
-   - Table showing file name, size, status (present / missing / size mismatch) and **Play count**. There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
-   - Buttons: Import files, Import folder, **Reset play count** (after a confirm), Delete.
-   - **Play count** (`src/videos/playCounts.ts`): how many times a tag started each video on this kiosk, counted once the video actually plays. The loop's repeats don't count. Stored per kiosk in `localStorage` (`kiosk.playCounts`, by file name), not in the shared config. Reset play count and Reset configuration clear it.
+   - Table showing file name, size, status (present / missing / size mismatch) and **Plays**. There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
+   - Buttons: Import files, Import folder, **Reset counter** (right-aligned, away from the imports; after a confirm), Delete.
+   - **Plays** (`src/videos/playCounts.ts`): how many times a tag started each video on this kiosk, counted once the video actually plays. The loop's repeats don't count. Stored per kiosk in `localStorage` (`kiosk.playCounts`, by file name), not in the shared config. Reset counter and Reset configuration clear it.
    - Radio button to select the **loop video**. There is no "no loop" option: whenever there are videos, one is the loop. The first video added becomes the loop, and it can be moved but not cleared.
 3. **Cards:**
    - Table showing UID (displayed grouped, e.g. `04 A2 3B…`, on one line), assigned video (dropdown), and Remove. There's no label column: the video file name identifies the card.
@@ -209,7 +209,7 @@ Sections, each a plain TS module rendering DOM:
    - Autoplay status.
    - Service worker status, with a "new version available → Reload" button. The app updates itself **only at launch** (`src/pwa/sw.ts`): it checks for a new version once while starting, and if one is ready within 30 s it activates it and reloads. It never checks again while running, and a version Chrome finds later only shows the Reload button, so the app never reloads itself mid-show.
 
-7. **Install app** (just above Reset): optional, see §9.2.
+7. **Install as Chrome App** (just above Reset): optional, see §9.2.
 8. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
 
 **Scanner in settings:** scans are only consumed while a scan modal is open. Otherwise settings ignores them, apart from preventing burst keys from typing into inputs.
@@ -255,10 +255,10 @@ Sections, each a plain TS module rendering DOM:
 
 **Where the prompt appears:**
 
-- **Settings: an Install app section** just above Reset (`src/settings/installSection.ts`). It says installing is optional and shows "App installed ✓" once installed.
-  - If a `beforeinstallprompt` event is saved, show an **Install app** button that calls `prompt()` and awaits `userChoice`. A saved event can only be used once; if the user dismisses it, show the manual steps and wait for Chrome to fire the event again.
+- **Settings: an Install as Chrome App section** just above Reset (`src/settings/installSection.ts`). It says installing is optional and shows "App installed ✓" once installed.
+  - If a `beforeinstallprompt` event is saved, show an **Install** button that calls `prompt()` and awaits `userChoice`. A saved event can only be used once; if the user dismisses it, show the manual steps and wait for Chrome to fire the event again.
   - If no event is available yet, show manual steps: "Click the install icon at the right of the address bar, or Chrome menu ⋮ → Cast, save, and share → Install page as app…"
-  - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The section must still work without it.
+  - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The section must still work without it (the UI no longer mentions the 30 seconds).
 - **First-launch setup guide (`#/setup`, `src/onboarding/`):** one centred card per step, with Back/Next. From step 2 on, a **Reset** button left of Back does the same as Settings → Reset configuration, then shows step 1. Step 1 has no Reset (a kiosk at step 1 has nothing to reset) and shows the app version instead of Back. It opens instead of the kiosk until it's finished, unless the kiosk can already play its loop video. It resumes at the first unfinished step after a reload, including when Chrome opens the newly installed app in its own window. Steps:
   1. **Welcome to the Topps Kiosk**: lists the steps ahead, with **Get started** (sets `welcomeDone`, so a reload resumes past it). No install prompt: installing is optional and lives in settings (§9.2).
   2. **Connect the NFC reader**: "hold any card on it". Next is enabled once a scan arrives, and the step can be skipped.

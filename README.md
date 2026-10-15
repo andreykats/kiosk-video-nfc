@@ -13,7 +13,7 @@ Full design: [PLAN.md](PLAN.md). Kiosk machine setup: [docs/kiosk-setup.md](docs
 
 ## Using it
 
-On first launch, a **setup guide** starts with a welcome card, then walks through each step: connect the reader, load or start a config, add videos, pair cards / pick the background loop, pair an admin card, and set the kiosk to open at startup. Installing the app is optional and lives at the bottom of settings (**Install app**). You can reopen it from Settings → **Setup guide**.
+On first launch, a **setup guide** starts with a welcome card, then walks through each step: connect the reader, load or start a config, add videos, pair cards / pick the background loop, pair an admin card, and set the kiosk to open at startup. Installing the app is optional and lives at the bottom of settings (**Install as Chrome App**). You can reopen it from Settings → **Setup guide**.
 
 | | |
 |---|---|
@@ -22,7 +22,7 @@ On first launch, a **setup guide** starts with a welcome card, then walks throug
 | Pair a card | Settings → Videos → **Pair** next to the video, then scan one or more cards. Or Settings → Cards → **Pair new card**, scan the card, pick a video |
 | Add an admin card | Settings → Admin cards → **Add admin card**, scan the card |
 | Pick the loop video | Settings → Videos → the **Loop** radio button |
-| See how often videos play | Settings → Videos → **Play count**: how many times a card played each video on this kiosk (the loop's repeats don't count). **Reset play count** sets them all back to 0 |
+| See how often videos play | Settings → Videos → **Plays**: how many times a card played each video on this kiosk (the loop's repeats don't count). **Reset counter** sets them all back to 0 |
 | Start over | Settings → Reset → **Reset configuration** deletes this kiosk's videos and config, then restarts the setup guide (export the config first to keep it) |
 
 Scanning a card while a card video is playing does nothing. An admin card still opens settings.
