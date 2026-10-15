@@ -139,3 +139,28 @@ test('losing window focus shows a notice until focus comes back', async ({ page 
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await expect(notice).toBeHidden();
 });
+
+test('Diagnostics counts playback failures since start, and the event log survives a restart', async ({ page, context }) => {
+  const before = await loopSrc(page);
+  await page.getByTestId('loop-video').evaluate((v) => v.dispatchEvent(new Event('error')));
+  await expect.poll(() => loopSrc(page)).not.toBe(before);
+
+  await page.getByTestId('kiosk').press('Control+Shift+S');
+  await expect(page.getByTestId('diag-since-start')).toContainText('loop reloaded once · tag videos failed 0 times');
+
+  await page.reload();
+  await expect(page.getByTestId('settings')).toBeVisible();
+  // The counters start again with the app; the log keeps the failure and marks each start.
+  await expect(page.getByTestId('diag-since-start')).toContainText('loop reloaded 0 times');
+  const eventLog = page.getByTestId('event-log');
+  await eventLog.locator('summary').click();
+  await expect(eventLog.locator('li.error', { hasText: 'Loop video "loop.mp4" failed' })).toHaveCount(1);
+  expect(await eventLog.locator('li.start').count()).toBeGreaterThanOrEqual(2);
+
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await eventLog.getByTestId('copy-log').click();
+  await expect(eventLog.getByTestId('copy-log')).toHaveText('Copied ✓');
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toMatch(/^\d{4}-\d\d-\d\dT[\d:.]+Z START Kiosk started \(v/m);
+  expect(copied).toContain('ERROR Loop video "loop.mp4" failed');
+});

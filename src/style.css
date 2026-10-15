@@ -97,6 +97,8 @@ span.banner { display: inline-block; margin: 0; padding: 0.2rem 0.5rem; }
 .log { font-family: ui-monospace, monospace; font-size: 0.8rem; max-height: 16rem; overflow: auto; }
 .log li.error { color: var(--bad); }
 .log li.warn { color: var(--warn); }
+/* Newest first, so a start closes its run: the line separates it from the run before. */
+.log li.start { margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--line); font-weight: 600; }
 
 .import-progress { margin: 0.75rem 0; display: grid; gap: 0.4rem; }
 .import-progress progress { width: 100%; }

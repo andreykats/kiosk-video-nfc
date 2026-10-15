@@ -143,6 +143,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const scheduleLoopRetry = (...parts: unknown[]) => {
     if (disposed || loopRetry !== undefined) return;
     loopFailures++;
+    ctx.diagnostics.recordPlaybackFailure('loop');
     const delay = retryDelay(loopFailures, LOOP_RETRY_BASE_MS, LOOP_RETRY_MAX_MS);
     log.error(...parts, `Reloading it in ${Math.round(delay / 1000)} s.`);
     if (loopFailures > 1 && state.kind === 'loop') setSetupVisible(true);
@@ -243,6 +244,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   const dispatch = (event: KioskEvent) => {
     if (disposed) return;
+    if (event.type === 'featureFailed' && state.kind === 'feature') ctx.diagnostics.recordPlaybackFailure('feature');
     const next = transition(state, event, {
       config: ctx.config.get(),
       hasFile: (n) => ctx.videos.has(n),

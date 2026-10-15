@@ -14,7 +14,7 @@ import { ServiceWorkerManager } from './pwa/sw';
 import { CardInput } from './scan/cardInput';
 import { mountSettings } from './settings/settingsView';
 import { h } from './ui/dom';
-import { VideoStore } from './videos/opfsStore';
+import { requestPersistence, VideoStore } from './videos/opfsStore';
 import { PlayCounts } from './videos/playCounts';
 
 const ROUTE_HASH: Record<Route, string> = { kiosk: '#/', settings: '#/settings', setup: '#/setup' };
@@ -31,7 +31,8 @@ function showFatal(root: HTMLElement, message: string): void {
 
 async function boot(): Promise<void> {
   captureGlobalErrors();
-  recordAutostartLaunch();
+  const autostarted = recordAutostartLaunch();
+  log.start(`Kiosk started (v${__APP_VERSION__})${autostarted ? ' by the startup command' : ''}.`);
   const root = document.getElementById('app')!;
 
   // Created before any await so an early beforeinstallprompt isn't missed.
@@ -102,6 +103,19 @@ async function boot(): Promise<void> {
     }
   });
   render();
+  void readiness.recompute();
+  void keepVideosStored(readiness);
+}
+
+/**
+ * Asks Chrome not to clear the videos when the disk fills up. Settings asks
+ * again (installing the app can change Chrome's answer), but a kiosk that runs
+ * for months may never have settings opened.
+ */
+async function keepVideosStored(readiness: ReadinessMonitor): Promise<void> {
+  if (!(await requestPersistence())) {
+    log.warn('Storage isn’t persistent: Chrome may delete the videos if the disk gets full. Install the app (Settings → Install as Chrome App).');
+  }
   void readiness.recompute();
 }
 

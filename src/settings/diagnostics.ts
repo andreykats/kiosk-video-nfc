@@ -1,5 +1,5 @@
 import type { AppContext } from '../app/context';
-import { log, logChanged } from '../app/log';
+import { formatLog, log, logChanged, type LogEntry } from '../app/log';
 import { formatUid } from '../scan/uid';
 import { formatBytes } from '../videos/opfsStore';
 import { h, replaceChildren } from '../ui/dom';
@@ -15,6 +15,38 @@ const AUTOPLAY_TEXT = {
 } as const;
 
 const READER_MODE_TEXT = { keyboard: 'HID Keyboard', bridge: 'NFC Browser Bridge' } as const;
+
+const times = (n: number) => (n === 1 ? 'once' : `${n} times`);
+
+function sinceStart(ctx: AppContext): string {
+  const { startedAt, failures } = ctx.diagnostics;
+  const since = new Date(startedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return `running since ${since} · loop reloaded ${times(failures.loop)} · tag videos failed ${times(failures.feature)}`;
+}
+
+function logItem(e: LogEntry): HTMLElement {
+  const at = new Date(e.at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' });
+  return h('li', { class: e.level }, `${at} ${e.message}`);
+}
+
+/** Copies the whole log as plain text, for pasting into a message to whoever looks after the kiosk. */
+function copyLogButton(): HTMLButtonElement {
+  const label = 'Copy log';
+  const button = h('button', { type: 'button', 'data-testid': 'copy-log' }, label);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const show = (text: string) => {
+    button.textContent = text;
+    clearTimeout(timer);
+    timer = setTimeout(() => (button.textContent = label), 3000);
+  };
+  button.addEventListener('click', () => {
+    navigator.clipboard.writeText(formatLog(log.recent())).then(
+      () => show('Copied ✓'),
+      () => show('Couldn’t copy'),
+    );
+  });
+  return button;
+}
 
 function row(label: string, value: Node | string, testId?: string): HTMLElement {
   return h('div', { class: 'diag-row' }, h('dt', {}, label), h('dd', { 'data-testid': testId }, value));
@@ -101,6 +133,7 @@ export function renderDiagnostics(ctx: AppContext): Section {
             'diag-ndef',
           )
         : null,
+      row('Since start', sinceStart(ctx), 'diag-since-start'),
       row(
         'Autoplay',
         h('span', { class: ctx.diagnostics.autoplay === 'ok' || ctx.diagnostics.autoplay === 'unknown' ? '' : 'banner banner-warn' }, AUTOPLAY_TEXT[ctx.diagnostics.autoplay]),
@@ -117,10 +150,8 @@ export function renderDiagnostics(ctx: AppContext): Section {
         'diag-sw',
       ),
     );
-    replaceChildren(
-      logList,
-      ...[...log.recent()].reverse().map((e) => h('li', { class: e.level }, `${new Date(e.at).toLocaleTimeString()} ${e.message}`)),
-    );
+    const entries = log.recent();
+    replaceChildren(logList, ...(entries.length > 0 ? [...entries].reverse().map(logItem) : [h('li', {}, 'Nothing logged yet.')]));
   };
 
   const el = h(
@@ -129,7 +160,14 @@ export function renderDiagnostics(ctx: AppContext): Section {
     h('h2', {}, 'Diagnostics'),
     offline.el,
     body,
-    h('details', {}, h('summary', {}, 'Recent errors and warnings'), logList),
+    h(
+      'details',
+      { 'data-testid': 'event-log' },
+      h('summary', {}, 'Event log'),
+      h('p', { class: 'hint' }, 'Kiosk starts, warnings, errors and other events, newest first. Kept across restarts (the last 200).'),
+      copyLogButton(),
+      logList,
+    ),
   );
   const section = reactiveSection(el, render, [
     (l) => ctx.readiness.changed.subscribe(l),

@@ -115,7 +115,7 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 - **Delete video:** confirm first. This removes the OPFS file and the `videos[]` entry, unpairs cards that pointed to it (list them in the confirm dialog). If it was the loop video, the loop moves to another video, preferring one no card plays (the dialog says which).
 - **Playback:** `fileHandle.getFile()` → `URL.createObjectURL(file)` → `video.src`. Revoke the URL when it's replaced. Files are disk-backed, so 1 GB files must not be read into memory.
 - **Persistent storage:**
-  - Call `navigator.storage.persist()` the first time settings opens and again after each import.
+  - Call `navigator.storage.persist()` at every launch (a kiosk may run for months without settings being opened; a refusal is logged), each time settings opens, and after each import.
   - Show the persisted status and usage/quota in settings.
   - If storage isn't persisted, show a hint to install the app (Chrome grants persistence without a prompt, based on engagement and installation).
 - Expected scale is about 20 × 1 GB. Chrome allows up to 60% of the disk per site, so free disk space is the practical limit.
@@ -415,7 +415,9 @@ tests/unit/*, tests/e2e/*, tests/fixtures/*
   - OPFS operations.
   - Scanner input.
 - The kiosk view must **never** get stuck. Any playback or config error falls back to the loop, or to the "Setup required" screen.
-- Log errors to the console with a consistent prefix, and keep the last ~50 in memory for the diagnostics panel.
+- Log to the console with a consistent prefix, and keep the last 200 starts, notes, warnings and errors in localStorage (`kiosk.log`) for Diagnostics → **Event log**, so what happened before a restart or crash can still be read. Each launch adds a "Kiosk started (v…)" entry. **Copy log** copies it as text; Reset clears it.
+- Diagnostics → **Since start** shows when this launch started and how many times the loop was reloaded and tag videos failed since then.
+- Screen wake lock: requested whenever the kiosk view is visible. If the system refuses it or takes it away while visible (low battery, power saving), ask again at once, then every minute, logging only the first failure and the recovery.
 
 ## 13. Out of scope
 
