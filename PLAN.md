@@ -206,7 +206,7 @@ Sections, each a plain TS module rendering DOM:
    - Storage usage/quota and persisted status.
    - Last scanned UID with a live display (handy for testing readers).
    - Autoplay status.
-   - Service worker status, with an "App update available → Reload" button. Use vite-plugin-pwa `registerType: 'prompt'` so the app never reloads itself mid-show.
+   - Service worker status, with a "new version available → Reload" button. The app updates itself **only at launch** (`src/pwa/sw.ts`): it checks for a new version once while starting, and if one is ready within 30 s it activates it and reloads. It never checks again while running, and a version Chrome finds later only shows the Reload button, so the app never reloads itself mid-show.
 
 7. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
 
@@ -218,7 +218,7 @@ Sections, each a plain TS module rendering DOM:
 
 - `vite.config.ts`:
   - `base: '/<repo>/'`.
-  - vite-plugin-pwa with `registerType: 'prompt'`.
+  - vite-plugin-pwa with `registerType: 'prompt'`, applied automatically only at launch (see §8, Diagnostics).
   - Precache the app shell (html/js/css/icons).
   - `navigateFallback: 'index.html'`.
   - Exclude `config.json` from precache, plus a NetworkOnly route for it.

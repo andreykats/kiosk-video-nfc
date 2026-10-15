@@ -31,7 +31,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
    If you do run the installed app directly and want it fullscreen at launch without a click, set the Chrome policy `AutomaticFullscreenAllowedForUrls` to `https://topps.drey.dev` on that machine, for example through your device management.
 6. Turn off sleep, the screen saver and notifications. (While the kiosk view is showing, the app also asks Chrome to keep the screen awake, but don't rely on that alone.)
-7. **Restart the computer every night**, outside opening hours (see the sections below). The app recovers from stalled or broken videos by itself. But if Chrome's page crashes, it shows a "sad tab" and stays like that until Chrome restarts. A nightly restart also applies any app update.
+7. **Restart the computer every night**, outside opening hours (see the sections below). The app recovers from stalled or broken videos by itself. But if Chrome's page crashes, it shows a "sad tab" and stays like that until Chrome restarts. The app only updates itself when it starts, so the nightly restart is also what installs app updates.
 8. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
 
 ## Windows
@@ -73,5 +73,5 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 | "Setup required" on the screen | No loop video is selected, or the loop file is missing. Press **Open setup guide**, or open settings and follow the checklist. |
 | A card video froze, or the loop went black for a moment | The kiosk notices playback that has stopped for 10 seconds. It returns to the loop, or reloads the loop, by itself. If it keeps happening, Diagnostics → **Recent errors and warnings** shows which file. Re-import that file. |
 | "Setup required … can't be played" | The loop video failed twice in a row. The kiosk keeps retrying (up to every 5 minutes) and clears the message once the loop plays. If it doesn't clear, re-import the loop video. |
-| Settings says "App update available" | Press **Reload** when no one is watching. The app never reloads itself. |
+| Settings says "A new version of the app is available" | A new version was published while the kiosk was running. The app picks it up the next time it starts (for example after the nightly restart). To switch now, press **Reload** when no one is watching. The app never updates or reloads itself while it's running. |
 | Videos disappeared | Storage wasn't persisted and Chrome cleared it. Install the app, re-import the videos, and check **Persisted: yes**. |
