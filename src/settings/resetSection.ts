@@ -20,7 +20,7 @@ async function resetKiosk(ctx: AppContext): Promise<void> {
       h(
         'p',
         {},
-        `This deletes all ${files.size} video file(s) (${formatBytes(bytes)}) from this kiosk, and the config: ${config.videos.length} video(s), ${config.cards.length} card(s) and ${config.adminCards.length} admin card(s).`,
+        `This deletes all ${files.size} video file(s) (${formatBytes(bytes)}) from this kiosk, and the config: ${config.videos.length} video(s), ${config.cards.length} tag(s) and ${config.adminCards.length} admin tag(s).`,
       ),
       h('p', {}, 'The setup guide then starts again from step 1. This can’t be undone. Export the config first if you want to keep it.'),
     ],
@@ -47,7 +47,7 @@ export function renderResetSection(ctx: AppContext): Section {
     'section',
     { class: 'danger-zone', 'data-testid': 'reset-section' },
     h('h2', {}, 'Reset'),
-    h('p', { class: 'hint' }, 'Remove all videos, cards, admin cards and settings from this kiosk, and start the setup guide again.'),
+    h('p', { class: 'hint' }, 'Remove all videos, tags, admin tags and settings from this kiosk, and start the setup guide again.'),
     h('button', { type: 'button', class: 'danger', 'data-testid': 'reset-kiosk', onclick: () => void resetKiosk(ctx) }, 'Reset configuration'),
   );
   return { el, destroy: () => undefined };

@@ -72,8 +72,8 @@ export function renderDiagnostics(ctx: AppContext): Section {
         storage?.usage != null && storage.quota != null ? `${formatBytes(storage.usage)} used of ${formatBytes(storage.quota)}` : 'unknown',
       ),
       row('Persisted', storage?.persisted == null ? 'unknown' : storage.persisted ? 'yes' : 'no — install the app to make storage persistent', 'diag-persisted'),
-      row('Card reader', READER_MODE_TEXT[ctx.scanner.mode], 'diag-reader'),
-      row('Card identifier', CARD_KEY_LABELS[ctx.scanner.cardKey], 'diag-card-key'),
+      row('Tag reader', READER_MODE_TEXT[ctx.scanner.mode], 'diag-reader'),
+      row('Tag identifier', CARD_KEY_LABELS[ctx.scanner.cardKey], 'diag-card-key'),
       ctx.scanner.mode === 'keyboard' ? null : row('Bridge app', bridgeStatusText(ctx), 'diag-bridge'),
       row(
         'Last scanned UID',
@@ -84,16 +84,16 @@ export function renderDiagnostics(ctx: AppContext): Section {
               h('strong', { class: 'mono' }, formatUid(scan.uid)),
               ` (${scan.uid}) at ${new Date(scan.at).toLocaleTimeString()} via ${scan.source === 'bridge' ? 'the bridge app' : 'the keyboard'}`,
             )
-          : 'none yet — scan a card to test the reader',
+          : 'none yet — scan a tag to test the reader',
         'diag-last-scan',
       ),
       scan?.source === 'bridge'
         ? row(
-            'Card ID (NDEF)',
+            'Tag ID (NDEF)',
             h(
               'div',
               {},
-              h('strong', { class: 'mono' }, scan.ndefKey ?? 'none — the card has no URI or Text record'),
+              h('strong', { class: 'mono' }, scan.ndefKey ?? 'none — the tag has no URI or Text record'),
               scan.records.length > 0
                 ? h('ol', { class: 'ndef-records' }, ...scan.records.map((r) => h('li', {}, `${r.tnf} ${r.type}: `, h('span', { class: 'mono' }, r.value))))
                 : null,

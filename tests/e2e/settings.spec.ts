@@ -9,13 +9,13 @@ test('first run opens the setup guide', async ({ page }) => {
   await expect(page.getByTestId('step-install')).toBeVisible();
 });
 
-test('pair a new card, then reassign it', async ({ page }) => {
+test('pair a new tag, then reassign it', async ({ page }) => {
   await openSettings(page);
   await page.getByTestId('import-files-input').setInputFiles([`${FIXTURES}lion.mp4`, `${FIXTURES}tiger.mp4`]);
   await clickDialogButton(page, 'OK');
 
-  await page.getByRole('button', { name: 'Pair new card' }).click();
-  await expect(page.getByTestId('scan-status')).toHaveText('Scan card now…');
+  await page.getByRole('button', { name: 'Pair new tag' }).click();
+  await expect(page.getByTestId('scan-status')).toHaveText('Scan tag now…');
   await scan(page, '04A23B1C');
   await expect(page.getByTestId('pair-uid')).toHaveText('04 A2 3B 1C');
   await page.getByTestId('pair-video').selectOption('lion.mp4');
@@ -25,7 +25,7 @@ test('pair a new card, then reassign it', async ({ page }) => {
   await expect(row.getByRole('combobox')).toHaveValue('lion.mp4');
 
   await page.waitForTimeout(1600); // past the reader debounce window
-  await page.getByRole('button', { name: 'Pair new card' }).click();
+  await page.getByRole('button', { name: 'Pair new tag' }).click();
   await scan(page, '04A23B1C');
   await expect(page.locator('dialog[open]')).toContainText('Already paired');
   await page.getByTestId('pair-video').selectOption('tiger.mp4');
@@ -34,7 +34,7 @@ test('pair a new card, then reassign it', async ({ page }) => {
   await expect(page.locator('[data-testid="cards-table"] tbody tr')).toHaveCount(1);
 });
 
-test('settings lists Card reader just above Diagnostics', async ({ page }) => {
+test('settings lists Tag reader just above Diagnostics', async ({ page }) => {
   await setUpKiosk(page);
   const ids = await page.locator('[data-testid="settings"] > section').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
   const reader = ids.indexOf('reader-section');
@@ -73,10 +73,10 @@ test('quick pair from the Videos list, with reassign; the loop video cannot be p
   await expect(row('loop.mp4').getByTestId('quick-pair')).toBeEnabled();
 });
 
-test('admin cards reject video-card UIDs and vice versa', async ({ page }) => {
+test('admin tags reject video-tag UIDs and vice versa', async ({ page }) => {
   await openSettings(page);
   await importConfig(page);
-  await page.getByRole('button', { name: 'Add admin card' }).click();
+  await page.getByRole('button', { name: 'Add admin tag' }).click();
   await scan(page, LION_UID);
   await expect(page.getByTestId('scan-status')).toContainText('is paired to video');
   await scan(page, 'AABBCCDD');
@@ -86,9 +86,9 @@ test('admin cards reject video-card UIDs and vice versa', async ({ page }) => {
   await expect(page.getByTestId('admin-section').locator('input')).toHaveCount(0);
 
   await page.waitForTimeout(1600);
-  await page.getByRole('button', { name: 'Pair new card' }).click();
+  await page.getByRole('button', { name: 'Pair new tag' }).click();
   await scan(page, 'AABBCCDD');
-  await expect(page.getByTestId('scan-status')).toContainText('is an admin card');
+  await expect(page.getByTestId('scan-status')).toContainText('is an admin tag');
   await clickDialogButton(page, 'Cancel');
 });
 
@@ -116,7 +116,7 @@ test('export → import round-trip', async ({ page }) => {
   await page.getByLabel('Video for 04A23B1C5D8000').selectOption('tiger.mp4');
   await expect(page.getByLabel('Video for 04A23B1C5D8000')).toHaveValue('tiger.mp4');
   await page.getByTestId('import-config-input').setInputFiles({ name: 'config.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
-  await expect(page.getByTestId('config-summary')).toContainText('3 video(s), 2 card(s), 1 admin card(s)');
+  await expect(page.getByTestId('config-summary')).toContainText('3 video(s), 2 tag(s), 1 admin tag(s)');
   await clickDialogButton(page, 'Replace local config');
   await expect(page.getByLabel('Video for 04A23B1C5D8000')).toHaveValue('lion.mp4');
   await expect(page.getByTestId('config-applied')).toContainText('from a file');
@@ -147,7 +147,7 @@ test('update from published config fetches config.json fresh and applies it', as
   });
   await openSettings(page);
   await page.getByTestId('update-published').click();
-  await expect(page.getByTestId('config-summary')).toContainText('3 video(s), 2 card(s), 1 admin card(s)');
+  await expect(page.getByTestId('config-summary')).toContainText('3 video(s), 2 tag(s), 1 admin tag(s)');
   await expect(page.locator('dialog[open]')).toContainText('Videos not yet imported on this kiosk (3)');
   await clickDialogButton(page, 'Replace local config');
   await clickDialogButton(page, 'OK');
@@ -155,12 +155,12 @@ test('update from published config fetches config.json fresh and applies it', as
   expect(requests).toBe(1);
 });
 
-test('videos and cards tables show file names only: no title, label or "no loop" row', async ({ page }) => {
+test('videos and tags tables show file names only: no title, label or "no loop" row', async ({ page }) => {
   await setUpKiosk(page);
   await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', '']);
   await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
-  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['Card', 'Video', '']);
+  await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['Tag', 'Video', '']);
   await expect(page.getByTestId('cards-table').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel('No loop video')).toHaveCount(0);
   await expect(page.getByTestId('videos-table').locator('input[type="radio"]')).toHaveCount(3);
@@ -178,7 +178,7 @@ test('deleting the loop video moves the loop to another video', async ({ page })
   await expect(page.getByLabel('Use lion.mp4 as loop video')).toBeChecked();
 });
 
-test('deleting a video lists and unpairs its cards', async ({ page }) => {
+test('deleting a video lists and unpairs its tags', async ({ page }) => {
   await setUpKiosk(page);
   await page.locator('tr[data-file="lion.mp4"]').getByRole('button', { name: 'Delete' }).click();
   await expect(page.locator('dialog[open]')).toContainText('04 A2 3B 1C 5D 80 00');
@@ -212,7 +212,7 @@ test('importing over an existing file asks first and leaves no .partial files', 
   expect(names.find((n) => n[0] === 'tiger.mp4')![1]).toBe(tigerSize);
 });
 
-test('with no videos the kiosk shows a centred "Setup required" card', async ({ page }) => {
+test('with no videos the kiosk shows a centred "Setup required" tag', async ({ page }) => {
   await setUpKiosk(page);
   // Visit the kiosk once while it can play, which completes first-launch setup.
   await page.getByTestId('back-to-kiosk').click();
@@ -246,7 +246,7 @@ test('reset configuration wipes videos and config and restarts the setup guide',
   // Cancelling changes nothing.
   await reset.getByTestId('reset-kiosk').click();
   await expect(page.locator('dialog[open]')).toContainText('3 video file(s)');
-  await expect(page.locator('dialog[open]')).toContainText('2 card(s) and 1 admin card(s)');
+  await expect(page.locator('dialog[open]')).toContainText('2 tag(s) and 1 admin tag(s)');
   await clickDialogButton(page, 'Cancel');
   await expect(page.locator('[data-testid="cards-table"] tbody tr')).toHaveCount(2);
 
@@ -267,6 +267,6 @@ test('reset configuration wipes videos and config and restarts the setup guide',
   await page.reload();
   await expect(page.getByTestId('step-install')).toBeVisible();
   await page.goto('./#/settings');
-  await expect(page.getByTestId('cards-section')).toContainText('No cards paired yet.');
+  await expect(page.getByTestId('cards-section')).toContainText('No tags paired yet.');
   await expect(page.getByTestId('videos-section')).toContainText('No videos yet');
 });

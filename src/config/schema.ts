@@ -73,7 +73,7 @@ export function sameMatch(a: CardMatch, b: CardMatch): boolean {
 
 /** For messages: "UID 04A23B1C" or "card ID "https://…"". */
 export function describeMatch(match: CardMatch): string {
-  return match.kind === 'uid' ? `UID ${match.value}` : `card ID ${JSON.stringify(match.value)}`;
+  return match.kind === 'uid' ? `UID ${match.value}` : `tag ID ${JSON.stringify(match.value)}`;
 }
 
 const PARTIAL_SUFFIX = '.partial';
@@ -201,7 +201,7 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
     } else if (kind === 'ndef') {
       const problem = typeof value === 'string' ? ndefKeyError(value) : 'must be a string';
       if (problem) {
-        errors.push(`${at}.match.value (card ID) ${problem}.`);
+        errors.push(`${at}.match.value (tag ID) ${problem}.`);
         return false;
       }
     } else {

@@ -26,7 +26,7 @@ function videoSelect(ctx: AppContext, selected: string | null, attrs: Record<str
  */
 async function pairNewCard(ctx: AppContext): Promise<void> {
   const dialog = openScanDialog<string>(ctx, {
-    title: 'Pair new card',
+    title: 'Pair new tag',
     testId: 'pair-dialog',
     onScan: (scan, d) => {
       const check = checkPairing(ctx.config.get(), scan, ctx.scanner.cardKey);
@@ -45,13 +45,13 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
     const error = h('p', { class: 'scan-status error', hidden: true });
     replaceChildren(
       dialog.body,
-      h('p', {}, `Card ${matchKindLabel(match)} `, h('strong', { class: 'mono uid', 'data-testid': 'pair-uid' }, formatMatch(match))),
+      h('p', {}, `Tag ${matchKindLabel(match)} `, h('strong', { class: 'mono uid', 'data-testid': 'pair-uid' }, formatMatch(match))),
       existing
         ? h(
             'p',
             { class: 'banner banner-warn', 'data-testid': 'pair-existing' },
             match.kind === 'ndef'
-              ? `Cards with this card ID already play ${existing.fileName}. Saving will reassign all of them.`
+              ? `Tags with this tag ID already play ${existing.fileName}. Saving will reassign all of them.`
               : `Already paired to ${existing.fileName}. Saving will reassign it.`,
           )
         : null,
@@ -95,16 +95,16 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
   const save = async (d: DialogHandle<string>, match: CardMatch) => {
     d.setActions(idle());
     if (!(await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '' })))) {
-      scanMessage(d, 'Could not save. Scan the card again.', 'error');
+      scanMessage(d, 'Could not save. Scan the tag again.', 'error');
       return;
     }
     paired = true;
     if (!keep.checked) return d.close(matchId(match));
     d.setActions(idle());
-    scanMessage(d, `Paired ${formatMatch(match)} ✓ Scan another card, or press Done.`, 'success');
+    scanMessage(d, `Paired ${formatMatch(match)} ✓ Scan another tag, or press Done.`, 'success');
   };
   const dialog = openScanDialog<string>(ctx, {
-    title: `Pair a card with ${fileName}`,
+    title: `Pair a tag with ${fileName}`,
     testId: 'quick-pair-dialog',
     onScan: (scan, d) => {
       d.setActions(idle());
@@ -112,7 +112,7 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
       if (check.kind !== 'ok') {
         scanMessage(d, pairingError(check), 'error');
       } else if (check.existing?.fileName === fileName) {
-        scanMessage(d, `${formatMatch(check.match)} already plays this video. Scan another card.`);
+        scanMessage(d, `${formatMatch(check.match)} already plays this video. Scan another tag.`);
       } else if (check.existing) {
         const { match, existing } = check;
         scanMessage(d, `${reassignText(match, existing.fileName)} Reassign it to this video?`);
@@ -134,7 +134,7 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
       return false; // closing the dialog stops listening
     },
   });
-  dialog.body.append(h('label', { class: 'keep-pairing' }, keep, ' Keep pairing cards to this video'));
+  dialog.body.append(h('label', { class: 'keep-pairing' }, keep, ' Keep pairing tags to this video'));
   dialog.setActions(idle());
   await dialog.result;
 }
@@ -146,7 +146,7 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
  */
 async function addNewAdminCard(ctx: AppContext): Promise<void> {
   const dialog = openScanDialog<string>(ctx, {
-    title: 'Add admin card',
+    title: 'Add admin tag',
     testId: 'admin-dialog',
     onScan: (scan, d) => {
       const config = ctx.config.get();
@@ -154,17 +154,17 @@ async function addNewAdminCard(ctx: AppContext): Promise<void> {
         .map((m) => findCard(config, m))
         .find((c) => c !== undefined);
       if (card) {
-        scanMessage(d, `${formatMatch(card.match)} is paired to video "${card.fileName}". Remove it from cards first, or scan another card.`, 'error');
+        scanMessage(d, `${formatMatch(card.match)} is paired to video "${card.fileName}". Remove it from tags first, or scan another tag.`, 'error');
         return false;
       }
       const match: CardMatch = { kind: 'uid', value: scan.uid };
       if (findAdminCard(config, match)) {
-        scanMessage(d, `${formatMatch(match)} is already an admin card. Scan another card.`, 'error');
+        scanMessage(d, `${formatMatch(match)} is already an admin tag. Scan another tag.`, 'error');
         return false;
       }
       void saveEdit(ctx, (c) => addAdminCard(c, { match, label: '' })).then((saved) => {
         if (saved) d.close(matchId(match));
-        else scanMessage(d, 'Could not save. Scan the card again.', 'error');
+        else scanMessage(d, 'Could not save. Scan the tag again.', 'error');
       });
       return false; // closing the dialog stops listening
     },
@@ -178,14 +178,14 @@ export function renderCards(ctx: AppContext): Section {
     const config = ctx.config.get();
     replaceChildren(
       body,
-      h('div', { class: 'toolbar' }, h('button', { type: 'button', class: 'primary', onclick: () => void pairNewCard(ctx) }, 'Pair new card')),
-      h('p', { class: 'hint', 'data-testid': 'card-key-hint' }, `This kiosk identifies cards by ${CARD_KEY_LABELS[ctx.scanner.cardKey]}. Change it under Card reader.`),
+      h('div', { class: 'toolbar' }, h('button', { type: 'button', class: 'primary', onclick: () => void pairNewCard(ctx) }, 'Pair new tag')),
+      h('p', { class: 'hint', 'data-testid': 'card-key-hint' }, `This kiosk identifies tags by ${CARD_KEY_LABELS[ctx.scanner.cardKey]}. Change it under Tag reader.`),
       config.cards.length === 0
-        ? h('p', { class: 'hint' }, 'No cards paired yet.')
+        ? h('p', { class: 'hint' }, 'No tags paired yet.')
         : h(
             'table',
             { 'data-testid': 'cards-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Card'), h('th', {}, 'Video'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'Tag'), h('th', {}, 'Video'), h('th'))),
             h(
               'tbody',
               {},
@@ -213,7 +213,7 @@ export function renderCards(ctx: AppContext): Section {
                         type: 'button',
                         class: 'danger',
                         onclick: async () => {
-                          const ok = await confirmDialog({ title: 'Remove card?', content: [`${formatMatch(card.match)} → ${card.fileName}`], confirmLabel: 'Remove', danger: true });
+                          const ok = await confirmDialog({ title: 'Remove tag?', content: [`${formatMatch(card.match)} → ${card.fileName}`], confirmLabel: 'Remove', danger: true });
                           if (ok) await saveEdit(ctx, (c) => removeCard(c, card.match));
                         },
                       },
@@ -226,7 +226,7 @@ export function renderCards(ctx: AppContext): Section {
           ),
     );
   };
-  const el = h('section', { 'data-testid': 'cards-section' }, h('h2', {}, 'Cards'), body);
+  const el = h('section', { 'data-testid': 'cards-section' }, h('h2', {}, 'Tags'), body);
   return reactiveSection(el, render, [(l) => ctx.config.changed.subscribe(l), (l) => ctx.scanner.cardKeyChanged.subscribe(l)]);
 }
 
@@ -236,9 +236,9 @@ export function renderAdminCards(ctx: AppContext): Section {
     const config = ctx.config.get();
     replaceChildren(
       body,
-      h('div', { class: 'toolbar' }, h('button', { type: 'button', onclick: () => void addNewAdminCard(ctx) }, 'Add admin card')),
+      h('div', { class: 'toolbar' }, h('button', { type: 'button', onclick: () => void addNewAdminCard(ctx) }, 'Add admin tag')),
       config.adminCards.length === 0
-        ? h('p', { class: 'hint' }, `No admin cards. Settings can still be opened with ${SETTINGS_SHORTCUT_LABEL}.`)
+        ? h('p', { class: 'hint' }, `No admin tags. Settings can still be opened with ${SETTINGS_SHORTCUT_LABEL}.`)
         : h(
             'ul',
             { 'data-testid': 'admin-list', class: 'admin-list' },
@@ -246,7 +246,7 @@ export function renderAdminCards(ctx: AppContext): Section {
               h(
                 'li',
                 matchAttrs(card.match),
-                card.match.kind === 'ndef' ? h('span', { class: 'hint' }, 'Card ID ') : null,
+                card.match.kind === 'ndef' ? h('span', { class: 'hint' }, 'Tag ID ') : null,
                 h('span', { class: 'mono uid' }, formatMatch(card.match)),
                 ' ',
                 h(
@@ -255,7 +255,7 @@ export function renderAdminCards(ctx: AppContext): Section {
                     type: 'button',
                     class: 'danger',
                     onclick: async () => {
-                      const ok = await confirmDialog({ title: 'Remove admin card?', content: [formatMatch(card.match)], confirmLabel: 'Remove', danger: true });
+                      const ok = await confirmDialog({ title: 'Remove admin tag?', content: [formatMatch(card.match)], confirmLabel: 'Remove', danger: true });
                       if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.match));
                     },
                   },
@@ -266,6 +266,6 @@ export function renderAdminCards(ctx: AppContext): Section {
           ),
     );
   };
-  const el = h('section', { 'data-testid': 'admin-section' }, h('h2', {}, 'Admin cards'), body);
+  const el = h('section', { 'data-testid': 'admin-section' }, h('h2', {}, 'Admin tags'), body);
   return reactiveSection(el, render, [(l) => ctx.config.changed.subscribe(l)]);
 }

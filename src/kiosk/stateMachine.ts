@@ -48,7 +48,7 @@ export function transition(state: KioskState, event: KioskEvent, ctx: KioskConte
       if (!ctx.hasFile(card.fileName)) {
         return {
           state,
-          effects: [{ type: 'warn', message: `Card with ${describeMatch(card.match)} is paired to "${card.fileName}", which is not imported on this kiosk.` }],
+          effects: [{ type: 'warn', message: `Tag with ${describeMatch(card.match)} is paired to "${card.fileName}", which is not imported on this kiosk.` }],
         };
       }
       return { state: { kind: 'feature', fileName: card.fileName }, effects: [{ type: 'playFeature', fileName: card.fileName }] };

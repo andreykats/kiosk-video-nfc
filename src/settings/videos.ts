@@ -36,7 +36,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
       content: [
         h('p', {}, 'The file is removed from this kiosk and the video is removed from the config.'),
         cards.length > 0
-          ? h('div', {}, h('p', {}, 'These cards will be unpaired:'), errorList(cards.map((c) => formatMatch(c.match))))
+          ? h('div', {}, h('p', {}, 'These tags will be unpaired:'), errorList(cards.map((c) => formatMatch(c.match))))
           : '',
         config.loopVideo === fileName
           ? h('p', {}, nextLoop ? `This is the loop video. ${nextLoop} will become the loop video.` : 'This is the loop video, and there are no other videos to loop.')
@@ -104,7 +104,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
               'data-testid': 'quick-pair',
               // The loop plays between cards, so no card can start it.
               disabled: busy || isLoop,
-              title: isLoop ? 'The loop video plays between cards and can’t be paired' : null,
+              title: isLoop ? 'The loop video plays between tags and can’t be paired' : null,
               onclick: () => void quickPair(ctx, v.fileName),
             },
             'Pair',

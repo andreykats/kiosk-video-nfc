@@ -22,5 +22,5 @@ export function formatMatch(match: CardMatch): string {
 
 /** Short label for the match kind, as shown in tables. */
 export function matchKindLabel(match: CardMatch): string {
-  return match.kind === 'uid' ? 'UID' : 'Card ID';
+  return match.kind === 'uid' ? 'UID' : 'Tag ID';
 }

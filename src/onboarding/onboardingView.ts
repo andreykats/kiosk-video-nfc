@@ -161,18 +161,18 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
         stepCard(nav, 'reader', {
           title: 'Connect the NFC reader',
           body: [
-            p('Plug the NFC reader into a USB port. Choose how this kiosk reads cards, then hold any card on the reader.'),
+            p('Plug the NFC reader into a USB port. Choose how this kiosk reads tags, then hold any tag on the reader.'),
             controls.el,
             scanned
               ? h(
                   'p',
                   { class: 'success', 'data-testid': 'reader-status' },
-                  `Reader is working ✓ Read card ${formatUid(scanned.uid)}`,
-                  scanned.ndefKey !== null ? ` with card ID ${scanned.ndefKey}` : '',
+                  `Reader is working ✓ Read tag ${formatUid(scanned.uid)}`,
+                  scanned.ndefKey !== null ? ` with tag ID ${scanned.ndefKey}` : '',
                 )
-              : h('p', { class: 'waiting', 'data-testid': 'reader-status' }, 'Waiting for a card…'),
+              : h('p', { class: 'waiting', 'data-testid': 'reader-status' }, 'Waiting for a tag…'),
             ctx.scanner.mode === 'keyboard'
-              ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, card reads are lost.', 'hint')
+              ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, tag reads are lost.', 'hint')
               : null,
           ],
           primary: { label: 'Next', onClick: done, disabled: scanned === null && !readFlags().readerDone, testId: 'onboarding-next' },
@@ -200,7 +200,7 @@ function configStep(ctx: AppContext, nav: Nav): StepView {
     if (hasContent(current)) {
       const ok = await confirmDialog({
         title: 'Replace the current config?',
-        content: [`This kiosk already has ${current.videos.length} video(s) and ${current.cards.length} card(s) set up. They will be replaced.`],
+        content: [`This kiosk already has ${current.videos.length} video(s) and ${current.cards.length} tag(s) set up. They will be replaced.`],
         confirmLabel: 'Replace',
         danger: true,
       });
@@ -247,19 +247,19 @@ function configStep(ctx: AppContext, nav: Nav): StepView {
       stepCard(nav, 'config', {
         title: 'Import configuration',
         body: [
-          p('The config lists the videos, which card plays which video, and the admin cards.'),
+          p('The config lists the videos, which tag plays which video, and the admin tags.'),
           path && applied
             ? h(
                 'p',
                 { class: 'success', 'data-testid': 'config-current' },
-                `${applied.source === 'new' ? 'Started a new config' : 'Config loaded'} ✓ ${config.videos.length} video(s), ${config.cards.length} card(s). Pick an option below to replace it, or continue.`,
+                `${applied.source === 'new' ? 'Started a new config' : 'Config loaded'} ✓ ${config.videos.length} video(s), ${config.cards.length} tag(s). Pick an option below to replace it, or continue.`,
               )
             : null,
           h(
             'div',
             { class: 'options' },
             option('Import a config file', 'Use a config.json exported from another kiosk.', 'option-import', () => fileInput.click()),
-            option('Start a new config', 'Add videos and pair cards on this kiosk.', 'option-new', () => void apply(emptyConfig(), 'new')),
+            option('Start a new config', 'Add videos and pair tags on this kiosk.', 'option-new', () => void apply(emptyConfig(), 'new')),
           ),
           fileInput,
           errors.length > 0 ? h('div', { class: 'error', 'data-testid': 'config-errors' }, errorList(errors)) : null,
@@ -401,7 +401,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     if (cards.length > 0) {
       const ok = await confirmDialog({
         title: `Use ${fileName} as the background loop?`,
-        content: [`The loop plays on repeat instead of being started by a card, so its ${cards.length} card(s) will be unpaired.`],
+        content: [`The loop plays on repeat instead of being started by a tag, so its ${cards.length} tag(s) will be unpaired.`],
         confirmLabel: 'Use as loop',
       });
       if (!ok) return view.rerender();
@@ -452,7 +452,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
             h(
               'span',
               { class: 'hint', 'data-testid': 'pair-count' },
-              isLoop ? 'Plays on repeat between cards' : cards.length === 0 ? 'No cards yet' : `${cards.length} card${cards.length === 1 ? '' : 's'} paired`,
+              isLoop ? 'Plays on repeat between tags' : cards.length === 0 ? 'No tags yet' : `${cards.length} tag${cards.length === 1 ? '' : 's'} paired`,
             ),
             h(
               'button',
@@ -461,10 +461,10 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
                 'data-testid': 'pair-card',
                 // The loop plays between cards, so no card can start it.
                 disabled: busy || isLoop,
-                title: isLoop ? 'The loop video plays between cards and can’t be paired' : null,
+                title: isLoop ? 'The loop video plays between tags and can’t be paired' : null,
                 onclick: () => void quickPair(ctx, v.fileName),
               },
-              'Pair card',
+              'Pair tag',
             ),
           ),
         ),
@@ -473,11 +473,11 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     replaceChildren(
       el,
       stepCard(nav, 'pair', {
-        title: 'Pair videos with cards',
+        title: 'Pair videos with tags',
         wide: true,
         busy,
         body: [
-          p('Press Pair card, then hold a card on the reader. That card will play the video. To pair several cards in a row, tick Keep pairing in the dialog. One video is the background loop and plays on repeat between cards. Tick Loop on another video to move it.'),
+          p('Press Pair tag, then hold a tag on the reader. That tag will play the video. To pair several tags in a row, tick Keep pairing in the dialog. One video is the background loop and plays on repeat between tags. Tick Loop on another video to move it.'),
           config.videos.length === 0
             ? p('There are no videos yet. Add some first.', 'error')
             : h('table', { class: 'pair-table', 'data-testid': 'pair-table' }, h('tbody', {}, ...rows)),
@@ -506,11 +506,11 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
       .map((m) => findCard(config, m))
       .find((c) => c !== undefined);
     if (card) {
-      message = { text: `${formatMatch(card.match)} plays “${card.fileName}”. Use a different card for admin.`, kind: 'error' };
+      message = { text: `${formatMatch(card.match)} plays “${card.fileName}”. Use a different tag for admin.`, kind: 'error' };
     } else if (findAdminCard(config, match)) {
-      message = { text: `${formatUid(scan.uid)} is already an admin card.`, kind: 'error' };
+      message = { text: `${formatUid(scan.uid)} is already an admin tag.`, kind: 'error' };
     } else if (await saveEdit(ctx, (c) => addAdminCard(c, { match, label: '' }))) {
-      message = { text: `Added ${formatUid(scan.uid)} as an admin card ✓`, kind: 'success' };
+      message = { text: `Added ${formatUid(scan.uid)} as an admin tag ✓`, kind: 'success' };
     }
     view.rerender();
   });
@@ -521,10 +521,10 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
       replaceChildren(
         el,
         stepCard(nav, 'admin', {
-          title: 'Pair an admin card',
+          title: 'Pair an admin tag',
           body: [
-            p('Staff hold an admin card on the reader to open settings. Hold the card you want to use on the reader now.'),
-            h('p', { class: 'waiting', 'data-testid': 'admin-waiting' }, admins.length === 0 ? 'Waiting for a card…' : 'Hold another card to add more, or press Next.'),
+            p('Staff hold an admin tag on the reader to open settings. Hold the tag you want to use on the reader now.'),
+            h('p', { class: 'waiting', 'data-testid': 'admin-waiting' }, admins.length === 0 ? 'Waiting for a tag…' : 'Hold another tag to add more, or press Next.'),
             message ? h('p', { class: message.kind, 'data-testid': 'admin-message' }, message.text) : null,
             admins.length > 0
               ? h(
@@ -535,12 +535,12 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
                       'span',
                       { class: 'chip mono', ...matchAttrs(a.match) },
                       formatMatch(a.match),
-                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin card ${a.match.value}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.match)) }, '×'),
+                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin tag ${a.match.value}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.match)) }, '×'),
                     ),
                   ),
                 )
               : null,
-            p(`Without an admin card, settings can still be opened with ${SETTINGS_SHORTCUT_LABEL}.`, 'hint'),
+            p(`Without an admin tag, settings can still be opened with ${SETTINGS_SHORTCUT_LABEL}.`, 'hint'),
           ],
           primary: admins.length > 0 ? { label: 'Next', onClick: nav.next, testId: 'onboarding-next' } : undefined,
           secondary: admins.length > 0 ? undefined : { label: 'Skip', onClick: nav.next, testId: 'onboarding-skip' },
@@ -563,9 +563,9 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
       stepCard(nav, 'done', {
         title: 'You’re all set',
         body: [
-          p(`${config.videos.length} video(s) and ${config.cards.length} card(s). Background loop: ${config.loopVideo ?? 'none'}.`),
+          p(`${config.videos.length} video(s) and ${config.cards.length} tag(s). Background loop: ${config.loopVideo ?? 'none'}.`),
           offline.el,
-          p(`To open settings, hold an admin card on the reader or press ${SETTINGS_SHORTCUT_LABEL}.`, 'hint'),
+          p(`To open settings, hold an admin tag on the reader or press ${SETTINGS_SHORTCUT_LABEL}.`, 'hint'),
           p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk.', 'hint'),
         ],
         secondary: { label: 'Export config', testId: 'onboarding-export', onClick: () => downloadConfig(ctx.config.get()) },

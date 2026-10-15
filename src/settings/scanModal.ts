@@ -12,7 +12,7 @@ export function openScanDialog<T>(
   ctx: AppContext,
   options: { title: string; testId: string; onScan: (scan: ScanEvent, dialog: DialogHandle<T>) => boolean },
 ): DialogHandle<T> {
-  const status = h('p', { class: 'scan-status', 'data-testid': 'scan-status' }, 'Scan card now…');
+  const status = h('p', { class: 'scan-status', 'data-testid': 'scan-status' }, 'Scan tag now…');
   const dialog = openDialog<T>({
     title: options.title,
     testId: options.testId,

@@ -72,7 +72,7 @@ describe('validateConfig', () => {
     for (const value of ['', 'x'.repeat(257), 'a\nb']) {
       const d = valid();
       d.cards[0]!.match = { kind: 'ndef', value };
-      expect(errorsOf(d).join(), JSON.stringify(value)).toMatch(/card ID/);
+      expect(errorsOf(d).join(), JSON.stringify(value)).toMatch(/tag ID/);
     }
   });
 

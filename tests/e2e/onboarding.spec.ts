@@ -17,12 +17,12 @@ async function throughReader(page: Page) {
   await expect(step(page, 'reader')).toBeVisible();
   await expect(page.getByTestId('onboarding-next')).toBeDisabled();
   await scan(page, '04A23B1C');
-  await expect(page.getByTestId('reader-status')).toContainText('Reader is working ✓ Read card 04 A2 3B 1C');
+  await expect(page.getByTestId('reader-status')).toContainText('Reader is working ✓ Read tag 04 A2 3B 1C');
   await next(page);
   await expect(step(page, 'config')).toBeVisible();
 }
 
-test('first launch: new config → add videos → pair cards and pick the loop', async ({ page }) => {
+test('first launch: new config → add videos → pair tags and pick the loop', async ({ page }) => {
   await throughReader(page);
   await page.getByTestId('option-new').click();
 
@@ -46,7 +46,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   // The loop video can't be paired.
   await expect(page.locator('tr[data-file="loop.mp4"]').getByTestId('pair-card')).toBeDisabled();
   const count = (file: string) => page.locator(`tr[data-file="${file}"]`).getByTestId('pair-count');
-  await expect(count('lion.mp4')).toHaveText('No cards yet');
+  await expect(count('lion.mp4')).toHaveText('No tags yet');
 
   // Keep pairing is off by default: the dialog closes after one card.
   await page.locator('tr[data-file="lion.mp4"]').getByTestId('pair-card').click();
@@ -54,7 +54,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await page.waitForTimeout(1600); // past the debounce for the reader-test card
   await scan(page, LION_UID);
   await expect(page.getByTestId('quick-pair-dialog')).toHaveCount(0);
-  await expect(count('lion.mp4')).toHaveText('1 card paired');
+  await expect(count('lion.mp4')).toHaveText('1 tag paired');
   // The row shows a count, not the card's UID or payload.
   await expect(page.locator('tr[data-file="lion.mp4"]')).not.toContainText('04 A2');
 
@@ -64,7 +64,7 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await scan(page, '0A0B0C0D');
   await expect(page.getByTestId('scan-status')).toContainText('Paired');
   await scan(page, '0A0B0C0E');
-  await expect(count('lion.mp4')).toHaveText('3 cards paired');
+  await expect(count('lion.mp4')).toHaveText('3 tags paired');
   // A card already paired here is reported, and the dialog keeps waiting.
   await page.waitForTimeout(1600);
   await scan(page, LION_UID);
@@ -78,8 +78,8 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await expect(page.getByTestId('scan-status')).toContainText('plays “lion.mp4”');
   await page.getByRole('button', { name: 'Reassign' }).click();
   await expect(page.getByTestId('quick-pair-dialog')).toHaveCount(0);
-  await expect(count('tiger.mp4')).toHaveText('1 card paired');
-  await expect(count('lion.mp4')).toHaveText('2 cards paired');
+  await expect(count('tiger.mp4')).toHaveText('1 tag paired');
+  await expect(count('lion.mp4')).toHaveText('2 tags paired');
 
   await next(page);
 
@@ -89,12 +89,12 @@ test('first launch: new config → add videos → pair cards and pick the loop',
   await expect(page.getByTestId('onboarding-skip')).toBeVisible();
   await page.waitForTimeout(1600);
   await scan(page, LION_UID);
-  await expect(page.getByTestId('admin-message')).toContainText('Use a different card for admin');
+  await expect(page.getByTestId('admin-message')).toContainText('Use a different tag for admin');
   await scan(page, 'AABBCCDD');
   await expect(page.getByTestId('admin-cards').locator('[data-uid="AABBCCDD"]')).toBeVisible();
   await next(page);
 
-  await expect(step(page, 'done')).toContainText('3 video(s) and 3 card(s). Background loop: loop.mp4.');
+  await expect(step(page, 'done')).toContainText('3 video(s) and 3 tag(s). Background loop: loop.mp4.');
 
   // Export from the last step, for importing on other kiosks.
   const downloadPromise = page.waitForEvent('download');
@@ -159,7 +159,7 @@ test('first launch: import config file → copy videos → review pairings', asy
   await expect(step(page, 'pair')).toBeVisible();
   await expect(page.locator('tr[data-file="bonus.mp4"]')).toHaveCount(0);
   await expect(page.getByLabel('Use loop.mp4 as background loop')).toBeChecked();
-  await expect(page.locator('tr[data-file="lion.mp4"]').getByTestId('pair-count')).toHaveText('1 card paired');
+  await expect(page.locator('tr[data-file="lion.mp4"]').getByTestId('pair-count')).toHaveText('1 tag paired');
   await next(page);
 
   // The imported config already has an admin card.

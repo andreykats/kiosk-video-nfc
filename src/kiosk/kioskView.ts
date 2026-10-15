@@ -83,7 +83,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const bridgeEl = h(
     'div',
     { class: 'focus-notice', 'data-testid': 'bridge-notice', role: 'status', hidden: true },
-    h('h1', {}, 'Card reader not available'),
+    h('h1', {}, 'Tag reader not available'),
     h('p', { 'data-testid': 'bridge-notice-detail' }),
   );
   const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl, focusEl, bridgeEl);
@@ -118,7 +118,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
         { class: 'setup-card' },
         h('h1', {}, 'Setup required'),
         h('p', { 'data-testid': 'setup-reason' }, setupReason()),
-        h('p', { class: 'hint' }, `Run the setup guide to add videos and pair cards, or open settings. You can also press ${SETTINGS_SHORTCUT_LABEL} or hold an admin card on the reader.`),
+        h('p', { class: 'hint' }, `Run the setup guide to add videos and pair tags, or open settings. You can also press ${SETTINGS_SHORTCUT_LABEL} or hold an admin tag on the reader.`),
         h(
           'div',
           { class: 'onboarding-actions' },
@@ -292,7 +292,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   };
   const onBlur = () => {
     focusLost = true;
-    if (ctx.scanner.mode === 'keyboard') log.warn('The kiosk window lost keyboard focus. Card scans are missed until the kiosk is clicked.');
+    if (ctx.scanner.mode === 'keyboard') log.warn('The kiosk window lost keyboard focus. Tag scans are missed until the kiosk is clicked.');
     updateFocusNotice();
   };
   const onFocus = () => {

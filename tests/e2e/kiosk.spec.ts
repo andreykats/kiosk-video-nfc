@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
 });
 
-test('paired card plays its video once, then the loop resumes where it paused', async ({ page }) => {
+test('paired tag plays its video once, then the loop resumes where it paused', async ({ page }) => {
   await scan(page, LION_UID);
   await waitForPlaying(page, 'feature-video', 'lion.mp4');
   await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'feature');
@@ -32,14 +32,14 @@ test('scans during a feature video are ignored', async ({ page }) => {
   expect((await videoState(page, 'feature-video')).file).toBe('lion.mp4');
 });
 
-test('an unknown card does nothing', async ({ page }) => {
+test('an unknown tag does nothing', async ({ page }) => {
   await scan(page, 'DEADBEEF');
   await page.waitForTimeout(300);
   await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop');
   expect((await videoState(page, 'feature-video')).hidden).toBe(true);
 });
 
-test('an admin card opens settings, even during a feature video', async ({ page }) => {
+test('an admin tag opens settings, even during a feature video', async ({ page }) => {
   await scan(page, ADMIN_UID);
   await expect(page.getByTestId('settings')).toBeVisible();
   await page.getByTestId('back-to-kiosk').click();
@@ -56,7 +56,7 @@ test('Ctrl+Shift+S opens settings', async ({ page }) => {
   await expect(page).toHaveURL(/#\/settings$/);
 });
 
-test('the kiosk goes fullscreen on the first click or card scan', async ({ page }) => {
+test('the kiosk goes fullscreen on the first click or tag scan', async ({ page }) => {
   const isFullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
   if (await isFullscreen()) await page.evaluate(() => document.exitFullscreen());
   await expect.poll(isFullscreen).toBe(false);
@@ -73,7 +73,7 @@ test('the kiosk goes fullscreen on the first click or card scan', async ({ page 
 
 const loopSrc = (page: Page) => page.getByTestId('loop-video').evaluate((v: HTMLVideoElement) => v.src);
 
-test('a card video that stops playing gives way to the loop, and cards work again', async ({ page }) => {
+test('a tag video that stops playing gives way to the loop, and tags work again', async ({ page }) => {
   await scan(page, LION_UID);
   await waitForPlaying(page, 'feature-video', 'lion.mp4');
   // A frozen decoder fires neither `ended` nor `error`; pausing looks the same.

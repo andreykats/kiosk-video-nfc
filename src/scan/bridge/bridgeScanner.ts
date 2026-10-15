@@ -101,7 +101,7 @@ export class BridgeScanner {
       }),
       client.on('card_present', (ev) => void this.onCard(client, ev)),
       client.on('error', (e) => {
-        log.error('Card reader bridge:', e.message);
+        log.error('Tag reader bridge:', e.message);
         this.setStatus({ state: 'protocol-mismatch', message: e.message });
       }),
     );
@@ -117,7 +117,7 @@ export class BridgeScanner {
   }
 
   private onConnecting(): void {
-    if (this.status_.state === 'connected') log.warn('Lost the connection to the card reader bridge; reconnecting.');
+    if (this.status_.state === 'connected') log.warn('Lost the connection to the tag reader bridge; reconnecting.');
     if (this.status_.state !== 'unreachable') this.setStatus({ state: 'connecting' });
     clearTimeout(this.unreachableTimer);
     this.unreachableTimer = setTimeout(() => {
@@ -134,7 +134,7 @@ export class BridgeScanner {
     const reader = client.readers.find((r) => r.name === ev.reader);
     if (reader?.kind === 'sam') return;
     if (ev.uid === null || !isCanonicalUid(ev.uid)) {
-      log.warn(`Card on "${ev.reader}" has no usable UID (${ev.uid ?? 'none'}); ignored.`);
+      log.warn(`Tag on "${ev.reader}" has no usable UID (${ev.uid ?? 'none'}); ignored.`);
       return;
     }
     const at = this.opts.now();
@@ -147,14 +147,14 @@ export class BridgeScanner {
       try {
         records = (await withTimeout(readNdef(client, ev.reader, ev.atr), this.opts.ndefTimeoutMs)).records;
       } catch (e) {
-        log.warn(`Reading the NDEF data of card ${ev.uid} failed; matching by UID only.`, e);
+        log.warn(`Reading the NDEF data of tag ${ev.uid} failed; matching by UID only.`, e);
       }
     }
     if (this.client !== client) return; // stopped while reading
     let ndefKey = matchKey(records);
     const problem = ndefKey === null ? null : ndefKeyError(ndefKey);
     if (problem) {
-      log.warn(`Card ${ev.uid} has a card ID that can't be used (it ${problem}); matching by UID only.`);
+      log.warn(`Tag ${ev.uid} has a tag ID that can't be used (it ${problem}); matching by UID only.`);
       ndefKey = null;
     }
     this.scans.emit({ uid: ev.uid, at, source: 'bridge', ndefKey, records: summarize(records) });

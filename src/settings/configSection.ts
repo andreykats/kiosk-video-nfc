@@ -24,7 +24,7 @@ async function applyConfig(ctx: AppContext, result: Result<Config, string[]>, so
         'ul',
         { 'data-testid': 'config-summary' },
         h('li', {}, `Exported: ${formatDate(summary.updatedAt)}`),
-        h('li', {}, `${summary.videos} video(s), ${summary.cards} card(s), ${summary.adminCards} admin card(s)`),
+        h('li', {}, `${summary.videos} video(s), ${summary.cards} tag(s), ${summary.adminCards} admin tag(s)`),
         h('li', {}, `Loop video: ${summary.loopVideo ?? 'none'}`),
       ),
       summary.missingLocally.length > 0

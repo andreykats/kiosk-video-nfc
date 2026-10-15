@@ -9,8 +9,8 @@ import { reactiveSection, type Section } from './section';
 export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-bridge/releases';
 
 const MODE_LABELS: Record<ReaderMode, string> = {
-  keyboard: 'HID Keyboard (Read card’s UID only)',
-  bridge: 'NFC Browser Bridge (Read card’s NDEF payload)',
+  keyboard: 'HID Keyboard (Read tag’s UID only)',
+  bridge: 'NFC Browser Bridge (Read tag’s NDEF payload)',
 };
 
 /** One line describing the bridge connection, for settings and diagnostics. */
@@ -48,7 +48,7 @@ export function readerControls(ctx: AppContext): Section {
     const status = ctx.scanner.bridgeStatus;
     const select = h(
       'select',
-      { 'data-testid': 'reader-mode', 'aria-label': 'Card reader input method' },
+      { 'data-testid': 'reader-mode', 'aria-label': 'Tag reader input method' },
       ...(Object.keys(MODE_LABELS) as ReaderMode[]).map((m) => h('option', { value: m, selected: m === mode }, MODE_LABELS[m])),
     );
     select.addEventListener('change', () => {
@@ -58,7 +58,7 @@ export function readerControls(ctx: AppContext): Section {
     const cardKey = ctx.scanner.cardKey;
     const keySelect = h(
       'select',
-      { 'data-testid': 'card-key', 'aria-label': 'Card identifier', disabled: !usesBridge },
+      { 'data-testid': 'card-key', 'aria-label': 'Tag identifier', disabled: !usesBridge },
       ...CARD_KEYS.map((k) => h('option', { value: k, selected: k === cardKey }, CARD_KEY_LABELS[k])),
     );
     keySelect.addEventListener('change', () => {
@@ -66,16 +66,16 @@ export function readerControls(ctx: AppContext): Section {
     });
     replaceChildren(
       el,
-      h('label', {}, 'Card reader input method: ', select),
-      h('label', {}, 'Card identifier: ', keySelect),
+      h('label', {}, 'Tag reader input method: ', select),
+      h('label', {}, 'Tag identifier: ', keySelect),
       h(
         'p',
         { class: 'hint' },
         !usesBridge
           ? 'HID Keyboard readers only read the UID.'
           : cardKey === 'ndef'
-            ? 'Cards are paired and played by the first URI or Text record on the card. Every card written with the same payload plays the same video.'
-            : 'Cards are paired and played by their UID. Each physical card is paired on its own.',
+            ? 'Tags are paired and played by the first URI or Text record on the tag. Every tag written with the same payload plays the same video.'
+            : 'Tags are paired and played by their UID. Each physical tag is paired on its own.',
       ),
       usesBridge
         ? h(
@@ -110,14 +110,14 @@ export function renderReaderSection(ctx: AppContext): Section {
           ? h(
               'p',
               { class: 'banner banner-warn', 'data-testid': 'reader-card-key-warning' },
-              `${count} card(s) in the config are identified by ${other}, so this kiosk won’t recognise them. It identifies cards by ${CARD_KEY_LABELS[key]}.`,
+              `${count} tag(s) in the config are identified by ${other}, so this kiosk won’t recognise them. It identifies tags by ${CARD_KEY_LABELS[key]}.`,
             )
           : null,
       );
     },
     [(l) => ctx.scanner.changed.subscribe(l), (l) => ctx.config.changed.subscribe(l)],
   );
-  const el = h('section', { 'data-testid': 'reader-section' }, h('h2', {}, 'Card reader'), controls.el, warning);
+  const el = h('section', { 'data-testid': 'reader-section' }, h('h2', {}, 'Tag reader'), controls.el, warning);
   return {
     el,
     destroy: () => {

@@ -30,7 +30,7 @@ export default defineConfig({
       manifest: {
         name: 'Topps Kiosk',
         short_name: 'Topps Kiosk',
-        description: 'Plays a looping video and switches to card-specific videos on NFC scans.',
+        description: 'Plays a looping video and switches to tag-specific videos on NFC scans.',
         start_url: './',
         scope: './',
         display: 'fullscreen',

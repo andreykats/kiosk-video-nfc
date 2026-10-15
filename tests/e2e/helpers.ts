@@ -18,8 +18,8 @@ export const testConfig = {
     { fileName: 'tiger.mp4', title: 'Tiger', sizeBytes: 0 },
   ],
   cards: [
-    { uid: LION_UID, fileName: 'lion.mp4', label: 'Lion card' },
-    { uid: TIGER_UID, fileName: 'tiger.mp4', label: 'Tiger card' },
+    { uid: LION_UID, fileName: 'lion.mp4', label: 'Lion tag' },
+    { uid: TIGER_UID, fileName: 'tiger.mp4', label: 'Tiger tag' },
   ],
   adminCards: [{ uid: ADMIN_UID, label: 'Front desk' }],
 };
