@@ -6,6 +6,8 @@ import { ADMIN_UID, FIXTURES, LION_UID, clickDialogButton, scan, testConfig, wai
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
 const next = (page: Page) => page.getByTestId('onboarding-next').click();
+const fakePlatform = (page: Page, platform: string) =>
+  page.addInitScript((value) => Object.defineProperty(Navigator.prototype, 'platform', { get: () => value }), platform);
 
 async function throughReader(page: Page) {
   await page.goto('./');
@@ -22,7 +24,9 @@ async function throughReader(page: Page) {
   await expect(step(page, 'config')).toBeVisible();
 }
 
-test('first launch: new config → add videos → pair tags and pick the loop', async ({ page }) => {
+test('first launch: new config → add videos → pair tags and pick the loop', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await fakePlatform(page, 'MacIntel');
   await throughReader(page);
   await page.getByTestId('option-new').click();
 
@@ -111,6 +115,19 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   expect(exported.adminCards.map((a: { match: { value: string } }) => a.match.value)).toEqual(['AABBCCDD']);
   await expect(step(page, 'done')).toBeVisible();
 
+  // On a Mac, the last step is a copyable command that runs the auto-start script.
+  const scriptUrl = new URL('mac-kiosk-autostart.sh', page.url()).href;
+  const command = `curl -fsSL ${scriptUrl} | bash`;
+  await expect(page.getByTestId('mac-autostart')).toContainText('Last step');
+  await expect(page.getByTestId('mac-autostart-command')).toHaveText(command);
+  await page.getByTestId('mac-autostart-copy').click();
+  await expect(page.getByTestId('mac-autostart-copy')).toHaveText('Copied ✓');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+  // The URL in the command serves the script itself.
+  const script = await (await page.request.get(scriptUrl)).text();
+  expect(script).toMatch(/^#!\/bin\/bash\n/);
+  expect(script).toContain('--kiosk');
+
   await page.getByTestId('onboarding-start').click();
 
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
@@ -129,6 +146,7 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
 });
 
 test('first launch: import config file → copy videos → review pairings', async ({ page }) => {
+  await fakePlatform(page, 'Win32');
   await throughReader(page);
   await page.getByTestId('onboarding-config-input').setInputFiles({ name: 'config.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(testConfig)) });
 
@@ -165,6 +183,9 @@ test('first launch: import config file → copy videos → review pairings', asy
   // The imported config already has an admin card.
   await expect(step(page, 'admin').locator(`[data-uid="${ADMIN_UID}"]`)).toBeVisible();
   await next(page);
+  // The Mac auto-start script isn't offered on Windows.
+  await expect(step(page, 'done')).toBeVisible();
+  await expect(page.getByTestId('mac-autostart')).toHaveCount(0);
   await page.getByTestId('onboarding-start').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
 });

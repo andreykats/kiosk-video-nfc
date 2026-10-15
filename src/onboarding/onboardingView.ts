@@ -151,6 +151,22 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
   );
 }
 
+/** A Terminal command shown in full, with a button that copies it. */
+function copyableCommand(command: string, testId: string): HTMLElement[] {
+  const copy = h('button', { type: 'button', 'data-testid': `${testId}-copy` }, 'Copy command');
+  copy.addEventListener('click', () => {
+    navigator.clipboard.writeText(command).then(
+      () => (copy.textContent = 'Copied ✓'),
+      () => (copy.textContent = 'Couldn’t copy: select the command below and copy it'),
+    );
+  });
+  return [copy, h('p', { class: 'mono command', 'data-testid': `${testId}-command` }, command)];
+}
+
+const scriptUrl = (script: string) => new URL(`${import.meta.env.BASE_URL}${script}`, location.href).href;
+
+const OPEN_TERMINAL = 'Open Terminal: press ⌘ Space, type Terminal, then press Return.';
+
 const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
 
 /**
@@ -158,9 +174,8 @@ const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
  * browser downloads is blocked by Gatekeeper; one fetched by curl isn't. The
  * script reruns itself with sudo, so it needs a real file (not a pipe into bash).
  */
-function hidModeCommand(pageUrl: string, baseUrl: string): string {
-  const url = new URL(`${baseUrl}${ACR1552_MODE_SCRIPT}`, pageUrl).href;
-  return `curl -fsSL ${url} -o /tmp/${ACR1552_MODE_SCRIPT} && bash /tmp/${ACR1552_MODE_SCRIPT} hid`;
+function hidModeCommand(): string {
+  return `curl -fsSL ${scriptUrl(ACR1552_MODE_SCRIPT)} -o /tmp/${ACR1552_MODE_SCRIPT} && bash /tmp/${ACR1552_MODE_SCRIPT} hid`;
 }
 
 /**
@@ -171,14 +186,6 @@ function hidModeHelp(): HTMLElement {
   if (!navigator.platform.startsWith('Mac')) {
     return p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, use ACS’s configuration tool.', 'hint');
   }
-  const command = hidModeCommand(location.href, import.meta.env.BASE_URL);
-  const copy = h('button', { type: 'button', 'data-testid': 'hid-mode-copy' }, 'Copy command');
-  copy.addEventListener('click', () => {
-    navigator.clipboard.writeText(command).then(
-      () => (copy.textContent = 'Copied ✓'),
-      () => (copy.textContent = 'Couldn’t copy: select the command below and copy it'),
-    );
-  });
   return h(
     'div',
     { class: 'hid-mode-help', 'data-testid': 'hid-mode-help' },
@@ -187,13 +194,12 @@ function hidModeHelp(): HTMLElement {
       'ol',
       { class: 'hint' },
       h('li', {}, 'Press Copy command.'),
-      h('li', {}, 'Open Terminal: press ⌘ Space, type Terminal, then press Return.'),
+      h('li', {}, OPEN_TERMINAL),
       h('li', {}, 'Paste the command (⌘ V) and press Return.'),
       h('li', {}, 'Type this Mac’s password and press Return. Nothing shows while you type.'),
       h('li', {}, 'Type y and press Return to confirm.'),
     ),
-    copy,
-    h('p', { class: 'mono command', 'data-testid': 'hid-mode-command' }, command),
+    ...copyableCommand(hidModeCommand(), 'hid-mode'),
   );
 }
 
@@ -608,6 +614,34 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
   return view;
 }
 
+const MAC_AUTOSTART_SCRIPT = 'mac-kiosk-autostart.sh';
+
+/**
+ * The guide's last step on a Mac: a script (public/mac-kiosk-autostart.sh)
+ * that opens the kiosk fullscreen in Chrome at every login and turns on
+ * automatic login. It reads its passwords from the terminal, so it can be
+ * piped into bash. Windows uses a Startup shortcut (docs/kiosk-setup.md).
+ */
+function macAutostartHelp(): HTMLElement | null {
+  if (!navigator.platform.startsWith('Mac')) return null;
+  return h(
+    'div',
+    { class: 'autostart-help', 'data-testid': 'mac-autostart' },
+    h('p', {}, h('strong', {}, 'Last step: '), 'make the kiosk open fullscreen every time this Mac starts.'),
+    h(
+      'ol',
+      { class: 'hint' },
+      h('li', {}, 'Press Copy command.'),
+      h('li', {}, OPEN_TERMINAL),
+      h('li', {}, 'Paste the command (⌘ V) and press Return.'),
+      h('li', {}, 'Type this Mac’s password each time it asks, and press Return. Nothing shows while you type.'),
+      h('li', {}, 'If macOS asks to let Terminal control System Events, choose OK.'),
+      h('li', {}, 'Press Start kiosk below, then restart the Mac. The kiosk should open fullscreen by itself.'),
+    ),
+    ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash`, 'mac-autostart'),
+  );
+}
+
 function doneStep(ctx: AppContext, nav: Nav): StepView {
   const offline = renderOfflineIndicator(ctx);
   void ctx.readiness.recompute();
@@ -622,6 +656,7 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
           offline.el,
           p(`To open settings, hold an admin tag on the reader or press ${SETTINGS_SHORTCUT_LABEL}.`, 'hint'),
           p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk.', 'hint'),
+          macAutostartHelp(),
         ],
         secondary: { label: 'Export config', testId: 'onboarding-export', onClick: () => downloadConfig(ctx.config.get()) },
         primary: {

@@ -47,13 +47,13 @@ chrome --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev
 "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/
 ```
 
-**macOS:** add a Login Item, or a LaunchAgent, that runs:
+**macOS:** run this in Terminal as the kiosk's user. The setup guide's last page shows it with a **Copy command** button. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run`, `--uninstall` and `--url` are explained in `--help`):
 
 ```
-open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/
+curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
 ```
 
-Chrome only applies the flags when it isn't already running, so quit Chrome completely first (and stop it opening by itself at login).
+Chrome only applies the flags when it isn't already running, so the script makes sure Chrome doesn't open by itself at login.
 
 - **Exiting kiosk mode:** Alt+F4 on Windows, Cmd+Q on a Mac.
 - **Same data as the installed app:** the kiosk-mode window uses the same storage as the installed app, so it has the same videos and config. Do the setup guide first (in the installed app or a normal Chrome window), then switch to the launch command.

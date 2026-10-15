@@ -90,6 +90,7 @@ test('bridge mode: tags play by the kiosk tag identifier only, and keyboard scan
   await page.waitForTimeout(500);
   await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop');
 
+  await page.waitForTimeout(1600); // past the reader debounce window for the earlier tap of this tag
   await tap(page, fake, ntag(LION_UID));
   await waitForPlaying(page, 'feature-video', 'lion.mp4');
 });
