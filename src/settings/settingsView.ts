@@ -4,9 +4,10 @@ import { closeAllDialogs } from '../ui/dialog';
 import { h } from '../ui/dom';
 import { requestPersistence } from '../videos/opfsStore';
 import { renderAdminCards, renderCards } from './cards';
-import { renderChecklist, renderInstallBanner } from './checklist';
+import { renderChecklist } from './checklist';
 import { renderConfigSection } from './configSection';
 import { renderDiagnostics } from './diagnostics';
+import { renderInstallSection } from './installSection';
 import { renderReaderSection } from './readerSection';
 import { renderResetSection } from './resetSection';
 import type { Section } from './section';
@@ -52,7 +53,6 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
   const env: SettingsEnv = { idle };
   const sections = [
     renderHeader(ctx),
-    renderInstallBanner(ctx),
     renderChecklist(ctx),
     renderVideos(ctx, env),
     renderCards(ctx),
@@ -60,6 +60,7 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
     renderConfigSection(ctx),
     renderReaderSection(ctx),
     renderDiagnostics(ctx),
+    renderInstallSection(ctx),
     renderResetSection(ctx),
   ];
   const view = h('div', { class: 'settings', 'data-testid': 'settings' }, ...sections.map((s) => s.el));

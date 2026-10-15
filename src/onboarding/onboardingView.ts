@@ -9,7 +9,6 @@ import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
 import type { ScanEvent } from '../scan/scanEvent';
 import { formatMatch, formatUid } from '../scan/uid';
-import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
 import { quickPair } from '../settings/cards';
 import { matchAttrs } from '../settings/pairing';
@@ -71,10 +70,13 @@ function stepCard(
       h(
         'span',
         { class: 'left' },
-        button({ label: 'Reset', onClick: nav.reset, disabled: options.busy, testId: 'onboarding-reset' }, 'link danger'),
-        index > 0
-          ? button({ label: 'Back', onClick: nav.back, disabled: options.busy, testId: 'onboarding-back' }, 'link')
-          : h('span', { class: 'version', 'data-testid': 'onboarding-version' }, `v${__APP_VERSION__}`),
+        // Step 1 is where a fresh or reset kiosk starts, so there is nothing to reset yet.
+        ...(index > 0
+          ? [
+              button({ label: 'Reset', onClick: nav.reset, disabled: options.busy, testId: 'onboarding-reset' }, 'link danger'),
+              button({ label: 'Back', onClick: nav.back, disabled: options.busy, testId: 'onboarding-back' }, 'link'),
+            ]
+          : [h('span', { class: 'version', 'data-testid': 'onboarding-version' }, `v${__APP_VERSION__}`)]),
       ),
       h(
         'span',
@@ -110,46 +112,6 @@ function reactiveStep(
       cleanup?.();
     },
   };
-}
-
-function installStep(ctx: AppContext, nav: Nav): StepView {
-  return reactiveStep(
-    (el) => {
-      const installed = ctx.install.get() === 'installed';
-      replaceChildren(
-        el,
-        stepCard(nav, 'install', {
-          title: 'Install the Topps Kiosk',
-          body: [
-            p('Installing keeps the kiosk working offline and stops Chrome from deleting videos when the disk fills up.'),
-            installed ? p('App installed ✓', 'success') : installCallToAction(ctx),
-            installed ? null : p('Chrome may only offer to install after you’ve clicked the page and spent about 30 seconds on it.', 'hint'),
-          ],
-          primary: installed
-            ? {
-                label: 'Next',
-                testId: 'onboarding-next',
-                onClick: () => {
-                  writeFlags({ installStepDone: true });
-                  nav.next();
-                },
-              }
-            : undefined,
-          secondary: installed
-            ? undefined
-            : {
-                label: 'Skip for now',
-                testId: 'onboarding-skip',
-                onClick: () => {
-                  writeFlags({ installStepDone: true });
-                  nav.next();
-                },
-              },
-        }),
-      );
-    },
-    [(l) => ctx.install.changed.subscribe(l)],
-  );
 }
 
 /** A Terminal command shown in full, with a button that copies it. */
@@ -714,7 +676,6 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
 }
 
 const STEPS: Record<StepId, (ctx: AppContext, nav: Nav) => StepView> = {
-  install: installStep,
   reader: readerStep,
   config: configStep,
   addVideos: addVideosStep,
@@ -770,7 +731,6 @@ export function mountOnboarding(root: HTMLElement, ctx: AppContext): () => void 
   const config = ctx.config.get();
   show(
     resumeStep({
-      installStepDone: flags.installStepDone,
       readerDone: flags.readerDone,
       path: nav.path(),
       videoCount: config.videos.length,

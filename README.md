@@ -13,7 +13,7 @@ Full design: [PLAN.md](PLAN.md). Kiosk machine setup: [docs/kiosk-setup.md](docs
 
 ## Using it
 
-On first launch, a **setup guide** walks through each step: install the app, connect the reader, load or start a config, add videos, pair cards / pick the background loop, and pair an admin card. You can reopen it from Settings → **Setup guide**.
+On first launch, a **setup guide** walks through each step: connect the reader, load or start a config, add videos, pair cards / pick the background loop, pair an admin card, and set the kiosk to open at startup. Installing the app is optional and lives at the bottom of settings (**Install app**). You can reopen it from Settings → **Setup guide**.
 
 | | |
 |---|---|
@@ -41,7 +41,7 @@ chrome --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev
 | `--kiosk` | Opens the site fullscreen with no Chrome toolbars, tabs or title bar. |
 | `--autoplay-policy=no-user-gesture-required` | Lets videos play with sound without anyone clicking first. Without it, Chrome plays them muted. |
 
-Step 7 of the setup guide (**Open the kiosk at startup**) shows the command for this computer with a **Copy command** button. The startup command opens `https://topps.drey.dev/?autostart`: the app records that launch, which turns **Opens at startup** green in the settings checklist, and removes `?autostart` from the address.
+Step 6 of the setup guide (**Open the kiosk at startup**) shows the command for this computer with a **Copy command** button. The startup command opens `https://topps.drey.dev/?autostart`: the app records that launch, which turns **Opens at startup** green in the settings checklist, and removes `?autostart` from the address.
 
 **Windows:** press Win+R, run `shell:startup`, and in that folder create a shortcut with this target, so it starts at login:
 

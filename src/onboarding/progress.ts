@@ -1,13 +1,11 @@
 /** Setup-guide flags that can't be derived from the kiosk's state. */
 export interface OnboardingFlags {
-  /** The user pressed Next or Skip on the install step. */
-  installStepDone: boolean;
   readerDone: boolean;
   completed: boolean;
 }
 
 const KEY = 'kiosk.onboarding';
-const DEFAULTS: OnboardingFlags = { installStepDone: false, readerDone: false, completed: false };
+const DEFAULTS: OnboardingFlags = { readerDone: false, completed: false };
 
 export function readFlags(): OnboardingFlags {
   try {
@@ -15,8 +13,6 @@ export function readFlags(): OnboardingFlags {
     if (typeof raw !== 'object' || raw === null) return { ...DEFAULTS };
     const r = raw as Record<string, unknown>;
     return {
-      // installSkipped is the flag's name before the reset button existed.
-      installStepDone: r.installStepDone === true || r.installSkipped === true,
       readerDone: r.readerDone === true,
       completed: r.completed === true,
     };

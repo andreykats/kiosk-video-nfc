@@ -1,6 +1,6 @@
 import type { AppliedInfo, ConfigStore } from '../config/store';
 import { checkAppCached, computeOfflineReadiness, type Readiness } from '../pwa/offlineReady';
-import type { InstallManager, InstallState } from '../pwa/install';
+import type { InstallManager } from '../pwa/install';
 import type { ServiceWorkerManager } from '../pwa/sw';
 import { storageInfo, type StorageInfo, type VideoStore } from '../videos/opfsStore';
 import { lastAutostartLaunch } from './autostart';
@@ -8,14 +8,13 @@ import { Emitter } from './emitter';
 import { log } from './log';
 
 export interface ChecklistItem {
-  id: 'install' | 'config' | 'videos' | 'persisted' | 'offline' | 'autostart';
+  id: 'config' | 'videos' | 'persisted' | 'offline' | 'autostart';
   label: string;
   done: boolean;
   hint?: string;
 }
 
 export interface ChecklistInputs {
-  install: InstallState;
   applied: AppliedInfo | null;
   videoCount: number;
   missingVideos: number;
@@ -28,12 +27,6 @@ export interface ChecklistInputs {
 /** Pure first-run setup checklist (PLAN §9.2). */
 export function computeChecklist(i: ChecklistInputs): ChecklistItem[] {
   return [
-    {
-      id: 'install',
-      label: 'Install app',
-      done: i.install === 'installed',
-      hint: 'Install so the app keeps working offline and videos aren’t cleared.',
-    },
     { id: 'config', label: 'Update config', done: i.applied !== null, hint: 'Settings → Config → Update from published config.' },
     {
       id: 'videos',
@@ -41,7 +34,7 @@ export function computeChecklist(i: ChecklistInputs): ChecklistItem[] {
       done: i.videoCount > 0 && i.missingVideos === 0,
       hint: i.videoCount === 0 ? 'No videos in the config yet.' : `${i.missingVideos} video(s) missing → Import folder.`,
     },
-    { id: 'persisted', label: 'Storage persisted', done: i.persisted === true, hint: 'Install the app, then reopen settings.' },
+    { id: 'persisted', label: 'Storage persisted', done: i.persisted === true, hint: 'Install the app (Settings → Install app), then reopen settings.' },
     { id: 'offline', label: 'Ready to work offline', done: i.readiness.ready, hint: 'See Diagnostics for details.' },
     {
       id: 'autostart',
@@ -72,7 +65,8 @@ export class ReadinessMonitor {
     private readonly config: ConfigStore,
     private readonly videos: VideoStore,
     private readonly sw: ServiceWorkerManager,
-    private readonly install: InstallManager,
+    // Installing can make storage persistent.
+    install: InstallManager,
   ) {
     const trigger = () => this.recompute();
     config.changed.subscribe(trigger);
@@ -121,7 +115,6 @@ export class ReadinessMonitor {
     });
     const listed = this.config.get().videos;
     const checklist = computeChecklist({
-      install: this.install.get(),
       applied: this.config.lastApplied(),
       videoCount: listed.length,
       missingVideos: listed.filter((v) => !presentFiles.has(v.fileName)).length,

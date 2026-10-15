@@ -11,12 +11,12 @@ const fakePlatform = (page: Page, platform: string) =>
 
 async function throughReader(page: Page) {
   await page.goto('./');
-  await expect(step(page, 'install')).toBeVisible();
-  await expect(step(page, 'install')).toContainText('Step 1 of 8');
+  await expect(step(page, 'reader')).toContainText('Step 1 of 7');
+  // Step 1 shows the version where Back would be, and no Reset: a kiosk at step 1 has nothing to reset.
   await expect(page.getByTestId('onboarding-version')).toHaveText(/^v\d+\.\d+\.\d+(-dev)?$/);
-  await page.getByTestId('onboarding-skip').click();
+  await expect(page.getByTestId('onboarding-reset')).toHaveCount(0);
+  await expect(page.getByTestId('onboarding-back')).toHaveCount(0);
 
-  await expect(step(page, 'reader')).toBeVisible();
   await expect(page.getByTestId('onboarding-next')).toBeDisabled();
   await scan(page, '04A23B1C');
   await expect(page.getByTestId('reader-status')).toHaveText('Reader is working ✓');
@@ -99,7 +99,7 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   await next(page);
 
   // Step 7 on a Mac: a copyable command that runs the auto-start script.
-  await expect(step(page, 'autostart')).toContainText('Step 7 of 8');
+  await expect(step(page, 'autostart')).toContainText('Step 6 of 7');
   const scriptUrl = new URL('mac-kiosk-autostart.sh', page.url()).href;
   const command = `curl -fsSL ${scriptUrl} | bash`;
   await expect(page.getByTestId('mac-autostart-command')).toHaveText(command);
@@ -114,7 +114,7 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   await expect(page.getByTestId('autostart-status')).toHaveCount(0);
   await next(page);
 
-  await expect(step(page, 'done')).toContainText('Step 8 of 8');
+  await expect(step(page, 'done')).toContainText('Step 7 of 7');
   await expect(step(page, 'done')).toContainText('3 video(s) and 3 tag(s). Background loop: loop.mp4.');
 
   // Export from the last step, for importing on other kiosks.
@@ -218,26 +218,10 @@ test('the guide resumes where it left off after a reload', async ({ page }) => {
   await expect(step(page, 'config')).toContainText('Started a new config ✓');
 });
 
-test('install step offers the install button and moves on once installed', async ({ page }) => {
-  await page.goto('./');
-  await page.evaluate(() => {
-    const event = new Event('beforeinstallprompt', { cancelable: true }) as Event & Record<string, unknown>;
-    event.prompt = async () => undefined;
-    event.userChoice = Promise.resolve({ outcome: 'accepted', platform: 'web' });
-    window.dispatchEvent(event);
-  });
-  await expect(step(page, 'install').getByTestId('install-button')).toBeVisible();
-  await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
-  await expect(step(page, 'install')).toContainText('App installed ✓');
-  await next(page);
-  await expect(step(page, 'reader')).toBeVisible();
-});
-
 test('reader step: keyboard mode offers a copyable ACR1552U HID mode command on a Mac, and points elsewhere on Windows', async ({ page, context, browser, baseURL }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'MacIntel' }));
   await page.goto('./');
-  await page.getByTestId('onboarding-skip').click();
   await expect(step(page, 'reader')).toBeVisible();
   await expect(page.getByTestId('reader-mode')).toHaveValue('keyboard');
   const help = page.getByTestId('hid-mode-help');
@@ -262,7 +246,6 @@ test('reader step: keyboard mode offers a copyable ACR1552U HID mode command on 
   const windows = await browser.newPage();
   await windows.addInitScript(() => Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'Win32' }));
   await windows.goto('./');
-  await windows.getByTestId('onboarding-skip').click();
   await expect(step(windows, 'reader')).toContainText('use ACS’s configuration tool');
   await expect(windows.getByTestId('hid-mode-copy')).toHaveCount(0);
   await windows.close();
@@ -288,7 +271,7 @@ test('reset in the guide wipes videos and config and starts again at step 1', as
 
   await reset.click();
   await clickDialogButton(page, 'Reset everything');
-  await expect(step(page, 'install')).toContainText('Step 1 of 8');
+  await expect(step(page, 'reader')).toContainText('Step 1 of 7');
 
   const left = await page.evaluate(async () => {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('videos');
@@ -300,7 +283,7 @@ test('reset in the guide wipes videos and config and starts again at step 1', as
 
   // Nothing comes back after a reload: still at step 1, with an empty config.
   await page.reload();
-  await expect(step(page, 'install')).toBeVisible();
+  await expect(step(page, 'reader')).toBeVisible();
   await page.goto('./#/settings');
   await expect(page.getByTestId('videos-section')).toContainText('No videos yet');
 });

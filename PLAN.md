@@ -26,7 +26,7 @@ Build an offline-capable browser kiosk app:
 | Card UIDs in public config | **Plain text is acceptable**, including admin cards. |
 | Scan while a paired video plays | **Ignored** until the video finishes and the loop resumes. |
 | Settings access | **Keyboard shortcut OR scanning an admin card.** No PIN. Admin cards are paired in settings, and multiple admin cards are allowed. |
-| PWA install | The app **actively asks staff to install it** as a PWA, and keeps asking until it's installed (see §9.2). |
+| PWA install | Optional: **Install app** at the bottom of settings (see §9.2). The kiosk runs in a Chrome `--kiosk` tab, which shares the installed app's storage; installing mainly helps Chrome grant persistent storage. |
 
 ## 3. Architecture overview
 
@@ -208,7 +208,8 @@ Sections, each a plain TS module rendering DOM:
    - Autoplay status.
    - Service worker status, with a "new version available → Reload" button. The app updates itself **only at launch** (`src/pwa/sw.ts`): it checks for a new version once while starting, and if one is ready within 30 s it activates it and reloads. It never checks again while running, and a version Chrome finds later only shows the Reload button, so the app never reloads itself mid-show.
 
-7. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
+7. **Install app** (just above Reset): optional, see §9.2.
+8. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
 
 **Scanner in settings:** scans are only consumed while a scan modal is open. Otherwise settings ignores them, apart from preventing burst keys from typing into inputs.
 
@@ -236,7 +237,7 @@ Sections, each a plain TS module rendering DOM:
 - Strictly speaking, offline already works in a plain tab once the service worker has cached the app.
 - Installing makes Chrome more likely to grant persistent storage, so imported videos aren't deleted when the disk fills up.
 - Installing also gives the app its own window.
-- So the app asks to be installed, and setup isn't complete until it is.
+- It's still optional (user decision, 2026-10-15): the kiosk runs in a `--kiosk` tab either way, so there's no install step in the guide and no checklist item. The **Storage persisted** checklist item still flags a kiosk whose storage Chrome may clear.
 
 **Detecting install state** (store the result in `localStorage` key `kiosk.installed`):
 
@@ -253,22 +254,21 @@ Sections, each a plain TS module rendering DOM:
 
 **Where the prompt appears:**
 
-- **Settings: a top banner** whenever the state is not `installed`. It reads "Install this app so it keeps working offline and your videos aren't cleared."
-  - If a `beforeinstallprompt` event is saved, show an **Install app** button that calls `prompt()` and awaits `userChoice`. A saved event can only be used once; if the user dismisses it, keep the banner and wait for Chrome to fire the event again.
+- **Settings: an Install app section** just above Reset (`src/settings/installSection.ts`). It says installing is optional and shows "App installed ✓" once installed.
+  - If a `beforeinstallprompt` event is saved, show an **Install app** button that calls `prompt()` and awaits `userChoice`. A saved event can only be used once; if the user dismisses it, show the manual steps and wait for Chrome to fire the event again.
   - If no event is available yet, show manual steps: "Click the install icon at the right of the address bar, or Chrome menu ⋮ → Cast, save, and share → Install page as app…"
-  - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The banner must still work without it.
-- **First-launch setup guide (`#/setup`, `src/onboarding/`):** one centred card per step, with Back/Next. A **Reset** button left of Back does the same as Settings → Reset configuration, then shows step 1. It opens instead of the kiosk until it's finished, unless the kiosk can already play its loop video. It resumes at the first unfinished step after a reload, including when Chrome opens the newly installed app in its own window. Steps:
-  1. **Install the Topps Kiosk**: the install call-to-action above, or "Skip for now".
-  2. **Connect the NFC reader**: "hold any card on it". Next is enabled once a scan arrives, and the step can be skipped.
-  3. **Import configuration**: **Import a config file** or **Start a new config**. The guide doesn't offer the published `config.json`; configs are copied between kiosks as files.
-  4. New config → **Add videos** (files or a whole folder); the import moves straight on to step 5. Imported config → **Copy the videos** (folder import of the listed videos that are missing). This step can't be skipped: its only button is **Choose folder** until every listed video is on the kiosk. If a folder has only some of them, the step lists what's still needed. Then **Next** appears (the guide moves on by itself after a complete import).
-  5. **Pair videos with cards**: lists the videos. Each row has **Pair card** (scan inline; admin cards are rejected, and a card that already plays another video can be moved) or a **Loop** checkbox. Only one video can be the loop, and making a video the loop unpairs its cards. Next is enabled once a loop video is chosen.
-  6. **Pair an admin card**: hold a card on the reader and it's added as an admin card. Cards that already play a video are refused, more than one card can be added, and the step can be skipped (the keyboard shortcut still works).
-  7. **Open the kiosk at startup**: a copyable command for this platform. Mac: `curl … | bash` for `public/mac-kiosk-autostart.sh` (LaunchAgent that opens Chrome `--kiosk` at login, Chrome out of Login Items, automatic login). Windows: the `chrome.exe --kiosk` target for a `shell:startup` shortcut. Both open `<url>?autostart` (`src/app/autostart.ts`). Next is always enabled: it can only be checked by restarting.
-  8. **You're all set**: a summary plus the "Ready to work offline" indicator (§9.3), with **Export config** (downloads `config.json`, same as in settings) next to **Start kiosk**.
+  - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The section must still work without it.
+- **First-launch setup guide (`#/setup`, `src/onboarding/`):** one centred card per step, with Back/Next. From step 2 on, a **Reset** button left of Back does the same as Settings → Reset configuration, then shows step 1. Step 1 has no Reset (a kiosk at step 1 has nothing to reset) and shows the app version instead of Back. It opens instead of the kiosk until it's finished, unless the kiosk can already play its loop video. It resumes at the first unfinished step after a reload, including when Chrome opens the newly installed app in its own window. Steps:
+  1. **Connect the NFC reader**: "hold any card on it". Next is enabled once a scan arrives, and the step can be skipped.
+  2. **Import configuration**: **Import a config file** or **Start a new config**. The guide doesn't offer the published `config.json`; configs are copied between kiosks as files.
+  3. New config → **Add videos** (files or a whole folder); the import moves straight on to step 4. Imported config → **Copy the videos** (folder import of the listed videos that are missing). This step can't be skipped: its only button is **Choose folder** until every listed video is on the kiosk. If a folder has only some of them, the step lists what's still needed. Then **Next** appears (the guide moves on by itself after a complete import).
+  4. **Pair videos with cards**: lists the videos. Each row has **Pair card** (scan inline; admin cards are rejected, and a card that already plays another video can be moved) or a **Loop** checkbox. Only one video can be the loop, and making a video the loop unpairs its cards. Next is enabled once a loop video is chosen.
+  5. **Pair an admin card**: hold a card on the reader and it's added as an admin card. Cards that already play a video are refused, more than one card can be added, and the step can be skipped (the keyboard shortcut still works).
+  6. **Open the kiosk at startup**: a copyable command for this platform. Mac: `curl … | bash` for `public/mac-kiosk-autostart.sh` (LaunchAgent that opens Chrome `--kiosk` at login, Chrome out of Login Items, automatic login). Windows: the `chrome.exe --kiosk` target for a `shell:startup` shortcut. Both open `<url>?autostart` (`src/app/autostart.ts`). Next is always enabled: it can only be checked by restarting.
+  7. **You're all set**: a summary plus the "Ready to work offline" indicator (§9.3), with **Export config** (downloads `config.json`, same as in settings) next to **Start kiosk**.
 
   Settings has a **Setup guide** button that reopens it. If the loop goes missing after setup, the kiosk shows "Setup required" with buttons for the guide and for settings.
-- **Settings checklist:** Install app, Update config, Import videos, Storage persisted, **Ready to work offline ✓** (§9.3), Opens at startup. It shows at the top of settings until every item is green. A page can't see login items, so **Opens at startup** goes green once the app has been opened at `?autostart` (stored per kiosk in `kiosk.autostartLaunchedAt`, kept by Reset because the startup command stays on the computer).
+- **Settings checklist:** Update config, Import videos, Storage persisted, **Ready to work offline ✓** (§9.3), Opens at startup. It shows at the top of settings until every item is green. A page can't see login items, so **Opens at startup** goes green once the app has been opened at `?autostart` (stored per kiosk in `kiosk.autostartLaunchedAt`, kept by Reset because the startup command stays on the computer).
 - **Kiosk view with a configured loop:** **no install prompt.** Visitors can't install it, and it would cover the content.
 - **Diagnostics:** "Installed: yes / no / unknown".
 
@@ -330,7 +330,7 @@ Purpose: staff can confirm a kiosk will start and run with no internet before it
 **Both OSes:**
 
 1. Open the site in Chrome while online. The setup guide opens.
-2. Follow it: install the app, test the reader, load the config (published or from a file), copy the videos from the USB stick, and check the pairings.
+2. Follow it: test the reader, load the config (published or from a file), copy the videos from the USB stick, and check the pairings.
 3. On the last step, check that it shows **Ready to work offline ✓**.
 4. Check in settings that storage is persisted.
 5. Set the launch command to run at login:
