@@ -190,7 +190,7 @@ Sections, each a plain TS module rendering DOM:
 
 1. **Header:** "Back to kiosk" button, app version (injected from `package.json` via Vite `define`). No online/offline indicator (removed at the user's request).
 2. **Videos:**
-   - Table showing file name, size, status (present / missing / size mismatch) and **Plays**. There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
+   - Table showing file name, size, status (present / missing / size mismatch), **Tags** (how many tag pairings play the video; an NDEF pairing counts once however many physical tags share its ID) and **Plays**. There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
    - Buttons: Import files, Import folder, **Reset counter** (right-aligned, away from the imports; after a confirm), Delete.
    - **Plays** (`src/videos/playCounts.ts`): how many times a tag started each video on this kiosk, counted once the video actually plays. The loop's repeats don't count. Stored per kiosk in `localStorage` (`kiosk.playCounts`, by file name), not in the shared config. Reset counter and Reset configuration clear it.
    - Radio button to select the **loop video**. There is no "no loop" option: whenever there are videos, one is the loop. The first video added becomes the loop, and it can be moved but not cleared.

@@ -104,6 +104,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
         h('td', { class: 'mono' }, v.fileName),
         h('td', {}, formatBytes(size ?? v.sizeBytes)),
         h('td', {}, status),
+        h('td', { 'data-testid': 'tag-count' }, String(cardsForVideo(config, v.fileName).length)),
         h('td', { class: 'play-count', 'data-testid': 'play-count' }, String(ctx.playCounts.get(v.fileName))),
         h(
           'td',
@@ -140,7 +141,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
         : h(
             'table',
             { 'data-testid': 'videos-table' },
-            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th', { title: 'Times a tag played this video on this kiosk' }, 'Plays'), h('th'))),
+            h('thead', {}, h('tr', {}, h('th', {}, 'Loop'), h('th', {}, 'File'), h('th', {}, 'Size'), h('th', {}, 'Status'), h('th', { title: 'Tags paired with this video' }, 'Tags'), h('th', { title: 'Times a tag played this video on this kiosk' }, 'Plays'), h('th'))),
             h(
               'tbody',
               {},

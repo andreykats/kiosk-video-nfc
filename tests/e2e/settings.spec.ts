@@ -121,7 +121,7 @@ test('an admin tag closes settings, except while a dialog is waiting for a tag',
 test('videos show how many times a tag played them, kept across reloads until Reset counter', async ({ page }) => {
   await setUpKiosk(page);
   const count = (file: string) => page.locator(`[data-testid="videos-table"] tr[data-file="${file}"]`).getByTestId('play-count');
-  await expect(page.getByTestId('videos-table').locator('thead th').nth(4)).toHaveText('Plays');
+  await expect(page.getByTestId('videos-table').locator('thead th').nth(5)).toHaveText('Plays');
   // Reset counter sits at the right end of the toolbar, away from the import buttons.
   const resetBox = (await page.getByTestId('reset-play-counts').boundingBox())!;
   const folderBox = (await page.getByRole('button', { name: 'Import folder' }).boundingBox())!;
@@ -156,6 +156,11 @@ test('Remove tag unpairs the scanned tag after a confirm; admin and unknown tags
   await setUpKiosk(page);
   const rows = page.locator('[data-testid="cards-table"] tbody tr');
   await expect(rows).toHaveCount(2);
+  // Videos → Tags counts the tags paired with each video.
+  const tagCount = (file: string) => page.locator(`[data-testid="videos-table"] tr[data-file="${file}"]`).getByTestId('tag-count');
+  await expect(tagCount('lion.mp4')).toHaveText('1');
+  await expect(tagCount('tiger.mp4')).toHaveText('1');
+  await expect(tagCount('loop.mp4')).toHaveText('0');
   // Next to Pair new tag.
   await expect(page.getByTestId('cards-section').locator('.toolbar button')).toHaveText(['Pair new tag', 'Remove tag']);
 
@@ -177,6 +182,7 @@ test('Remove tag unpairs the scanned tag after a confirm; admin and unknown tags
   await expect(page.locator('dialog[open]')).toHaveCount(0);
   await expect(rows).toHaveCount(1);
   await expect(page.locator(`[data-testid="cards-table"] tr[data-uid="${LION_UID}"]`)).toHaveCount(0);
+  await expect(tagCount('lion.mp4')).toHaveText('0');
   await expect(page.locator(`[data-testid="admin-list"] tr[data-uid="${ADMIN_UID}"]`)).toHaveCount(1);
 });
 
@@ -243,7 +249,7 @@ test('update from published config fetches config.json fresh and applies it', as
 
 test('videos and tags tables show file names only: no title, label or "no loop" row', async ({ page }) => {
   await setUpKiosk(page);
-  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', 'Plays', '']);
+  await expect(page.getByTestId('videos-table').locator('th')).toHaveText(['Loop', 'File', 'Size', 'Status', 'Tags', 'Plays', '']);
   await expect(page.getByTestId('settings').locator('input[type="text"]')).toHaveCount(0);
   await expect(page.getByLabel(`Video for ${LION_UID}`).locator('option:checked')).toHaveText('lion.mp4');
   await expect(page.getByTestId('cards-table').locator('th')).toHaveText(['UID', 'NDEF', 'Video file', '']);
