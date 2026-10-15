@@ -253,7 +253,7 @@ test('reset configuration wipes videos and config and restarts the setup guide',
   await reset.getByTestId('reset-kiosk').click();
   await clickDialogButton(page, 'Reset everything');
   await expect(page).toHaveURL(/#\/setup$/);
-  await expect(page.getByTestId('step-install')).toContainText('Step 1 of 7');
+  await expect(page.getByTestId('step-install')).toContainText('Step 1 of 8');
 
   const left = await page.evaluate(async () => {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('videos');

@@ -18,6 +18,10 @@ test('becomes ready to work offline, then runs with no network', async ({ page, 
   await page.reload();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
 
+  // The startup command's address works offline too: a restart without network.
+  await page.goto('./?autostart');
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+
   // Updating while offline fails cleanly and keeps the config.
   if (PUBLISHED_CONFIG_ENABLED) {
     await page.keyboard.press('Control+Shift+KeyS');

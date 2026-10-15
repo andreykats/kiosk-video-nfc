@@ -7,8 +7,8 @@ const fresh: ResumeInputs = { installStepDone: false, readerDone: false, path: n
 
 describe('setup guide steps', () => {
   it('orders steps by config path', () => {
-    expect(stepSequence('new')).toEqual(['install', 'reader', 'config', 'addVideos', 'pair', 'admin', 'done']);
-    expect(stepSequence('existing')).toEqual(['install', 'reader', 'config', 'copyVideos', 'pair', 'admin', 'done']);
+    expect(stepSequence('new')).toEqual(['install', 'reader', 'config', 'addVideos', 'pair', 'admin', 'autostart', 'done']);
+    expect(stepSequence('existing')).toEqual(['install', 'reader', 'config', 'copyVideos', 'pair', 'admin', 'autostart', 'done']);
   });
 
   it('starts at install on a fresh kiosk', () => {
@@ -32,7 +32,8 @@ describe('setup guide steps', () => {
     expect(nextStep('config', 'new')).toBe('addVideos');
     expect(nextStep('config', 'existing')).toBe('copyVideos');
     expect(nextStep('pair', 'new')).toBe('admin');
-    expect(nextStep('admin', 'new')).toBe('done');
+    expect(nextStep('admin', 'new')).toBe('autostart');
+    expect(nextStep('autostart', 'new')).toBe('done');
     expect(nextStep('done', 'new')).toBeNull();
     expect(previousStep('pair', 'existing')).toBe('copyVideos');
     expect(previousStep('install', null)).toBeNull();

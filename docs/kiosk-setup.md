@@ -18,13 +18,15 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
       - With an existing config, choose the folder. The guide copies the videos the config lists.
    5. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Loop** on the one video that plays on repeat.
    6. **Pair an admin card.** Hold the card staff will use to open settings. You can add more than one, or press Skip and use the keyboard shortcut instead.
-   7. **You're all set.** Check that it shows **Ready to work offline ✓**. On the first kiosk, press **Export config** to save `config.json` for the other kiosks. On a Mac, the last step is to press **Copy command** and run it in Terminal: it sets the kiosk to open fullscreen at every startup (see macOS below). Then press **Start kiosk**.
+   7. **Open the kiosk at startup.** Press **Copy command**. On a Mac, paste it into Terminal; on Windows, paste it as the target of a new shortcut in the `shell:startup` folder (the step lists the clicks). See Windows and macOS below.
+   8. **You're all set.** Check that it shows **Ready to work offline ✓**. On the first kiosk, press **Export config** to save `config.json` for the other kiosks. Then press **Start kiosk**, and restart the computer to check that the kiosk opens by itself. Settings → Setup checklist then shows **Opens at startup ✓**.
 3. Open settings (**Ctrl+Shift+S**; Control, not Cmd, on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, make sure the app is installed, then reopen settings.
 4. On the first kiosk, copy the exported `config.json` to the USB stick, so the other kiosks can use **Import a config file**. If you skipped the export, it's also in Settings → Config → **Export config**.
-5. Set the launch command to run at login (see the sections below):
+5. Set the launch command to run at login (step 7 of the setup guide; see the sections below):
    ```
-   chrome --kiosk --autoplay-policy=no-user-gesture-required <url>
+   chrome --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart
    ```
+   `?autostart` tells the app it was opened by the startup command, which turns **Opens at startup** green in the setup checklist. The app removes it from the address once it has seen it.
    A kiosk-mode tab shares storage with the installed app, so it sees the same videos and config. To exit kiosk mode, press Alt+F4 (Windows) or Cmd+Q (Mac).
 
    **Use this command for the live kiosk, not the installed app's icon.** Chrome opens the installed app in a window with its own title bar (app name, Uninstall, extensions, ⋮ menu), which the page can't hide. The app does go fullscreen on the first click or card scan, which hides the bar, but it can't do so by itself at launch. Kiosk mode starts fullscreen with no Chrome bars at all.
@@ -38,7 +40,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 - Press Win+R and run `shell:startup`. In that folder, create a shortcut with this target:
   ```
-  "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required <url>
+  "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart
   ```
 - Set Windows Update active hours, or schedule restarts, outside opening hours.
 - Nightly restart: in an administrator Command Prompt, run
@@ -49,12 +51,12 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 ## macOS
 
-- On the setup guide's last page, press **Copy command** and run it in Terminal, signed in as the user the kiosk uses. It's this command:
+- On step 7 of the setup guide (**Open the kiosk at startup**), press **Copy command** and run it in Terminal, signed in as the user the kiosk uses. It's this command:
   ```
   curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
   ```
   It sets up the Mac to open the kiosk at login:
-  - It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required <url>`.
+  - It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart`.
   - It removes Google Chrome from Login Items and turns off "Reopen windows when logging back in". The flags only take effect if Chrome isn't already running.
   - It turns on automatic login for that user. It asks for the user's password, then for an admin password. FileVault must be off; if it's on, the script says so and skips this step.
 

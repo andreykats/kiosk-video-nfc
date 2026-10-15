@@ -69,13 +69,14 @@ describe('computeOfflineReadiness', () => {
 describe('computeChecklist', () => {
   it('marks each step from its inputs', () => {
     const readiness = computeOfflineReadiness(inputs());
-    const items = computeChecklist({ install: 'unknown', applied: null, videoCount: 3, missingVideos: 1, persisted: false, readiness });
+    const items = computeChecklist({ install: 'unknown', applied: null, videoCount: 3, missingVideos: 1, persisted: false, readiness, autostartLaunched: false });
     expect(items.map((i) => [i.id, i.done])).toEqual([
       ['install', false],
       ['config', false],
       ['videos', false],
       ['persisted', false],
       ['offline', true],
+      ['autostart', false],
     ]);
     const all = computeChecklist({
       install: 'installed',
@@ -84,6 +85,7 @@ describe('computeChecklist', () => {
       missingVideos: 0,
       persisted: true,
       readiness,
+      autostartLaunched: true,
     });
     expect(all.every((i) => i.done)).toBe(true);
   });

@@ -41,13 +41,15 @@ chrome --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev
 | `--kiosk` | Opens the site fullscreen with no Chrome toolbars, tabs or title bar. |
 | `--autoplay-policy=no-user-gesture-required` | Lets videos play with sound without anyone clicking first. Without it, Chrome plays them muted. |
 
+Step 7 of the setup guide (**Open the kiosk at startup**) shows the command for this computer with a **Copy command** button. The startup command opens `https://topps.drey.dev/?autostart`: the app records that launch, which turns **Opens at startup** green in the settings checklist, and removes `?autostart` from the address.
+
 **Windows:** press Win+R, run `shell:startup`, and in that folder create a shortcut with this target, so it starts at login:
 
 ```
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart
 ```
 
-**macOS:** run this in Terminal as the kiosk's user. The setup guide's last page shows it with a **Copy command** button. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run`, `--uninstall` and `--url` are explained in `--help`):
+**macOS:** run this in Terminal as the kiosk's user. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run`, `--uninstall` and `--url` are explained in `--help`):
 
 ```
 curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash

@@ -1,3 +1,4 @@
+import { autostartUrl, lastAutostartLaunch } from '../app/autostart';
 import type { AppContext } from '../app/context';
 import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
@@ -615,31 +616,76 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
 }
 
 const MAC_AUTOSTART_SCRIPT = 'mac-kiosk-autostart.sh';
+const KIOSK_FLAGS = '--kiosk --autoplay-policy=no-user-gesture-required';
 
 /**
- * The guide's last step on a Mac: a script (public/mac-kiosk-autostart.sh)
- * that opens the kiosk fullscreen in Chrome at every login and turns on
- * automatic login. It reads its passwords from the terminal, so it can be
- * piped into bash. Windows uses a Startup shortcut (docs/kiosk-setup.md).
+ * How to make this computer open the kiosk fullscreen at startup. Macs run a
+ * script (public/mac-kiosk-autostart.sh) that adds a login item and turns on
+ * automatic login; it reads its passwords from the terminal, so it can be piped
+ * into bash. Windows uses a Startup shortcut. Either way Chrome opens the kiosk
+ * with `?autostart`, which turns the checklist's "Opens at startup" green.
  */
-function macAutostartHelp(): HTMLElement | null {
-  if (!navigator.platform.startsWith('Mac')) return null;
+function autostartHelp(): HTMLElement {
+  const kioskUrl = autostartUrl(new URL(import.meta.env.BASE_URL, location.href).href);
+  const platform = navigator.platform;
+  if (platform.startsWith('Mac')) {
+    return h(
+      'div',
+      { class: 'autostart-help', 'data-testid': 'mac-autostart' },
+      h(
+        'ol',
+        { class: 'hint' },
+        h('li', {}, 'Press Copy command.'),
+        h('li', {}, OPEN_TERMINAL),
+        h('li', {}, 'Paste the command (⌘ V) and press Return.'),
+        h('li', {}, 'Type this Mac’s password each time it asks, and press Return. Nothing shows while you type.'),
+        h('li', {}, 'If macOS asks to let Terminal control System Events, choose OK.'),
+      ),
+      ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash`, 'mac-autostart'),
+    );
+  }
+  if (platform.startsWith('Win')) {
+    return h(
+      'div',
+      { class: 'autostart-help', 'data-testid': 'windows-autostart' },
+      h(
+        'ol',
+        { class: 'hint' },
+        h('li', {}, 'Press Copy command.'),
+        h('li', {}, 'Press Windows + R, type shell:startup, then press Enter. A folder opens.'),
+        h('li', {}, 'Right-click in the folder and choose New → Shortcut. Paste the command (Ctrl + V) and press Next.'),
+        h('li', {}, 'Name it Topps Kiosk and press Finish.'),
+        h('li', {}, 'Make Windows sign in automatically, so the shortcut runs after a restart.'),
+      ),
+      ...copyableCommand(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ${KIOSK_FLAGS} ${kioskUrl}`, 'windows-autostart'),
+    );
+  }
   return h(
     'div',
-    { class: 'autostart-help', 'data-testid': 'mac-autostart' },
-    h('p', {}, h('strong', {}, 'Last step: '), 'make the kiosk open fullscreen every time this Mac starts.'),
-    h(
-      'ol',
-      { class: 'hint' },
-      h('li', {}, 'Press Copy command.'),
-      h('li', {}, OPEN_TERMINAL),
-      h('li', {}, 'Paste the command (⌘ V) and press Return.'),
-      h('li', {}, 'Type this Mac’s password each time it asks, and press Return. Nothing shows while you type.'),
-      h('li', {}, 'If macOS asks to let Terminal control System Events, choose OK.'),
-      h('li', {}, 'Press Start kiosk below, then restart the Mac. The kiosk should open fullscreen by itself.'),
-    ),
-    ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash`, 'mac-autostart'),
+    { class: 'autostart-help', 'data-testid': 'other-autostart' },
+    p('Set this computer to sign in automatically and run this command at login:', 'hint'),
+    ...copyableCommand(`google-chrome ${KIOSK_FLAGS} ${kioskUrl}`, 'other-autostart'),
   );
+}
+
+function autostartStep(_ctx: AppContext, nav: Nav): StepView {
+  const launchedAt = lastAutostartLaunch();
+  const el = h('div', { class: 'onboarding-step' });
+  replaceChildren(
+    el,
+    stepCard(nav, 'autostart', {
+      title: 'Open the kiosk at startup',
+      body: [
+        p('Set this computer to open the kiosk fullscreen every time it starts, with no one there to click.'),
+        autostartHelp(),
+        launchedAt
+          ? h('p', { class: 'success', 'data-testid': 'autostart-status' }, `This computer opened the kiosk at startup ✓ (last on ${launchedAt.toLocaleString()})`)
+          : p('After you press Start kiosk on the next step, restart the computer. The kiosk should open fullscreen by itself. Settings → Setup checklist shows Opens at startup ✓ once it has.', 'hint'),
+      ],
+      primary: { label: 'Next', onClick: nav.next, testId: 'onboarding-next' },
+    }),
+  );
+  return { el, destroy: () => undefined };
 }
 
 function doneStep(ctx: AppContext, nav: Nav): StepView {
@@ -656,7 +702,6 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
           offline.el,
           p(`To open settings, hold an admin tag on the reader or press ${SETTINGS_SHORTCUT_LABEL}.`, 'hint'),
           p('To use this setup on other kiosks, press Export config to save config.json. Import that file on another kiosk.', 'hint'),
-          macAutostartHelp(),
         ],
         secondary: { label: 'Export config', testId: 'onboarding-export', onClick: () => downloadConfig(ctx.config.get()) },
         primary: {
@@ -681,6 +726,7 @@ const STEPS: Record<StepId, (ctx: AppContext, nav: Nav) => StepView> = {
   copyVideos: copyVideosStep,
   pair: pairStep,
   admin: adminStep,
+  autostart: autostartStep,
   done: doneStep,
 };
 

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { copyFile, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ADMIN_UID, FIXTURES, LION_UID, clickDialogButton, scan, testConfig, waitForPlaying } from './helpers';
+import { ADMIN_UID, FIXTURES, LION_UID, clickDialogButton, openSettings, scan, setUpKiosk, testConfig, waitForPlaying } from './helpers';
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
 const next = (page: Page) => page.getByTestId('onboarding-next').click();
@@ -12,7 +12,7 @@ const fakePlatform = (page: Page, platform: string) =>
 async function throughReader(page: Page) {
   await page.goto('./');
   await expect(step(page, 'install')).toBeVisible();
-  await expect(step(page, 'install')).toContainText('Step 1 of 7');
+  await expect(step(page, 'install')).toContainText('Step 1 of 8');
   await expect(page.getByTestId('onboarding-version')).toHaveText(/^v\d+\.\d+\.\d+(-dev)?$/);
   await page.getByTestId('onboarding-skip').click();
 
@@ -98,6 +98,23 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   await expect(page.getByTestId('admin-cards').locator('[data-uid="AABBCCDD"]')).toBeVisible();
   await next(page);
 
+  // Step 7 on a Mac: a copyable command that runs the auto-start script.
+  await expect(step(page, 'autostart')).toContainText('Step 7 of 8');
+  const scriptUrl = new URL('mac-kiosk-autostart.sh', page.url()).href;
+  const command = `curl -fsSL ${scriptUrl} | bash`;
+  await expect(page.getByTestId('mac-autostart-command')).toHaveText(command);
+  await page.getByTestId('mac-autostart-copy').click();
+  await expect(page.getByTestId('mac-autostart-copy')).toHaveText('Copied ✓');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+  // The URL in the command serves the script, which opens the kiosk with the startup marker.
+  const script = await (await page.request.get(scriptUrl)).text();
+  expect(script).toMatch(/^#!\/bin\/bash\n/);
+  expect(script).toContain('--kiosk');
+  expect(script).toContain('?autostart');
+  await expect(page.getByTestId('autostart-status')).toHaveCount(0);
+  await next(page);
+
+  await expect(step(page, 'done')).toContainText('Step 8 of 8');
   await expect(step(page, 'done')).toContainText('3 video(s) and 3 tag(s). Background loop: loop.mp4.');
 
   // Export from the last step, for importing on other kiosks.
@@ -114,20 +131,6 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   ]);
   expect(exported.adminCards.map((a: { match: { value: string } }) => a.match.value)).toEqual(['AABBCCDD']);
   await expect(step(page, 'done')).toBeVisible();
-
-  // On a Mac, the last step is a copyable command that runs the auto-start script.
-  const scriptUrl = new URL('mac-kiosk-autostart.sh', page.url()).href;
-  const command = `curl -fsSL ${scriptUrl} | bash`;
-  await expect(page.getByTestId('mac-autostart')).toContainText('Last step');
-  await expect(page.getByTestId('mac-autostart-command')).toHaveText(command);
-  await page.getByTestId('mac-autostart-copy').click();
-  await expect(page.getByTestId('mac-autostart-copy')).toHaveText('Copied ✓');
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
-  // The URL in the command serves the script itself.
-  const script = await (await page.request.get(scriptUrl)).text();
-  expect(script).toMatch(/^#!\/bin\/bash\n/);
-  expect(script).toContain('--kiosk');
-
   await page.getByTestId('onboarding-start').click();
 
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
@@ -183,9 +186,16 @@ test('first launch: import config file → copy videos → review pairings', asy
   // The imported config already has an admin card.
   await expect(step(page, 'admin').locator(`[data-uid="${ADMIN_UID}"]`)).toBeVisible();
   await next(page);
-  // The Mac auto-start script isn't offered on Windows.
-  await expect(step(page, 'done')).toBeVisible();
+  // Windows gets a Startup shortcut instead of the Mac script.
+  await expect(step(page, 'autostart')).toBeVisible();
   await expect(page.getByTestId('mac-autostart')).toHaveCount(0);
+  const kioskUrl = new URL('./?autostart', page.url()).href;
+  await expect(page.getByTestId('windows-autostart')).toContainText('shell:startup');
+  await expect(page.getByTestId('windows-autostart-command')).toHaveText(
+    `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required ${kioskUrl}`,
+  );
+  await next(page);
+  await expect(step(page, 'done')).toBeVisible();
   await page.getByTestId('onboarding-start').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
 });
@@ -278,7 +288,7 @@ test('reset in the guide wipes videos and config and starts again at step 1', as
 
   await reset.click();
   await clickDialogButton(page, 'Reset everything');
-  await expect(step(page, 'install')).toContainText('Step 1 of 7');
+  await expect(step(page, 'install')).toContainText('Step 1 of 8');
 
   const left = await page.evaluate(async () => {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('videos');
@@ -293,4 +303,18 @@ test('reset in the guide wipes videos and config and starts again at step 1', as
   await expect(step(page, 'install')).toBeVisible();
   await page.goto('./#/settings');
   await expect(page.getByTestId('videos-section')).toContainText('No videos yet');
+});
+
+test('a launch by the startup command turns Opens at startup green', async ({ page }) => {
+  await setUpKiosk(page);
+  const item = page.getByTestId('setup-checklist').locator('[data-item="autostart"]');
+  await expect(item).toHaveClass(/todo/);
+  await expect(item).toContainText('Opens at startup');
+
+  await page.goto('./?autostart');
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  // The marker is removed, so a reload doesn't count as a startup launch.
+  expect(new URL(page.url()).search).toBe('');
+  await openSettings(page);
+  await expect(item).toHaveClass(/done/);
 });

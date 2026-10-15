@@ -1,5 +1,6 @@
 import './style.css';
 import { isSettingsShortcut } from './admin/access';
+import { recordAutostartLaunch } from './app/autostart';
 import type { AppContext, Route } from './app/context';
 import { Diagnostics } from './app/diagnostics';
 import { captureGlobalErrors, errorMessage, log } from './app/log';
@@ -29,6 +30,7 @@ function showFatal(root: HTMLElement, message: string): void {
 
 async function boot(): Promise<void> {
   captureGlobalErrors();
+  recordAutostartLaunch();
   const root = document.getElementById('app')!;
 
   // Created before any await so an early beforeinstallprompt isn't missed.

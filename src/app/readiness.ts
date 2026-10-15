@@ -3,11 +3,12 @@ import { checkAppCached, computeOfflineReadiness, type Readiness } from '../pwa/
 import type { InstallManager, InstallState } from '../pwa/install';
 import type { ServiceWorkerManager } from '../pwa/sw';
 import { storageInfo, type StorageInfo, type VideoStore } from '../videos/opfsStore';
+import { lastAutostartLaunch } from './autostart';
 import { Emitter } from './emitter';
 import { log } from './log';
 
 export interface ChecklistItem {
-  id: 'install' | 'config' | 'videos' | 'persisted' | 'offline';
+  id: 'install' | 'config' | 'videos' | 'persisted' | 'offline' | 'autostart';
   label: string;
   done: boolean;
   hint?: string;
@@ -20,6 +21,8 @@ export interface ChecklistInputs {
   missingVideos: number;
   persisted: boolean | null;
   readiness: Readiness;
+  /** The startup command has opened the kiosk at least once. */
+  autostartLaunched: boolean;
 }
 
 /** Pure first-run setup checklist (PLAN §9.2). */
@@ -40,6 +43,12 @@ export function computeChecklist(i: ChecklistInputs): ChecklistItem[] {
     },
     { id: 'persisted', label: 'Storage persisted', done: i.persisted === true, hint: 'Install the app, then reopen settings.' },
     { id: 'offline', label: 'Ready to work offline', done: i.readiness.ready, hint: 'See Diagnostics for details.' },
+    {
+      id: 'autostart',
+      label: 'Opens at startup',
+      done: i.autostartLaunched,
+      hint: 'Set the kiosk to open at startup (setup guide → Open at startup), then restart this computer.',
+    },
   ];
 }
 
@@ -118,6 +127,7 @@ export class ReadinessMonitor {
       missingVideos: listed.filter((v) => !presentFiles.has(v.fileName)).length,
       persisted: storage.persisted,
       readiness,
+      autostartLaunched: lastAutostartLaunch() !== null,
     });
     return { readiness, checklist, storage };
   }

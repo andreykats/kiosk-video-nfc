@@ -48,7 +48,10 @@ done
 
 [[ "$(uname -s)" == Darwin ]] || die "this script is for macOS"
 ((EUID != 0)) || die "run it as the kiosk's user, without sudo (it asks for an admin password when it needs one)"
-[[ "$URL" =~ ^https://[^[:space:]]+$ ]] || die "--url must be an https:// address, got: $URL"
+[[ "$URL" =~ ^https://[^[:space:]#]+$ ]] || die "--url must be an https:// address without a #, got: $URL"
+
+# The kiosk sees ?autostart and marks "Opens at startup" done in its setup checklist.
+if [[ "$URL" == *\?* ]]; then LAUNCH_URL="$URL&autostart"; else LAUNCH_URL="$URL?autostart"; fi
 
 has_tty() { { : </dev/tty; } 2>/dev/null; }
 
@@ -60,7 +63,7 @@ write_agent() {
   plutil -insert Label -string "$LABEL" "$tmp"
   plutil -insert ProgramArguments -array "$tmp"
   for arg in /usr/bin/open -na "Google Chrome" --args \
-             --kiosk --autoplay-policy=no-user-gesture-required "$URL"; do
+             --kiosk --autoplay-policy=no-user-gesture-required "$LAUNCH_URL"; do
     plutil -insert ProgramArguments -string "$arg" -append "$tmp"
   done
   plutil -insert RunAtLoad -bool true "$tmp"
