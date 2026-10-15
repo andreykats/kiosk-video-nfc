@@ -143,6 +143,25 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
   );
 }
 
+const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
+
+/**
+ * Keyboard input needs the reader in HID keyboard mode; the ACR1552U ships in
+ * CCID mode. The switch script (public/acr1552-mode.sh) only runs on macOS.
+ */
+function hidModeHelp(): HTMLElement {
+  if (!navigator.platform.startsWith('Mac')) {
+    return p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, use ACS’s configuration tool.', 'hint');
+  }
+  return h(
+    'div',
+    { 'data-testid': 'hid-mode-help' },
+    p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, download the script and run it in Terminal. It asks for this Mac’s password.', 'hint'),
+    h('p', {}, h('a', { href: `${import.meta.env.BASE_URL}${ACR1552_MODE_SCRIPT}`, download: ACR1552_MODE_SCRIPT, 'data-testid': 'hid-mode-download' }, 'Download the ACR1552U HID mode script')),
+    p(`bash ~/Downloads/${ACR1552_MODE_SCRIPT} hid`, 'mono'),
+  );
+}
+
 function readerStep(ctx: AppContext, nav: Nav): StepView {
   let scanned: ScanEvent | null = null;
   const done = () => {
@@ -174,6 +193,7 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
             ctx.scanner.mode === 'keyboard'
               ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, tag reads are lost.', 'hint')
               : null,
+            ctx.scanner.mode === 'keyboard' ? hidModeHelp() : null,
           ],
           primary: { label: 'Next', onClick: done, disabled: scanned === null && !readFlags().readerDone, testId: 'onboarding-next' },
           secondary: scanned ? undefined : { label: 'Skip', onClick: done, testId: 'onboarding-skip' },

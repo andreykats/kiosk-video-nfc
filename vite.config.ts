@@ -47,7 +47,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,svg,ico,webmanifest}'],
         globIgnores: ['**/config.json'],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/\/config\.json$/],
+        // Downloads (config.json, the .sh setup scripts), not pages: the fallback
+        // would otherwise save index.html under their name.
+        navigateFallbackDenylist: [/\/config\.json$/, /\.sh$/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.endsWith('/config.json'),
