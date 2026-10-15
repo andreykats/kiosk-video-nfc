@@ -143,23 +143,49 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
   );
 }
 
-/** Built from public/acr1552-mode.sh (see vite.config.ts); unzips to "ACR1552U HID Mode.command". */
-const ACR1552_HID_ZIP = 'acr1552-hid-mode.zip';
+const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
+
+/**
+ * Pasted into Terminal. A page can't start Terminal itself, and a script the
+ * browser downloads is blocked by Gatekeeper; one fetched by curl isn't. The
+ * script reruns itself with sudo, so it needs a real file (not a pipe into bash).
+ */
+function hidModeCommand(pageUrl: string, baseUrl: string): string {
+  const url = new URL(`${baseUrl}${ACR1552_MODE_SCRIPT}`, pageUrl).href;
+  return `curl -fsSL ${url} -o /tmp/${ACR1552_MODE_SCRIPT} && bash /tmp/${ACR1552_MODE_SCRIPT} hid`;
+}
 
 /**
  * Keyboard input needs the reader in HID keyboard mode; the ACR1552U ships in
- * CCID mode. The switch is a double-clickable macOS script.
+ * CCID mode. The switch script (public/acr1552-mode.sh) only runs on macOS.
  */
 function hidModeHelp(): HTMLElement {
   if (!navigator.platform.startsWith('Mac')) {
     return p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, use ACS’s configuration tool.', 'hint');
   }
+  const command = hidModeCommand(location.href, import.meta.env.BASE_URL);
+  const copy = h('button', { type: 'button', 'data-testid': 'hid-mode-copy' }, 'Copy command');
+  copy.addEventListener('click', () => {
+    navigator.clipboard.writeText(command).then(
+      () => (copy.textContent = 'Copied ✓'),
+      () => (copy.textContent = 'Couldn’t copy: select the command below and copy it'),
+    );
+  });
   return h(
     'div',
-    { 'data-testid': 'hid-mode-help' },
-    p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, download the switch, double-click the zip to unpack it, then double-click “ACR1552U HID Mode”. Terminal opens and asks for this Mac’s password.', 'hint'),
-    p('The first time, macOS won’t open it. Go to System Settings → Privacy & Security, click Open Anyway, then Open.', 'hint'),
-    h('p', {}, h('a', { href: `${import.meta.env.BASE_URL}${ACR1552_HID_ZIP}`, download: ACR1552_HID_ZIP, 'data-testid': 'hid-mode-download' }, 'Download the ACR1552U HID mode switch')),
+    { class: 'hid-mode-help', 'data-testid': 'hid-mode-help' },
+    p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it:', 'hint'),
+    h(
+      'ol',
+      { class: 'hint' },
+      h('li', {}, 'Press Copy command.'),
+      h('li', {}, 'Open Terminal: press ⌘ Space, type Terminal, then press Return.'),
+      h('li', {}, 'Paste the command (⌘ V) and press Return.'),
+      h('li', {}, 'Type this Mac’s password and press Return. Nothing shows while you type.'),
+      h('li', {}, 'Type y and press Return to confirm.'),
+    ),
+    copy,
+    h('p', { class: 'mono command', 'data-testid': 'hid-mode-command' }, command),
   );
 }
 

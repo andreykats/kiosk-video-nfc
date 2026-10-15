@@ -13,18 +13,16 @@ set -euo pipefail
 
 usage() {
     cat >&2 <<EOF
-Usage: ${0##*/} [MODE]
+Usage: ${0##*/} MODE
 
   get    show the current mode
-  hid    HID keyboard only (the default with no MODE)
+  hid    HID keyboard only
   ccid   CCID smart card reader only (factory default)
   both   HID keyboard + CCID smart card reader
 EOF
     exit 2
 }
 
-# Double-clicking the .command copy (from the setup guide) passes no arguments.
-(( $# > 0 )) || set -- hid
 [[ $# -eq 1 ]] || usage
 case "$1" in get|hid|ccid|both) ;; *) usage ;; esac
 [[ "$(uname -s)" == Darwin ]] || { echo "error: this script only runs on macOS" >&2; exit 1; }

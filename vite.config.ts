@@ -1,8 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
-import { commandZip } from './scripts/commandZip.ts';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -26,12 +24,6 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(process.env.APP_VERSION?.trim() || `${pkg.version}-dev`),
   },
   plugins: [
-    // The setup guide's double-click version of the ACR1552U mode script.
-    commandZip({
-      source: fileURLToPath(new URL('./public/acr1552-mode.sh', import.meta.url)),
-      entryName: 'ACR1552U HID Mode.command',
-      fileName: 'acr1552-hid-mode.zip',
-    }),
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,
@@ -55,9 +47,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,svg,ico,webmanifest}'],
         globIgnores: ['**/config.json'],
         navigateFallback: 'index.html',
-        // Downloads (config.json, the setup scripts), not pages: the fallback
+        // Downloads (config.json, the .sh setup scripts), not pages: the fallback
         // would otherwise save index.html under their name.
-        navigateFallbackDenylist: [/\/config\.json$/, /\.(sh|zip)$/],
+        navigateFallbackDenylist: [/\/config\.json$/, /\.sh$/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.endsWith('/config.json'),
