@@ -48,14 +48,18 @@ test('quick pair from the Videos list, with reassign; the loop video cannot be p
   await expect(row('loop.mp4').getByTestId('quick-pair')).toBeDisabled();
   await expect(row('lion.mp4').getByTestId('quick-pair')).toBeEnabled();
 
+  // One card per press by default.
   await row('lion.mp4').getByTestId('quick-pair').click();
   await expect(page.getByTestId('quick-pair-dialog')).toBeVisible();
   await expect(page.getByTestId('match-chooser')).toHaveCount(0);
+  await expect(page.getByTestId('keep-pairing')).not.toBeChecked();
   await scan(page, '0A0B0C0D');
-  await expect(page.getByTestId('scan-status')).toContainText('Paired 0A 0B 0C 0D');
+  await expect(page.getByTestId('quick-pair-dialog')).toHaveCount(0);
   await expect(page.locator('[data-testid="cards-table"] tr[data-uid="0A0B0C0D"] select')).toHaveValue('lion.mp4');
 
-  // A card that plays another video is only moved after confirming.
+  // Keep pairing: a card that plays another video is only moved after confirming, then the dialog waits for more.
+  await row('lion.mp4').getByTestId('quick-pair').click();
+  await page.getByTestId('keep-pairing').check();
   await scan(page, TIGER_UID);
   await expect(page.getByTestId('scan-status')).toContainText('tiger.mp4');
   await clickDialogButton(page, 'Reassign');

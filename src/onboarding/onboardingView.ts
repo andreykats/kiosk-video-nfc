@@ -2,7 +2,7 @@ import type { AppContext } from '../app/context';
 import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { addAdminCard, cardsForVideo, checkPairing, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, scanMatches, useAsLoopInstead } from '../config/ops';
+import { addAdminCard, cardsForVideo, findAdminCard, findCard, removeAdminCard, scanMatches, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type CardMatch, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
@@ -10,7 +10,8 @@ import type { ScanEvent } from '../scan/scanEvent';
 import { formatMatch, formatUid } from '../scan/uid';
 import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
-import { matchAttrs, pairingError, reassignText } from '../settings/pairing';
+import { quickPair } from '../settings/cards';
+import { matchAttrs } from '../settings/pairing';
 import { readerControls } from '../settings/readerSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
@@ -384,15 +385,7 @@ function copyVideosStep(ctx: AppContext, nav: Nav): StepView {
   }
 }
 
-interface PairingState {
-  fileName: string;
-  message: { text: string; kind: 'error' | 'info' } | null;
-  /** Card already plays another video; waiting for the user to move it. */
-  conflict: { match: CardMatch; otherFile: string } | null;
-}
-
 function pairStep(ctx: AppContext, nav: Nav): StepView {
-  let pairing: PairingState | null = null;
   let busy = false;
   const progress = h('div', { class: 'import-progress', 'data-testid': 'import-progress', hidden: true });
   const host = importHost(nav, progress, (b) => {
@@ -400,29 +393,6 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     view.rerender();
   });
   const filesInput = filePicker({ folder: false, testId: 'onboarding-files-input', onPick: (f) => void importPickedFiles(ctx, host, f) });
-
-  const pair = async (match: CardMatch, fileName: string) => {
-    if (await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '' }))) pairing = null;
-    view.rerender();
-  };
-
-  // Cards are identified by the kiosk's card key, chosen on the reader step.
-  const unsubscribeScans = ctx.scanner.scans.subscribe((scan) => {
-    if (!pairing || pairing.conflict) return;
-    const check = checkPairing(ctx.config.get(), scan, ctx.scanner.cardKey);
-    if (check.kind !== 'ok') {
-      pairing.message = { text: pairingError(check), kind: 'error' };
-    } else if (check.existing?.fileName === pairing.fileName) {
-      pairing.message = { text: `${formatMatch(check.match)} already plays this video. Hold another card on the reader, or press Cancel.`, kind: 'info' };
-    } else if (check.existing) {
-      pairing.conflict = { match: check.match, otherFile: check.existing.fileName };
-      pairing.message = null;
-    } else {
-      void pair(check.match, pairing.fileName);
-      return;
-    }
-    view.rerender();
-  });
 
   /** There is always a loop video: it can be moved to another video but not cleared. */
   const toggleLoop = async (fileName: string, checked: boolean) => {
@@ -436,44 +406,10 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
       });
       if (!ok) return view.rerender();
     }
-    if (pairing?.fileName === fileName) pairing = null;
     await saveEdit(ctx, (c) => useAsLoopInstead(c, fileName));
   };
 
-  function pairCell(fileName: string): HTMLElement {
-    if (pairing?.fileName !== fileName) {
-      return h(
-        'button',
-        { type: 'button', 'data-testid': 'pair-card', disabled: busy || pairing !== null, onclick: () => ((pairing = { fileName, message: null, conflict: null }), view.rerender()) },
-        'Pair card',
-      );
-    }
-    const cancel = h('button', { type: 'button', class: 'link', onclick: () => ((pairing = null), view.rerender()) }, 'Cancel');
-    if (pairing.conflict) {
-      const { match, otherFile } = pairing.conflict;
-      return h(
-        'div',
-        { class: 'pairing', 'data-testid': 'pair-conflict' },
-        h('p', {}, `${reassignText(match, otherFile)} Use it for this video instead?`),
-        h('button', { type: 'button', class: 'primary', onclick: () => void pair(match, fileName) }, 'Move card here'),
-        ' ',
-        cancel,
-      );
-    }
-    return h(
-      'div',
-      { class: 'pairing' },
-      h('p', { class: 'waiting', 'data-testid': 'pair-waiting' }, 'Hold a card on the reader…'),
-      pairing.message ? h('p', { class: pairing.message.kind, 'data-testid': 'pair-message' }, pairing.message.text) : null,
-      cancel,
-    );
-  }
-
-  const view = reactiveStep(
-    renderInto,
-    [(l) => ctx.config.changed.subscribe(l), (l) => ctx.videos.changed.subscribe(l)],
-    unsubscribeScans,
-  );
+  const view = reactiveStep(renderInto, [(l) => ctx.config.changed.subscribe(l), (l) => ctx.videos.changed.subscribe(l)]);
 
   function renderInto(el: HTMLElement) {
     const config = ctx.config.get();
@@ -509,22 +445,28 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
         h(
           'td',
           { class: 'cards-cell' },
-          isLoop
-            ? h('span', { class: 'hint' }, 'Plays on repeat between cards')
-            : h(
-                'div',
-                {},
-                ...cards.map((c) =>
-                  h(
-                    'span',
-                    { class: 'chip mono', ...matchAttrs(c.match) },
-                    formatMatch(c.match),
-                    h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Unpair ${c.match.value}`, onclick: () => void saveEdit(ctx, (cfg) => removeCard(cfg, c.match)) }, '×'),
-                  ),
-                ),
-                cards.length === 0 && pairing?.fileName !== v.fileName ? h('span', { class: 'hint' }, 'No card yet ') : null,
-                pairCell(v.fileName),
-              ),
+          h(
+            'div',
+            { class: 'pair-cell' },
+            // Counts pairings: in NDEF mode, every card with the same payload is one.
+            h(
+              'span',
+              { class: 'hint', 'data-testid': 'pair-count' },
+              isLoop ? 'Plays on repeat between cards' : cards.length === 0 ? 'No cards yet' : `${cards.length} card${cards.length === 1 ? '' : 's'} paired`,
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                'data-testid': 'pair-card',
+                // The loop plays between cards, so no card can start it.
+                disabled: busy || isLoop,
+                title: isLoop ? 'The loop video plays between cards and can’t be paired' : null,
+                onclick: () => void quickPair(ctx, v.fileName),
+              },
+              'Pair card',
+            ),
+          ),
         ),
       );
     });
@@ -535,7 +477,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
         wide: true,
         busy,
         body: [
-          p('Press Pair card, then hold a card on the reader. That card will play the video. One video is the background loop and plays on repeat between cards. Tick Loop on another video to move it.'),
+          p('Press Pair card, then hold a card on the reader. That card will play the video. To pair several cards in a row, tick Keep pairing in the dialog. One video is the background loop and plays on repeat between cards. Tick Loop on another video to move it.'),
           config.videos.length === 0
             ? p('There are no videos yet. Add some first.', 'error')
             : h('table', { class: 'pair-table', 'data-testid': 'pair-table' }, h('tbody', {}, ...rows)),
@@ -544,7 +486,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
           progress,
           loopReady ? null : p('Tick Loop on one video to continue.', 'hint'),
         ],
-        primary: { label: 'Next', onClick: nav.next, disabled: !loopReady || busy || pairing !== null, testId: 'onboarding-next' },
+        primary: { label: 'Next', onClick: nav.next, disabled: !loopReady || busy, testId: 'onboarding-next' },
       }),
     );
   }

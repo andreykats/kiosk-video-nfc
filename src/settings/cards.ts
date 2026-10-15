@@ -83,51 +83,59 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
 }
 
 /**
- * Videos → Pair: pairs each scanned card with one video straight away. Asks only
- * before moving a card that plays another video, and stays open for more cards.
+ * Pairs scanned cards with one video (Settings → Videos → Pair, and the setup
+ * guide). Each card is paired as soon as it's scanned; staff are asked only
+ * before moving a card that plays another video. The dialog closes after one
+ * card unless "Keep pairing" is ticked.
  */
 export async function quickPair(ctx: AppContext, fileName: string): Promise<void> {
-  const done: DialogAction<string>[] = [{ label: 'Done', value: null }];
+  const keep = h('input', { type: 'checkbox', 'data-testid': 'keep-pairing' });
+  let paired = false;
+  const idle = (): DialogAction<string>[] => [{ label: paired ? 'Done' : 'Cancel', value: null }];
   const save = async (d: DialogHandle<string>, match: CardMatch) => {
-    d.setActions(done);
-    if (await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '' }))) {
-      scanMessage(d, `Paired ${formatMatch(match)} ✓ Scan another card, or press Done.`, 'success');
-    } else {
+    d.setActions(idle());
+    if (!(await saveEdit(ctx, (c) => pairCard(c, { match, fileName, label: '' })))) {
       scanMessage(d, 'Could not save. Scan the card again.', 'error');
+      return;
     }
+    paired = true;
+    if (!keep.checked) return d.close(matchId(match));
+    d.setActions(idle());
+    scanMessage(d, `Paired ${formatMatch(match)} ✓ Scan another card, or press Done.`, 'success');
   };
   const dialog = openScanDialog<string>(ctx, {
     title: `Pair a card with ${fileName}`,
     testId: 'quick-pair-dialog',
     onScan: (scan, d) => {
-      d.setActions(done);
+      d.setActions(idle());
       const check = checkPairing(ctx.config.get(), scan, ctx.scanner.cardKey);
       if (check.kind !== 'ok') {
         scanMessage(d, pairingError(check), 'error');
       } else if (check.existing?.fileName === fileName) {
-        scanMessage(d, `${formatMatch(check.match)} already plays this video. Scan another card, or press Done.`);
+        scanMessage(d, `${formatMatch(check.match)} already plays this video. Scan another card.`);
       } else if (check.existing) {
         const { match, existing } = check;
-        scanMessage(d, reassignText(match, existing.fileName));
+        scanMessage(d, `${reassignText(match, existing.fileName)} Reassign it to this video?`);
         d.setActions([
-          ...done,
+          ...idle(),
           {
             label: 'Reassign',
             value: null,
             kind: 'primary',
             before: async () => {
               await save(d, match);
-              return false; // stay open for more cards
+              return false; // save() closes the dialog unless Keep pairing is ticked
             },
           },
         ]);
       } else {
         void save(d, check.match);
       }
-      return false; // keep listening
+      return false; // closing the dialog stops listening
     },
   });
-  dialog.setActions(done);
+  dialog.body.append(h('label', { class: 'keep-pairing' }, keep, ' Keep pairing cards to this video'));
+  dialog.setActions(idle());
   await dialog.result;
 }
 

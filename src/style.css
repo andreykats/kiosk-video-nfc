@@ -134,7 +134,7 @@ button.option:hover:not(:disabled) { border-color: var(--accent); }
 .loop-toggle { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; margin: 0; cursor: pointer; }
 .cards-cell { min-width: 16rem; }
 .chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.2rem 0.15rem 0.55rem; margin: 0 0.35rem 0.35rem 0; border: 1px solid var(--line); border-radius: 999px; font-size: 0.85rem; }
+.pair-cell { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .chip-remove { padding: 0 0.4rem; border: none; background: none; color: var(--muted); }
-.pairing p { margin: 0 0 0.4rem; }
 .onboarding-body .toolbar { margin-top: 1rem; }
 .settings section.danger-zone { border-color: #5a2a28; }

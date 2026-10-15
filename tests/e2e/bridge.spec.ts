@@ -101,8 +101,7 @@ test('quick pair rejects a card without an NDEF payload on an NDEF kiosk', async
   await tap(page, fake, ntag());
   await expect(page.getByTestId('scan-status')).toContainText('no NDEF payload');
   await tap(page, fake, ntag().withNdef([uriRecord(CARD_ID)]));
-  await expect(page.getByTestId('scan-status')).toContainText(`Paired ${CARD_ID}`);
-  await clickDialogButton(page, 'Done');
+  await expect(page.getByTestId('quick-pair-dialog')).toHaveCount(0);
   await expect(page.locator(`[data-testid="cards-table"] tr[data-match="ndef:${CARD_ID}"] select`)).toHaveValue('tiger.mp4');
 });
 
