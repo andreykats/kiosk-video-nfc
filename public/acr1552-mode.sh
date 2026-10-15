@@ -49,6 +49,15 @@ ObjC.import('IOKit');
 ObjC.import('IOUSBHost');
 // Return the CFTypeRef as an object so NSNumber values can be read directly.
 ObjC.bindFunction('IORegistryEntryCreateCFProperty', ['id', ['unsigned int', 'id', 'void *', 'unsigned int']]);
+// IOUSBHost objects are created through objc_msgSend with the block and error
+// parameters typed as plain pointers. The JXA bridge turns any JS value passed
+// for a block parameter, even null, into a block, and IOUSBHost then aborts
+// the process when it calls that block on the first device notification.
+ObjC.bindFunction('objc_getClass', ['id', ['char *']]);
+ObjC.bindFunction('class_createInstance', ['id', ['id', 'unsigned long']]);
+ObjC.bindFunction('sel_registerName', ['void *', ['char *']]);
+ObjC.bindFunction('objc_msgSend', ['id', ['id', 'void *', 'unsigned int', 'unsigned long', 'id', 'void *', 'void *']]);
+const INIT_SEL = $.sel_registerName('initWithIOService:options:queue:error:interestHandler:');
 
 const ACS_VID = 0x072F;
 const ACR1552_PIDS = [0x2303, 0x2308];
@@ -84,6 +93,17 @@ function fromNSData(data) {
 
 function readBytes(ptr, length) {
     return fromNSData($.NSData.dataWithBytesLength(ptr, length));
+}
+
+// Returns an IOUSBHostDevice/IOUSBHostInterface, or a nil object on failure.
+// Default queue, no error object, no interest handler.
+function openUSBObject(className, service, options) {
+    const instance = $.class_createInstance($.objc_getClass(className), 0);
+    return $.objc_msgSend(instance, INIT_SEL, service, options, $(), null, null);
+}
+
+function isAttached(service) {
+    return $.IORegistryEntryInPlane(service, 'IOService') !== 0;
 }
 
 function intProperty(service, key) {
@@ -139,8 +159,8 @@ function openCcidInterface(device, deviceService) {
     for (let attempt = 0; attempt < 50; attempt++) {
         const found = ccidInterfaceService(deviceService);
         if (found) {
-            const intf = $.IOUSBHostInterface.alloc.initWithIOServiceOptionsQueueErrorInterestHandler(found.service, 0, $(), null, $());
-            if (!intf.isNil()) return { intf, number: found.number };
+            const intf = openUSBObject('IOUSBHostInterface', found.service, 0);
+            if (!intf.isNil()) return { intf, service: found.service, number: found.number };
         }
         delay(0.1);
     }
@@ -204,13 +224,12 @@ function hostInterface(reply) {
 
 function main(cmd) {
     const deviceService = findReader();
-    const device = $.IOUSBHostDevice.alloc.initWithIOServiceOptionsQueueErrorInterestHandler(deviceService, DEVICE_CAPTURE, $(), null, $());
+    const device = openUSBObject('IOUSBHostDevice', deviceService, DEVICE_CAPTURE);
     if (device.isNil()) throw new ReaderError('could not take control of the reader (the script must run as root)');
-    let intf = null;
+    let opened = null;
     try {
-        const opened = openCcidInterface(device, deviceService);
-        intf = opened.intf;
-        const pipes = bulkPipes(device, intf, opened.number);
+        opened = openCcidInterface(device, deviceService);
+        const pipes = bulkPipes(device, opened.intf, opened.number);
 
         const current = hostInterface(escape(pipes, [0xE0, 0x00, 0x00, 0x93, 0x00], 0));
         console.log(`Current mode: ${MODE_TEXT[current]}`);
@@ -226,8 +245,10 @@ function main(cmd) {
         console.log(`New mode: ${MODE_TEXT[now]}`);
         console.log('If macOS does not pick up the change, unplug the reader and plug it back in.');
     } finally {
-        if (intf !== null) intf.destroy;
-        device.destroy;  // resets the reader and hands it back to macOS
+        // destroy hangs if the reader already re-enumerated (its registry entry
+        // is gone); exiting releases those handles anyway.
+        if (opened !== null && isAttached(opened.service)) opened.intf.destroy;
+        if (isAttached(deviceService)) device.destroy;  // resets the reader and hands it back to macOS
     }
 }
 
