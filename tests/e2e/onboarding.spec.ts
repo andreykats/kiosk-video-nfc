@@ -202,24 +202,25 @@ test('install step offers the install button and moves on once installed', async
   await expect(step(page, 'reader')).toBeVisible();
 });
 
-test('reader step: keyboard mode offers the ACR1552U HID mode script on a Mac, and points elsewhere on Windows', async ({ page, browser }) => {
+test('reader step: keyboard mode offers the double-click ACR1552U HID mode switch on a Mac, and points elsewhere on Windows', async ({ page, browser }) => {
   await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'MacIntel' }));
   await page.goto('./');
   await page.getByTestId('onboarding-skip').click();
   await expect(step(page, 'reader')).toBeVisible();
   await expect(page.getByTestId('reader-mode')).toHaveValue('keyboard');
   const help = page.getByTestId('hid-mode-help');
-  await expect(help).toContainText('bash ~/Downloads/acr1552-mode.sh hid');
+  await expect(help).toContainText('double-click “ACR1552U HID Mode”');
+  await expect(help).toContainText('Open Anyway');
   // Wait for the service worker, so the download also proves it isn't answered with index.html.
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('hid-mode-download').click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('acr1552-mode.sh');
-  const script = await readFile(await download.path(), 'utf8');
-  expect(script).toMatch(/^#!\/bin\/bash\n/);
-  expect(script).toContain('ACR1552U');
+  expect(download.suggestedFilename()).toBe('acr1552-hid-mode.zip');
+  const zip = await readFile(await download.path());
+  expect(zip.subarray(0, 4).toString('latin1')).toBe('PK\x03\x04');
+  expect(zip.includes('ACR1552U HID Mode.command')).toBe(true);
 
   // Only for keyboard input.
   await page.getByTestId('reader-mode').selectOption('bridge');

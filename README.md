@@ -104,7 +104,7 @@ A kiosk ignores pairings of the other kind, so a shared config can hold both. Se
 
 ### HID Keyboard mode on the ACR1552U
 
-The reader ships in CCID (smart card) mode. On a Mac, the setup guide's reader step links [`acr1552-mode.sh`](public/acr1552-mode.sh), which switches it: `bash ~/Downloads/acr1552-mode.sh hid` (it asks for an admin password; `get` shows the current mode). In HID-only mode the script can't switch the reader back, so it asks first; `both` keeps HID and CCID. It only changes the mode, so check the output settings below.
+The reader ships in CCID (smart card) mode. On a Mac, the setup guide's reader step offers `acr1552-hid-mode.zip`, which unzips to **ACR1552U HID Mode.command**: double-click it, and Terminal opens, asks for an admin password and switches the reader to HID keyboard mode. The script isn't signed, so the first time macOS blocks it: System Settings → Privacy & Security → **Open Anyway**. The build zips [`public/acr1552-mode.sh`](public/acr1552-mode.sh) (with its execute bit, which plain downloads lose). In Terminal, `bash acr1552-mode.sh get|hid|ccid|both` also shows or sets the other modes. In HID-only mode the script can't switch the reader back, so it asks first; `both` keeps HID and CCID. It only changes the mode, so check the output settings below.
 
 Otherwise, use ACS's configuration tool (Windows only) **once per reader**:
 

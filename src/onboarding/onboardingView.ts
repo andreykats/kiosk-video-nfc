@@ -143,11 +143,12 @@ function installStep(ctx: AppContext, nav: Nav): StepView {
   );
 }
 
-const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
+/** Built from public/acr1552-mode.sh (see vite.config.ts); unzips to "ACR1552U HID Mode.command". */
+const ACR1552_HID_ZIP = 'acr1552-hid-mode.zip';
 
 /**
  * Keyboard input needs the reader in HID keyboard mode; the ACR1552U ships in
- * CCID mode. The switch script (public/acr1552-mode.sh) only runs on macOS.
+ * CCID mode. The switch is a double-clickable macOS script.
  */
 function hidModeHelp(): HTMLElement {
   if (!navigator.platform.startsWith('Mac')) {
@@ -156,9 +157,9 @@ function hidModeHelp(): HTMLElement {
   return h(
     'div',
     { 'data-testid': 'hid-mode-help' },
-    p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, download the script and run it in Terminal. It asks for this Mac’s password.', 'hint'),
-    h('p', {}, h('a', { href: `${import.meta.env.BASE_URL}${ACR1552_MODE_SCRIPT}`, download: ACR1552_MODE_SCRIPT, 'data-testid': 'hid-mode-download' }, 'Download the ACR1552U HID mode script')),
-    p(`bash ~/Downloads/${ACR1552_MODE_SCRIPT} hid`, 'mono'),
+    p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, download the switch, double-click the zip to unpack it, then double-click “ACR1552U HID Mode”. Terminal opens and asks for this Mac’s password.', 'hint'),
+    p('The first time, macOS won’t open it. Go to System Settings → Privacy & Security, click Open Anyway, then Open.', 'hint'),
+    h('p', {}, h('a', { href: `${import.meta.env.BASE_URL}${ACR1552_HID_ZIP}`, download: ACR1552_HID_ZIP, 'data-testid': 'hid-mode-download' }, 'Download the ACR1552U HID mode switch')),
   );
 }
 
