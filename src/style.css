@@ -50,12 +50,14 @@ label { display: block; margin: 0.5rem 0; }
 .ndef-records .mono { word-break: break-all; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
-.toolbar .push-right { margin-left: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
 .mono { font-family: ui-monospace, 'SF Mono', Consolas, monospace; }
-.uid, .chip, td.actions { white-space: nowrap; }
+.uid, .chip, .actions { white-space: nowrap; }
+/* Row buttons (Pair, Delete, Remove) line up at the right edge. */
+td.actions { text-align: right; width: 1%; }
+.push-right { margin-left: auto; }
 .hint { color: var(--muted); font-size: 0.9rem; }
 .status.good, .good { color: var(--good); }
 .status.warn { color: var(--warn); }
@@ -98,7 +100,8 @@ span.banner { display: inline-block; margin: 0; padding: 0.2rem 0.5rem; }
 .scan-status.error { color: var(--bad); }
 .error-list { margin: 0.25rem 0; padding-left: 1.25rem; max-height: 14rem; overflow: auto; }
 .admin-list { list-style: none; padding: 0; }
-.admin-list li { padding: 0.3rem 0; }
+.orphans ul { list-style: none; padding: 0; }
+.admin-list li, .orphans li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
 
 .fatal { padding: 2rem; color: var(--text); }
 

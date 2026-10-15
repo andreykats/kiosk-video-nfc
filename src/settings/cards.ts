@@ -206,7 +206,7 @@ export function renderCards(ctx: AppContext): Section {
                   h('td', {}, select),
                   h(
                     'td',
-                    {},
+                    { class: 'actions' },
                     h(
                       'button',
                       {
@@ -248,12 +248,11 @@ export function renderAdminCards(ctx: AppContext): Section {
                 matchAttrs(card.match),
                 card.match.kind === 'ndef' ? h('span', { class: 'hint' }, 'Tag ID ') : null,
                 h('span', { class: 'mono uid' }, formatMatch(card.match)),
-                ' ',
                 h(
                   'button',
                   {
                     type: 'button',
-                    class: 'danger',
+                    class: 'danger push-right',
                     onclick: async () => {
                       const ok = await confirmDialog({ title: 'Remove admin tag?', content: [formatMatch(card.match)], confirmLabel: 'Remove', danger: true });
                       if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.match));
