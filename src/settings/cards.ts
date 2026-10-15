@@ -5,7 +5,7 @@ import { matchId, type CardEntry, type CardMatch } from '../config/schema';
 import { formatMatch, matchKindLabel } from '../scan/uid';
 import { confirmDialog, type DialogAction, type DialogHandle } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
-import { CARD_KEY_LABELS, identifierCells, matchAttrs, pairingError, reassignText } from './pairing';
+import { identifierCells, matchAttrs, pairingError, reassignText } from './pairing';
 import { openScanDialog, scanMessage } from './scanModal';
 import { reactiveSection, type Section } from './section';
 import { saveEdit } from '../app/edits';
@@ -229,7 +229,6 @@ export function renderCards(ctx: AppContext): Section {
         h('button', { type: 'button', onclick: () => void pairNewCard(ctx) }, 'Pair new tag'),
         h('button', { type: 'button', 'data-testid': 'remove-tag', disabled: config.cards.length === 0, onclick: () => void removeTagByScan(ctx) }, 'Remove tag'),
       ),
-      h('p', { class: 'hint', 'data-testid': 'card-key-hint' }, `This kiosk identifies tags by ${CARD_KEY_LABELS[ctx.scanner.cardKey]}. Change it under Tag reader.`),
       config.cards.length === 0
         ? h('p', { class: 'hint' }, 'No tags paired yet.')
         : h(

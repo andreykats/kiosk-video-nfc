@@ -163,6 +163,7 @@ test('Remove tag unpairs the scanned tag after a confirm; admin and unknown tags
   await expect(tagCount('loop.mp4')).toHaveText('0');
   // Next to Pair new tag.
   await expect(page.getByTestId('cards-section').locator('.toolbar button')).toHaveText(['Pair new tag', 'Remove tag']);
+  await expect(page.getByTestId('cards-section')).not.toContainText('This kiosk identifies');
 
   await page.getByTestId('remove-tag').click();
   await scan(page, ADMIN_UID);
