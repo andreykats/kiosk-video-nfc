@@ -16,7 +16,7 @@ const config: Config = {
   ],
   adminCards: [{ match: { kind: 'uid', value: 'ADADADAD' }, label: 'admin' }],
 };
-const ctx: KioskContext = { config, hasFile: (n) => n !== 'tiger.mp4', cardKey: 'uid' };
+const ctx: KioskContext = { config, hasFile: (n) => n !== 'tiger.mp4', cardKey: 'uid', interruptible: false };
 const playing = { kind: 'feature', fileName: 'lion.mp4' } as const;
 const scan = (uid: string, ndefKey: string | null = null) => ({ type: 'scan', card: { uid, ndefKey } }) as const;
 
@@ -40,6 +40,27 @@ describe('kiosk state machine', () => {
 
   it('ignores video-card scans while a feature plays', () => {
     expect(transition(playing, scan('04A23B1C'), ctx)).toEqual({ state: playing, effects: [] });
+  });
+
+  it('with interrupts on, a scan during a feature starts the scanned video at once', () => {
+    const interrupting: KioskContext = {
+      ...ctx,
+      interruptible: true,
+      config: {
+        ...config,
+        videos: [...config.videos, { fileName: 'bear.mp4', title: '', sizeBytes: 1 }],
+        cards: [...config.cards, { match: { kind: 'uid', value: '04A23B1E' }, fileName: 'bear.mp4', label: '' }],
+      },
+    };
+    const bear = transition(playing, scan('04A23B1E'), interrupting);
+    expect(bear).toEqual({ state: { kind: 'feature', fileName: 'bear.mp4' }, effects: [{ type: 'playFeature', fileName: 'bear.mp4' }] });
+    // The same tag starts its video over, as a new state.
+    const again = transition(playing, scan('04A23B1C'), interrupting);
+    expect(again.effects).toEqual([{ type: 'playFeature', fileName: 'lion.mp4' }]);
+    expect(again.state).not.toBe(playing);
+    // A tag whose video is missing, or an unknown tag, leaves the playing video alone.
+    expect(transition(playing, scan('04A23B1D'), interrupting).state).toBe(playing);
+    expect(transition(playing, scan('11111111'), interrupting)).toEqual({ state: playing, effects: [] });
   });
 
   it('opens settings for admin cards from both states', () => {

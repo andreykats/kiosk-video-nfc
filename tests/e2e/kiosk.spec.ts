@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_UID, LION_UID, scan, setUpKiosk, TIGER_UID, videoState, waitForPlaying } from './helpers';
+import { ADMIN_UID, LION_UID, openSettings, scan, setUpKiosk, TIGER_UID, videoState, waitForPlaying } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await setUpKiosk(page);
@@ -30,6 +30,34 @@ test('scans during a feature video are ignored', async ({ page }) => {
   await scan(page, TIGER_UID);
   await page.waitForTimeout(300);
   expect((await videoState(page, 'feature-video')).file).toBe('lion.mp4');
+});
+
+test('with Playback → interrupt on, a scan during a video starts the scanned video at once', async ({ page }) => {
+  await openSettings(page);
+  // The Playback section sits right above Config, and the option is off by default.
+  const sections = page.locator('[data-testid="settings"] > section');
+  const ids = await sections.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
+  expect(ids[ids.indexOf('config-section') - 1]).toBe('playback-section');
+  await expect(page.getByTestId('interrupt-playback')).not.toBeChecked();
+  await page.getByTestId('interrupt-playback').check();
+  await page.reload();
+  await expect(page.getByTestId('interrupt-playback')).toBeChecked();
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+
+  await scan(page, LION_UID);
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+  await scan(page, TIGER_UID);
+  await waitForPlaying(page, 'feature-video', 'tiger.mp4');
+  // Swapping the source mid-play isn't mistaken for a failure.
+  await page.waitForTimeout(500);
+  await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'feature');
+  expect((await videoState(page, 'feature-video')).file).toBe('tiger.mp4');
+  // Both plays count.
+  await openSettings(page);
+  for (const file of ['lion.mp4', 'tiger.mp4']) {
+    await expect(page.locator(`[data-testid="videos-table"] tr[data-file="${file}"]`).getByTestId('play-count')).toHaveText('1');
+  }
 });
 
 test('an unknown tag does nothing', async ({ page }) => {

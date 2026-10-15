@@ -19,6 +19,8 @@ export interface KioskContext {
   hasFile: (fileName: string) => boolean;
   /** What identifies video cards on this kiosk. */
   cardKey: CardMatch['kind'];
+  /** A video tag scanned during a video starts its video right away (Settings → Playback). */
+  interruptible: boolean;
 }
 
 export interface Transition {
@@ -43,7 +45,7 @@ export function transition(state: KioskState, event: KioskEvent, ctx: KioskConte
       const match = resolveScan(ctx.config, event.card, ctx.cardKey);
       // Admin cards open settings from any state.
       if (match?.kind === 'admin') return { state, effects: [{ type: 'openSettings' }] };
-      if (state.kind === 'feature' || !match) return { state, effects: [] };
+      if (!match || (state.kind === 'feature' && !ctx.interruptible)) return { state, effects: [] };
       const card = match.entry;
       if (!ctx.hasFile(card.fileName)) {
         return {

@@ -163,7 +163,7 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
           ▼                                              │
   [LOOP] ──scan(uid ∈ cards, file present)──► [PLAYING_FEATURE]
     │  ▲                                          │
-    │  └─ unknown UID / missing file: no-op       └─ any video-card scan: ignored
+    │  └─ unknown UID / missing file: no-op       └─ video-card scan: ignored, or with Settings → Playback → interrupt on, starts that video at once
     │
     ├─ scan(uid ∈ adminCards) ─► navigate #/settings   (also allowed during PLAYING_FEATURE)
     └─ shortcut Ctrl+Shift+S ─► navigate #/settings (any state)
@@ -204,16 +204,17 @@ Sections, each a plain TS module rendering DOM:
    - **"Remove tag"** (next to Pair new tag) opens a scan modal: the scanned tag's pairing is found by any identifier the scan carries (so a tag paired by the other kind can be removed too), shown, and removed only after **Remove** is pressed. An NDEF pairing warns that every tag with that ID is unpaired. Admin tags are exempt: scanning one shows a message and removes nothing; they're removed only from the Admin tags table.
    - The UID column has a fixed width (`td.col-uid`), so NDEF lines up with the Admin tags table.
 4. **Admin cards:** a table like Videos: **UID**, **NDEF** (the `otherId`, if recorded) and Remove on the right (no label field). **"Add admin card"** opens the same scan modal, saves as soon as a valid card is scanned, and rejects UIDs already used as video cards.
-5. **Config:** Export config, Update from published config, Import config from file, last applied `updatedAt`.
-6. **Diagnostics:**
+5. **Playback** (just above Config, `src/settings/playbackSection.ts`): **Tag scans interrupt the playing video**, off by default. Stored per kiosk in `localStorage` (`kiosk.interruptPlayback`). Off: scans during a tag's video are ignored until it ends. On: a video tag scanned during a video starts its video at once (`interruptible` in the state machine), and the same tag starts its video over. Admin tags open settings either way.
+6. **Config:** Export config, Update from published config, Import config from file, last applied `updatedAt`.
+7. **Diagnostics:**
    - **Ready to work offline** indicator with a per-condition breakdown (see §9.3).
    - Storage usage/quota and persisted status.
    - Last scanned UID with a live display (handy for testing readers).
    - Autoplay status.
    - Service worker status, with a "new version available → Reload" button. The app updates itself **only at launch** (`src/pwa/sw.ts`): it checks for a new version once while starting, and if one is ready within 30 s it activates it and reloads. It never checks again while running, and a version Chrome finds later only shows the Reload button, so the app never reloads itself mid-show.
 
-7. **Install as Chrome App** (just above Reset): optional, see §9.2.
-8. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
+8. **Install as Chrome App** (just above Reset): optional, see §9.2.
+9. **Reset** (last section): **Reset configuration** deletes every video file in OPFS, the stored config and its "last applied" record, and the setup-guide progress, after a confirm dialog listing what will be deleted. Then it opens the setup guide at step 1. The app stays installed and cached, and the install flag is kept, because the app really is still installed.
 
 **Scanner in settings:** scans are only consumed while a scan modal is open. Otherwise settings ignores them, apart from preventing burst keys from typing into inputs.
 

@@ -1,3 +1,4 @@
+import { readInterruptPlayback } from './playbackOptions';
 import type { AppContext } from '../app/context';
 import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import type { Diagnostics } from '../app/diagnostics';
@@ -242,8 +243,14 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   const dispatch = (event: KioskEvent) => {
     if (disposed) return;
-    const next = transition(state, event, { config: ctx.config.get(), hasFile: (n) => ctx.videos.has(n), cardKey: ctx.scanner.cardKey });
-    if (next.state.kind !== state.kind) watch.reset(performance.now());
+    const next = transition(state, event, {
+      config: ctx.config.get(),
+      hasFile: (n) => ctx.videos.has(n),
+      cardKey: ctx.scanner.cardKey,
+      interruptible: readInterruptPlayback(),
+    });
+    // A new state object is a new video, including one that interrupted another.
+    if (next.state !== state) watch.reset(performance.now());
     state = next.state;
     view.dataset.state = state.kind;
     next.effects.forEach(run);

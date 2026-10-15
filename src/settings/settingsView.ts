@@ -9,6 +9,7 @@ import { renderChecklist } from './checklist';
 import { renderConfigSection } from './configSection';
 import { renderDiagnostics } from './diagnostics';
 import { renderInstallSection } from './installSection';
+import { renderPlaybackSection } from './playbackSection';
 import { renderReaderSection } from './readerSection';
 import { renderResetSection } from './resetSection';
 import type { Section } from './section';
@@ -49,6 +50,7 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
     renderVideos(ctx, env),
     renderCards(ctx),
     renderAdminCards(ctx),
+    renderPlaybackSection(),
     renderConfigSection(ctx),
     renderReaderSection(ctx),
     renderDiagnostics(ctx),

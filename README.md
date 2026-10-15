@@ -26,7 +26,7 @@ On first launch, a **setup guide** starts with a welcome card, then walks throug
 | See how often videos play | Settings → Videos → **Plays**: how many times a card played each video on this kiosk (the loop's repeats don't count). **Reset counter** sets them all back to 0 |
 | Start over | Settings → Reset → **Reset configuration** deletes this kiosk's videos and config, then restarts the setup guide (export the config first to keep it) |
 
-Scanning a card while a card video is playing does nothing. An admin card still opens settings.
+By default, scanning a card while a card video is playing does nothing: the video plays to the end first. To let a scan interrupt it instead, tick Settings → **Playback** → **Tag scans interrupt the playing video** (stored per kiosk). The scanned card's video then starts at once, and the same card again starts its video over. An admin card opens settings either way.
 
 **Keyboard shortcut:** press **Ctrl+Shift+S** to open settings from the kiosk screen or the setup guide. It's the same three keys on Windows and on a Mac, where you press **Control**, not Cmd. Chrome doesn't use this combination for anything else. (Earlier versions used Ctrl+Alt+Shift+S, which no longer works.)
 
