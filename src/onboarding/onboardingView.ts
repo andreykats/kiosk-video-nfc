@@ -114,6 +114,39 @@ function reactiveStep(
   };
 }
 
+function welcomeStep(_ctx: AppContext, nav: Nav): StepView {
+  const el = h('div', { class: 'onboarding-step' });
+  replaceChildren(
+    el,
+    stepCard(nav, 'welcome', {
+      title: 'Welcome to the Topps Kiosk',
+      body: [
+        p('This guide sets up this computer as a kiosk, one step at a time. You’ll:'),
+        h(
+          'ol',
+          { class: 'welcome-steps' },
+          h('li', {}, 'Connect the NFC reader'),
+          h('li', {}, 'Start a new config or import one from another kiosk'),
+          h('li', {}, 'Add the videos'),
+          h('li', {}, 'Pair videos with tags and pick the background loop'),
+          h('li', {}, 'Pair an admin tag'),
+          h('li', {}, 'Make the kiosk open at startup'),
+        ),
+        p('Have the NFC reader, the tags and the USB stick with the videos ready.', 'hint'),
+      ],
+      primary: {
+        label: 'Get started',
+        testId: 'onboarding-next',
+        onClick: () => {
+          writeFlags({ welcomeDone: true });
+          nav.next();
+        },
+      },
+    }),
+  );
+  return { el, destroy: () => undefined };
+}
+
 /** A Terminal command shown in full, with a button that copies it. */
 function copyableCommand(command: string, testId: string): HTMLElement[] {
   const copy = h('button', { type: 'button', 'data-testid': `${testId}-copy` }, 'Copy command');
@@ -676,6 +709,7 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
 }
 
 const STEPS: Record<StepId, (ctx: AppContext, nav: Nav) => StepView> = {
+  welcome: welcomeStep,
   reader: readerStep,
   config: configStep,
   addVideos: addVideosStep,
@@ -731,6 +765,7 @@ export function mountOnboarding(root: HTMLElement, ctx: AppContext): () => void 
   const config = ctx.config.get();
   show(
     resumeStep({
+      welcomeDone: flags.welcomeDone,
       readerDone: flags.readerDone,
       path: nav.path(),
       videoCount: config.videos.length,

@@ -6,7 +6,7 @@ import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan
 test('first run opens the setup guide', async ({ page }) => {
   await page.goto('./');
   await expect(page).toHaveURL(/#\/setup$/);
-  await expect(page.getByTestId('step-reader')).toBeVisible();
+  await expect(page.getByTestId('step-welcome')).toBeVisible();
 });
 
 test('pair a new tag, then reassign it', async ({ page }) => {
@@ -253,7 +253,7 @@ test('reset configuration wipes videos and config and restarts the setup guide',
   await reset.getByTestId('reset-kiosk').click();
   await clickDialogButton(page, 'Reset everything');
   await expect(page).toHaveURL(/#\/setup$/);
-  await expect(page.getByTestId('step-reader')).toContainText('Step 1 of 7');
+  await expect(page.getByTestId('step-welcome')).toContainText('Step 1 of 8');
 
   const left = await page.evaluate(async () => {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('videos');
@@ -265,7 +265,7 @@ test('reset configuration wipes videos and config and restarts the setup guide',
 
   // Nothing comes back after a reload: still a fresh kiosk at step 1, with an empty config.
   await page.reload();
-  await expect(page.getByTestId('step-reader')).toBeVisible();
+  await expect(page.getByTestId('step-welcome')).toBeVisible();
   await page.goto('./#/settings');
   await expect(page.getByTestId('cards-section')).toContainText('No tags paired yet.');
   await expect(page.getByTestId('videos-section')).toContainText('No videos yet');

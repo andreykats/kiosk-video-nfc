@@ -1,11 +1,13 @@
 /** Setup-guide flags that can't be derived from the kiosk's state. */
 export interface OnboardingFlags {
+  /** The user pressed Get started on the welcome step. */
+  welcomeDone: boolean;
   readerDone: boolean;
   completed: boolean;
 }
 
 const KEY = 'kiosk.onboarding';
-const DEFAULTS: OnboardingFlags = { readerDone: false, completed: false };
+const DEFAULTS: OnboardingFlags = { welcomeDone: false, readerDone: false, completed: false };
 
 export function readFlags(): OnboardingFlags {
   try {
@@ -13,6 +15,8 @@ export function readFlags(): OnboardingFlags {
     if (typeof raw !== 'object' || raw === null) return { ...DEFAULTS };
     const r = raw as Record<string, unknown>;
     return {
+      // installStepDone is the flag's name from when step 1 was the install step.
+      welcomeDone: r.welcomeDone === true || r.installStepDone === true,
       readerDone: r.readerDone === true,
       completed: r.completed === true,
     };

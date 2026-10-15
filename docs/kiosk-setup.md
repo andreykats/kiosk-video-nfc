@@ -8,20 +8,21 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
    - **HID Keyboard:** the reader's output settings must match the other kiosks.
    - **NFC Browser Bridge:** install the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge/releases) app first and turn on **Start at login** in its menu. The reader stays in its factory CCID mode.
 2. In Google Chrome, **while online**, open `<url>`. The **setup guide** opens and shows one step at a time:
-   1. **Connect the NFC reader.** Choose the **Card reader input method**: **HID Keyboard** or **NFC Browser Bridge**. For the bridge, choose **Allow** when Chrome asks about **Apps on device**, and pick the **Card identifier**: **UID** (the default) or **NDEF payload**. Then hold any card on the reader and check that the guide shows "Reader is working ✓".
-   2. **Import configuration.**
+   1. **Welcome.** Lists the steps ahead. Press **Get started**.
+   2. **Connect the NFC reader.** Choose the **Card reader input method**: **HID Keyboard** or **NFC Browser Bridge**. For the bridge, choose **Allow** when Chrome asks about **Apps on device**, and pick the **Card identifier**: **UID** (the default) or **NDEF payload**. Then hold any card on the reader and check that the guide shows "Reader is working ✓".
+   3. **Import configuration.**
       - On the first kiosk, choose **Start a new config**.
       - On every other kiosk, choose **Import a config file** and pick the `config.json` exported from the first kiosk.
-   3. **Add or copy the videos.** Insert the USB stick.
+   4. **Add or copy the videos.** Insert the USB stick.
       - With a new config, choose the video files (or a folder).
       - With an existing config, choose the folder. The guide copies the videos the config lists.
-   4. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Loop** on the one video that plays on repeat.
-   5. **Pair an admin card.** Hold the card staff will use to open settings. You can add more than one, or press Skip and use the keyboard shortcut instead.
-   6. **Open the kiosk at startup.** Press **Copy command**. On a Mac, paste it into Terminal; on Windows, paste it as the target of a new shortcut in the `shell:startup` folder (the step lists the clicks). See Windows and macOS below.
-   7. **You're all set.** Check that it shows **Ready to work offline ✓**. On the first kiosk, press **Export config** to save `config.json` for the other kiosks. Then press **Start kiosk**, and restart the computer to check that the kiosk opens by itself. Settings → Setup checklist then shows **Opens at startup ✓**.
+   5. **Pair videos with cards.** For each video, press **Pair card** and hold its card on the reader. Tick **Loop** on the one video that plays on repeat.
+   6. **Pair an admin card.** Hold the card staff will use to open settings. You can add more than one, or press Skip and use the keyboard shortcut instead.
+   7. **Open the kiosk at startup.** Press **Copy command**. On a Mac, paste it into Terminal; on Windows, paste it as the target of a new shortcut in the `shell:startup` folder (the step lists the clicks). See Windows and macOS below.
+   8. **You're all set.** Check that it shows **Ready to work offline ✓**. On the first kiosk, press **Export config** to save `config.json` for the other kiosks. Then press **Start kiosk**, and restart the computer to check that the kiosk opens by itself. Settings → Setup checklist then shows **Opens at startup ✓**.
 3. Open settings (**Ctrl+Shift+S**; Control, not Cmd, on a Mac) and check that Diagnostics shows **Persisted: yes**. If it doesn't, install the app with **Install app** at the bottom of settings (optional, but it's what usually makes Chrome keep the videos when the disk fills up), then reopen settings.
 4. On the first kiosk, copy the exported `config.json` to the USB stick, so the other kiosks can use **Import a config file**. If you skipped the export, it's also in Settings → Config → **Export config**.
-5. Set the launch command to run at login (step 6 of the setup guide; see the sections below):
+5. Set the launch command to run at login (step 7 of the setup guide; see the sections below):
    ```
    chrome --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart
    ```
@@ -50,7 +51,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 ## macOS
 
-- On step 6 of the setup guide (**Open the kiosk at startup**), press **Copy command** and run it in Terminal, signed in as the user the kiosk uses. It's this command:
+- On step 7 of the setup guide (**Open the kiosk at startup**), press **Copy command** and run it in Terminal, signed in as the user the kiosk uses. It's this command:
   ```
   curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
   ```

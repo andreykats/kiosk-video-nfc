@@ -3,20 +3,24 @@ import { useAsLoopInstead } from '../../src/config/ops';
 import { emptyConfig, type Config } from '../../src/config/schema';
 import { nextStep, previousStep, resumeStep, stepSequence, type ResumeInputs } from '../../src/onboarding/steps';
 
-const fresh: ResumeInputs = { readerDone: false, path: null, videoCount: 0, missingCount: 0 };
+const fresh: ResumeInputs = { welcomeDone: false, readerDone: false, path: null, videoCount: 0, missingCount: 0 };
 
 describe('setup guide steps', () => {
   it('orders steps by config path', () => {
-    expect(stepSequence('new')).toEqual(['reader', 'config', 'addVideos', 'pair', 'admin', 'autostart', 'done']);
-    expect(stepSequence('existing')).toEqual(['reader', 'config', 'copyVideos', 'pair', 'admin', 'autostart', 'done']);
+    expect(stepSequence('new')).toEqual(['welcome', 'reader', 'config', 'addVideos', 'pair', 'admin', 'autostart', 'done']);
+    expect(stepSequence('existing')).toEqual(['welcome', 'reader', 'config', 'copyVideos', 'pair', 'admin', 'autostart', 'done']);
   });
 
-  it('starts at the reader on a fresh kiosk', () => {
-    expect(resumeStep(fresh)).toBe('reader');
+  it('starts at the welcome step on a fresh kiosk', () => {
+    expect(resumeStep(fresh)).toBe('welcome');
+  });
+
+  it('moves past the welcome step once Get started was pressed', () => {
+    expect(resumeStep({ ...fresh, welcomeDone: true })).toBe('reader');
   });
 
   it('resumes at config, then at videos for the chosen path', () => {
-    const base = { ...fresh, readerDone: true };
+    const base = { ...fresh, welcomeDone: true, readerDone: true };
     expect(resumeStep(base)).toBe('config');
     expect(resumeStep({ ...base, path: 'new' })).toBe('addVideos');
     expect(resumeStep({ ...base, path: 'new', videoCount: 2 })).toBe('pair');
@@ -32,7 +36,8 @@ describe('setup guide steps', () => {
     expect(nextStep('autostart', 'new')).toBe('done');
     expect(nextStep('done', 'new')).toBeNull();
     expect(previousStep('pair', 'existing')).toBe('copyVideos');
-    expect(previousStep('reader', null)).toBeNull();
+    expect(previousStep('reader', null)).toBe('welcome');
+    expect(previousStep('welcome', null)).toBeNull();
   });
 });
 
