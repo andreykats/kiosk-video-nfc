@@ -201,6 +201,8 @@ Sections, each a plain TS module rendering DOM:
      2. Capture UID. If it's already paired, show the current assignment and offer to reassign. If it's an admin card, reject.
      3. Pick a video.
      4. Save.
+   - **"Remove tag"** (next to Pair new tag) opens a scan modal: the scanned tag's pairing is found by any identifier the scan carries (so a tag paired by the other kind can be removed too), shown, and removed only after **Remove** is pressed. An NDEF pairing warns that every tag with that ID is unpaired. Admin tags are exempt: scanning one shows a message and removes nothing; they're removed only from the Admin tags table.
+   - The UID column has a fixed width (`td.col-uid`), so NDEF lines up with the Admin tags table.
 4. **Admin cards:** a table like Videos: **UID**, **NDEF** (the `otherId`, if recorded) and Remove on the right (no label field). **"Add admin card"** opens the same scan modal, saves as soon as a valid card is scanned, and rejects UIDs already used as video cards.
 5. **Config:** Export config, Update from published config, Import config from file, last applied `updatedAt`.
 6. **Diagnostics:**

@@ -152,6 +152,40 @@ test('videos show how many times a tag played them, kept across reloads until Re
   await expect(count('lion.mp4')).toHaveText('0');
 });
 
+test('Remove tag unpairs the scanned tag after a confirm; admin and unknown tags are refused', async ({ page }) => {
+  await setUpKiosk(page);
+  const rows = page.locator('[data-testid="cards-table"] tbody tr');
+  await expect(rows).toHaveCount(2);
+  // Next to Pair new tag.
+  await expect(page.getByTestId('cards-section').locator('.toolbar button')).toHaveText(['Pair new tag', 'Remove tag']);
+
+  await page.getByTestId('remove-tag').click();
+  await scan(page, ADMIN_UID);
+  await expect(page.getByTestId('scan-status')).toContainText('is an admin tag');
+  await scan(page, 'DEADBEEF');
+  await expect(page.getByTestId('scan-status')).toContainText('isn’t paired');
+  await scan(page, LION_UID);
+  await expect(page.getByTestId('scan-status')).toContainText('plays “lion.mp4”. Remove it?');
+  // Nothing is removed until Remove is pressed.
+  await clickDialogButton(page, 'Cancel');
+  await expect(rows).toHaveCount(2);
+
+  await page.getByTestId('remove-tag').click();
+  await page.waitForTimeout(1600); // past the reader debounce for the same tag
+  await scan(page, LION_UID);
+  await clickDialogButton(page, 'Remove');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await expect(rows).toHaveCount(1);
+  await expect(page.locator(`[data-testid="cards-table"] tr[data-uid="${LION_UID}"]`)).toHaveCount(0);
+  await expect(page.locator(`[data-testid="admin-list"] tr[data-uid="${ADMIN_UID}"]`)).toHaveCount(1);
+});
+
+test('the NDEF column lines up in the Tags and Admin tags tables', async ({ page }) => {
+  await setUpKiosk(page);
+  const x = async (table: string) => (await page.getByTestId(table).locator('tbody [data-col="ndef"]').first().boundingBox())!.x;
+  expect(Math.abs((await x('cards-table')) - (await x('admin-list')))).toBeLessThan(1);
+});
+
 test('export → import round-trip', async ({ page }) => {
   await setUpKiosk(page);
   const downloadPromise = page.waitForEvent('download');

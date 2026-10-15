@@ -141,6 +141,49 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
 }
 
 /**
+ * Remove-tag flow: scan → confirm → unpair. Looks the tag up by every identifier
+ * the scan carries, so a tag paired by the other kind (not recognised on this
+ * kiosk) can be removed too. Admin tags are removed under Admin tags instead.
+ */
+async function removeTagByScan(ctx: AppContext): Promise<void> {
+  const dialog = openScanDialog<string>(ctx, {
+    title: 'Remove tag',
+    testId: 'remove-tag-dialog',
+    onScan: (scan, d) => {
+      const config = ctx.config.get();
+      d.setActions([{ label: 'Cancel', value: null }]);
+      const admin = scanMatches(scan)
+        .map((m) => findAdminCard(config, m))
+        .find((a) => a !== undefined);
+      if (admin) {
+        scanMessage(d, `${formatMatch(admin.match)} is an admin tag. Remove it under Admin tags, or scan another tag.`, 'error');
+        return false;
+      }
+      const card = scanMatches(scan)
+        .map((m) => findCard(config, m))
+        .find((c) => c !== undefined);
+      if (!card) {
+        scanMessage(d, 'This tag isn’t paired. Scan another tag.', 'error');
+        return false;
+      }
+      const { match, fileName } = card;
+      scanMessage(
+        d,
+        match.kind === 'ndef'
+          ? `Tags with tag ID ${formatMatch(match)} play “${fileName}”. Removing it unpairs all of them.`
+          : `${formatMatch(match)} plays “${fileName}”. Remove it?`,
+      );
+      d.setActions([
+        { label: 'Cancel', value: null },
+        { label: 'Remove', value: matchId(match), kind: 'danger', before: () => saveEdit(ctx, (c) => removeCard(c, match)) },
+      ]);
+      return false; // a different tag scanned before confirming replaces this one
+    },
+  });
+  await dialog.result;
+}
+
+/**
  * Admin cards are always added by UID: they're individual staff cards, every
  * reader mode reads UIDs, and a card ID shared by many visitor cards must never
  * open settings.
@@ -180,7 +223,12 @@ export function renderCards(ctx: AppContext): Section {
     const config = ctx.config.get();
     replaceChildren(
       body,
-      h('div', { class: 'toolbar' }, h('button', { type: 'button', onclick: () => void pairNewCard(ctx) }, 'Pair new tag')),
+      h(
+        'div',
+        { class: 'toolbar' },
+        h('button', { type: 'button', onclick: () => void pairNewCard(ctx) }, 'Pair new tag'),
+        h('button', { type: 'button', 'data-testid': 'remove-tag', disabled: config.cards.length === 0, onclick: () => void removeTagByScan(ctx) }, 'Remove tag'),
+      ),
       h('p', { class: 'hint', 'data-testid': 'card-key-hint' }, `This kiosk identifies tags by ${CARD_KEY_LABELS[ctx.scanner.cardKey]}. Change it under Tag reader.`),
       config.cards.length === 0
         ? h('p', { class: 'hint' }, 'No tags paired yet.')

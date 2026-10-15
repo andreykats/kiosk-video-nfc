@@ -37,7 +37,8 @@ export function identifierCells(entry: { match: CardMatch; otherId?: CardMatch }
     const id = [entry.match, entry.otherId].find((m) => m?.kind === kind);
     return h(
       'td',
-      { class: kind === 'uid' ? 'uid' : 'card-id', 'data-col': kind },
+      // col-uid has a fixed width, so NDEF lines up across the Tags and Admin tags tables.
+      { class: kind === 'uid' ? 'uid col-uid' : 'card-id', 'data-col': kind },
       id ? h('span', { class: 'mono' }, formatMatch(id)) : h('span', { class: 'hint' }, '—'),
       id === entry.match ? note : null,
     );

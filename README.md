@@ -20,6 +20,7 @@ On first launch, a **setup guide** starts with a welcome card, then walks throug
 | Open settings | **Ctrl+Shift+S**, or scan an admin card |
 | Leave settings | **Back to kiosk**, scan an admin card (unless a dialog is waiting for a card), or wait 3 minutes without touching anything (this timer pauses while videos import) |
 | Pair a card | Settings → Videos → **Pair** next to the video, then scan one or more cards. Or Settings → Cards → **Pair new card**, scan the card, pick a video |
+| Remove a tag | Settings → Tags → **Remove tag**, scan the tag, press **Remove**. Or **Remove** on its row. Admin tags are refused here: remove them under Admin tags |
 | Add an admin card | Settings → Admin cards → **Add admin card**, scan the card |
 | Pick the loop video | Settings → Videos → the **Loop** radio button |
 | See how often videos play | Settings → Videos → **Plays**: how many times a card played each video on this kiosk (the loop's repeats don't count). **Reset counter** sets them all back to 0 |

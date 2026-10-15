@@ -55,6 +55,7 @@ th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var
 th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
 .mono { font-family: ui-monospace, 'SF Mono', Consolas, monospace; }
 .uid, .chip, .actions { white-space: nowrap; }
+td.col-uid { width: 30%; }
 /* Row buttons (Pair, Delete, Remove) line up at the right edge. */
 td.actions { text-align: right; width: 1%; }
 .push-right { margin-left: auto; }
