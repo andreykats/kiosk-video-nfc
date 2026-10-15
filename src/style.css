@@ -35,8 +35,6 @@ html[data-route='settings'], html[data-route='settings'] body { background: var(
 .settings h3 { font-size: 0.95rem; margin: 1rem 0 0.5rem; }
 .header-row { display: flex; align-items: center; gap: 1rem; }
 .version { color: var(--muted); font-size: 0.85rem; }
-.online.good { color: var(--good); }
-.online.warn { color: var(--warn); }
 
 button { font: inherit; padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--line); background: #2a2a2a; color: var(--text); cursor: pointer; }
 button:hover:not(:disabled) { background: #333; }

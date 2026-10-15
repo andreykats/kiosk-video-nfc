@@ -19,6 +19,11 @@ export interface DialogHandle<T> {
 
 const openDialogs = new Set<DialogHandle<unknown>>();
 
+/** Whether any dialog is open, so a scan may belong to it. */
+export function isDialogOpen(): boolean {
+  return openDialogs.size > 0;
+}
+
 /** Cancels every open dialog (e.g. when settings closes on idle). */
 export function closeAllDialogs(): void {
   for (const d of [...openDialogs]) d.close(null);

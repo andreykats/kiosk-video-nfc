@@ -18,7 +18,7 @@ On first launch, a **setup guide** starts with a welcome card, then walks throug
 | | |
 |---|---|
 | Open settings | **Ctrl+Shift+S**, or scan an admin card |
-| Leave settings | **Back to kiosk**, or wait 3 minutes without touching anything (this timer pauses while videos import) |
+| Leave settings | **Back to kiosk**, scan an admin card (unless a dialog is waiting for a card), or wait 3 minutes without touching anything (this timer pauses while videos import) |
 | Pair a card | Settings → Videos → **Pair** next to the video, then scan one or more cards. Or Settings → Cards → **Pair new card**, scan the card, pick a video |
 | Add an admin card | Settings → Admin cards → **Add admin card**, scan the card |
 | Pick the loop video | Settings → Videos → the **Loop** radio button |

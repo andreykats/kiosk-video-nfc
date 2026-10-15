@@ -11,7 +11,6 @@ test('becomes ready to work offline, then runs with no network', async ({ page, 
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByTestId('online-status')).toContainText('Offline');
   await expect(offlineReady(page)).toHaveAttribute('data-ready', 'true', { timeout: 20_000 });
 
   await page.goto('./#/');

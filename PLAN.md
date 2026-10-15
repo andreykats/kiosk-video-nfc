@@ -181,13 +181,13 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 - Hide the cursor (`cursor: none`) and block the context menu in the kiosk view.
 - **Fullscreen:** desktop Chrome ignores `display: fullscreen` and opens the installed app in a window with Chrome's title bar, which a page can't hide. The kiosk view calls `requestFullscreen()` on mount and again on every click or key press (a card scan counts) until it succeeds (`src/kiosk/fullscreen.ts`). Without a gesture this only works if the `AutomaticFullscreenAllowedForUrls` policy lists the site. Production kiosks use the `--kiosk` launch command, which starts fullscreen with no Chrome UI.
 - Missing video file for a paired card: no-op plus a `console.warn`. The video is also listed under "Missing videos" in settings.
-- Leaving settings (button, or auto-return after **3 minutes idle**) goes back to `#/` and restarts the loop.
+- Leaving settings (button, an admin tag scanned while no dialog is open, or auto-return after **3 minutes idle**) goes back to `#/` and restarts the loop.
 
 ## 8. Settings page
 
 Sections, each a plain TS module rendering DOM:
 
-1. **Header:** "Back to kiosk" button, app version (injected from `package.json` via Vite `define`), online/offline indicator.
+1. **Header:** "Back to kiosk" button, app version (injected from `package.json` via Vite `define`). No online/offline indicator (removed at the user's request).
 2. **Videos:**
    - Table showing file name, size, and status (present / missing / size mismatch). There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
    - Buttons: Import files, Import folder, Delete.

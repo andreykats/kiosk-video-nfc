@@ -1,6 +1,7 @@
 import { IdleTimer, SETTINGS_IDLE_MS } from '../admin/access';
 import type { AppContext } from '../app/context';
-import { closeAllDialogs } from '../ui/dialog';
+import { resolveScan } from '../config/ops';
+import { closeAllDialogs, isDialogOpen } from '../ui/dialog';
 import { h } from '../ui/dom';
 import { requestPersistence } from '../videos/opfsStore';
 import { renderAdminCards, renderCards } from './cards';
@@ -18,14 +19,6 @@ export interface SettingsEnv {
 }
 
 function renderHeader(ctx: AppContext): Section {
-  const online = h('span', { class: 'online', 'data-testid': 'online-status' });
-  const update = () => {
-    online.textContent = navigator.onLine ? '● Online' : '○ Offline';
-    online.className = `online ${navigator.onLine ? 'good' : 'warn'}`;
-  };
-  update();
-  window.addEventListener('online', update);
-  window.addEventListener('offline', update);
   const swBanner = h('div', { class: 'banner', hidden: true });
   const unsubscribe = ctx.sw.changed.subscribe(() => {
     swBanner.hidden = !ctx.sw.get().needRefresh;
@@ -35,22 +28,21 @@ function renderHeader(ctx: AppContext): Section {
   const el = h(
     'header',
     { class: 'settings-header' },
-    h('div', { class: 'header-row' }, h('button', { type: 'button', 'data-testid': 'back-to-kiosk', onclick: () => ctx.navigate('kiosk') }, '← Back to kiosk'), h('h1', {}, 'Kiosk settings'), h('button', { type: 'button', 'data-testid': 'open-setup-guide', onclick: () => ctx.navigate('setup') }, 'Setup guide'), h('span', { class: 'version' }, `v${__APP_VERSION__}`), online),
+    h('div', { class: 'header-row' }, h('button', { type: 'button', 'data-testid': 'back-to-kiosk', onclick: () => ctx.navigate('kiosk') }, '← Back to kiosk'), h('h1', {}, 'Kiosk settings'), h('button', { type: 'button', 'data-testid': 'open-setup-guide', onclick: () => ctx.navigate('setup') }, 'Setup guide'), h('span', { class: 'version' }, `v${__APP_VERSION__}`)),
     swBanner,
   );
-  return {
-    el,
-    destroy: () => {
-      window.removeEventListener('online', update);
-      window.removeEventListener('offline', update);
-      unsubscribe();
-    },
-  };
+  return { el, destroy: unsubscribe };
 }
 
 export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
   const idle = new IdleTimer(SETTINGS_IDLE_MS, () => ctx.navigate('kiosk'));
   const env: SettingsEnv = { idle };
+  // An admin tag closes settings, like it opens them from the kiosk. Not while a
+  // dialog is open: Add admin tag and pairing need the scan. This listener is
+  // added before any dialog's, so it runs while that dialog is still open.
+  const unsubscribeScans = ctx.scanner.scans.subscribe((scan) => {
+    if (!isDialogOpen() && resolveScan(ctx.config.get(), scan, ctx.scanner.cardKey)?.kind === 'admin') ctx.navigate('kiosk');
+  });
   const sections = [
     renderHeader(ctx),
     renderChecklist(ctx),
@@ -69,6 +61,7 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
   void requestPersistence().then(() => ctx.readiness.recompute());
 
   return () => {
+    unsubscribeScans();
     idle.destroy();
     sections.forEach((s) => s.destroy());
     closeAllDialogs();

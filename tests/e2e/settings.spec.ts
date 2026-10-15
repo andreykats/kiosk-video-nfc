@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PUBLISHED_CONFIG_ENABLED } from '../../src/config/sync';
 import { readFile } from 'node:fs/promises';
-import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig, TIGER_UID } from './helpers';
+import { ADMIN_UID, clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig, TIGER_UID } from './helpers';
 
 test('first run opens the setup guide', async ({ page }) => {
   await page.goto('./');
@@ -98,6 +98,24 @@ test('scans outside a scan dialog are only recorded in diagnostics', async ({ pa
   await expect(page.getByTestId('diag-last-scan')).toContainText('04 A2 3B 1C 5D 80 00');
   await expect(page.getByTestId('settings')).toBeVisible();
   await expect(page.locator('dialog[open]')).toHaveCount(0);
+});
+
+test('an admin tag closes settings, except while a dialog is waiting for a tag', async ({ page }) => {
+  await setUpKiosk(page);
+  // No online/offline label in the header.
+  await expect(page.getByTestId('online-status')).toHaveCount(0);
+
+  // While Add admin tag waits for a tag, the admin tag goes to the dialog.
+  await page.getByRole('button', { name: 'Add admin tag' }).click();
+  await scan(page, ADMIN_UID);
+  await expect(page.getByTestId('scan-status')).toContainText('is already an admin tag');
+  await expect(page.getByTestId('settings')).toBeVisible();
+  await clickDialogButton(page, 'Cancel');
+
+  await page.waitForTimeout(1600); // past the reader debounce for the same tag
+  await scan(page, ADMIN_UID);
+  await expect(page).toHaveURL(/#\/$/);
+  await expect(page.getByTestId('kiosk')).toBeVisible();
 });
 
 test('export → import round-trip', async ({ page }) => {
