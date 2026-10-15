@@ -13,6 +13,7 @@ import { renderOfflineIndicator } from '../settings/diagnostics';
 import { quickPair } from '../settings/cards';
 import { matchAttrs } from '../settings/pairing';
 import { readerControls } from '../settings/readerSection';
+import { resetKiosk } from '../settings/resetSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
@@ -23,6 +24,8 @@ import { nextStep, previousStep, resumeStep, stepSequence, type ConfigPath, type
 interface Nav {
   next(): void;
   back(): void;
+  /** Wipes the kiosk (after a confirm) and starts the guide again at step 1. */
+  reset(): void;
   path(): ConfigPath | null;
   /** Pauses the idle return to the kiosk while a long import runs. */
   hold(): () => void;
@@ -64,9 +67,14 @@ function stepCard(
     h(
       'div',
       { class: 'onboarding-actions' },
-      index > 0
-        ? button({ label: 'Back', onClick: nav.back, disabled: options.busy, testId: 'onboarding-back' }, 'link')
-        : h('span', { class: 'version', 'data-testid': 'onboarding-version' }, `v${__APP_VERSION__}`),
+      h(
+        'span',
+        { class: 'left' },
+        button({ label: 'Reset', onClick: nav.reset, disabled: options.busy, testId: 'onboarding-reset' }, 'link danger'),
+        index > 0
+          ? button({ label: 'Back', onClick: nav.back, disabled: options.busy, testId: 'onboarding-back' }, 'link')
+          : h('span', { class: 'version', 'data-testid': 'onboarding-version' }, `v${__APP_VERSION__}`),
+      ),
       h(
         'span',
         { class: 'right' },
@@ -669,6 +677,9 @@ export function mountOnboarding(root: HTMLElement, ctx: AppContext): () => void 
     back: () => {
       const prev = previousStep(container.dataset.step as StepId, nav.path());
       if (prev) show(prev);
+    },
+    reset: async () => {
+      if (await resetKiosk(ctx)) show(stepSequence(nav.path())[0]!);
     },
   };
 

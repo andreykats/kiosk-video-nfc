@@ -9,8 +9,10 @@ import type { Section } from './section';
 /**
  * Wipes this kiosk back to first launch: videos, config and setup-guide
  * progress. The app itself stays installed and cached for offline use.
+ * Resolves true once the kiosk was reset, false if cancelled or it failed;
+ * the caller then opens the setup guide at step 1.
  */
-async function resetKiosk(ctx: AppContext): Promise<void> {
+export async function resetKiosk(ctx: AppContext): Promise<boolean> {
   const config = ctx.config.get();
   const files = ctx.videos.files();
   const bytes = [...files.values()].reduce((sum, size) => sum + size, 0);
@@ -27,7 +29,7 @@ async function resetKiosk(ctx: AppContext): Promise<void> {
     confirmLabel: 'Reset everything',
     danger: true,
   });
-  if (!ok) return;
+  if (!ok) return false;
 
   try {
     await ctx.videos.clear();
@@ -35,11 +37,11 @@ async function resetKiosk(ctx: AppContext): Promise<void> {
   } catch (e) {
     log.error('Reset failed:', e);
     await messageDialog('Reset didn’t finish', ['Some data could not be deleted. Try again.', errorMessage(e)]);
-    return;
+    return false;
   }
   clearFlags();
   log.info('Kiosk reset to first launch.');
-  ctx.navigate('setup');
+  return true;
 }
 
 export function renderResetSection(ctx: AppContext): Section {
@@ -48,7 +50,7 @@ export function renderResetSection(ctx: AppContext): Section {
     { class: 'danger-zone', 'data-testid': 'reset-section' },
     h('h2', {}, 'Reset'),
     h('p', { class: 'hint' }, 'Remove all videos, tags, admin tags and settings from this kiosk, and start the setup guide again.'),
-    h('button', { type: 'button', class: 'danger', 'data-testid': 'reset-kiosk', onclick: () => void resetKiosk(ctx) }, 'Reset configuration'),
+    h('button', { type: 'button', class: 'danger', 'data-testid': 'reset-kiosk', onclick: async () => { if (await resetKiosk(ctx)) ctx.navigate('setup'); } }, 'Reset configuration'),
   );
   return { el, destroy: () => undefined };
 }

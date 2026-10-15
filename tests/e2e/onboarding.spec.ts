@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { copyFile, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ADMIN_UID, FIXTURES, LION_UID, scan, testConfig, waitForPlaying } from './helpers';
+import { ADMIN_UID, FIXTURES, LION_UID, clickDialogButton, scan, testConfig, waitForPlaying } from './helpers';
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
 const next = (page: Page) => page.getByTestId('onboarding-next').click();
@@ -235,4 +235,41 @@ test('reader step: keyboard mode offers a copyable ACR1552U HID mode command on 
   await expect(step(windows, 'reader')).toContainText('use ACS’s configuration tool');
   await expect(windows.getByTestId('hid-mode-copy')).toHaveCount(0);
   await windows.close();
+});
+
+test('reset in the guide wipes videos and config and starts again at step 1', async ({ page }) => {
+  await throughReader(page);
+  await page.getByTestId('option-new').click();
+  await page.getByTestId('onboarding-files-input').setInputFiles([`${FIXTURES}loop.mp4`, `${FIXTURES}lion.mp4`]);
+  await expect(step(page, 'pair')).toBeVisible();
+
+  // Reset sits to the left of Back.
+  const reset = page.getByTestId('onboarding-reset');
+  const resetBox = (await reset.boundingBox())!;
+  const backBox = (await page.getByTestId('onboarding-back').boundingBox())!;
+  expect(resetBox.x + resetBox.width).toBeLessThanOrEqual(backBox.x);
+
+  // Cancelling changes nothing.
+  await reset.click();
+  await expect(page.locator('dialog[open]')).toContainText('2 video file(s)');
+  await clickDialogButton(page, 'Cancel');
+  await expect(page.getByTestId('pair-table').locator('tr')).toHaveCount(2);
+
+  await reset.click();
+  await clickDialogButton(page, 'Reset everything');
+  await expect(step(page, 'install')).toContainText('Step 1 of 7');
+
+  const left = await page.evaluate(async () => {
+    const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('videos');
+    const names: string[] = [];
+    for await (const name of dir.keys()) names.push(name);
+    return names;
+  });
+  expect(left).toEqual([]);
+
+  // Nothing comes back after a reload: still at step 1, with an empty config.
+  await page.reload();
+  await expect(step(page, 'install')).toBeVisible();
+  await page.goto('./#/settings');
+  await expect(page.getByTestId('videos-section')).toContainText('No videos yet');
 });
