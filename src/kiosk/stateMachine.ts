@@ -1,5 +1,5 @@
 import { resolveScan, type CardIdentity } from '../config/ops';
-import { describeMatch, type Config } from '../config/schema';
+import { describeMatch, type CardMatch, type Config } from '../config/schema';
 
 export type KioskState = { kind: 'loop' } | { kind: 'feature'; fileName: string };
 
@@ -17,6 +17,8 @@ export type KioskEffect =
 export interface KioskContext {
   config: Config;
   hasFile: (fileName: string) => boolean;
+  /** What identifies video cards on this kiosk. */
+  cardKey: CardMatch['kind'];
 }
 
 export interface Transition {
@@ -38,7 +40,7 @@ export function transition(state: KioskState, event: KioskEvent, ctx: KioskConte
       return { state: { kind: 'loop' }, effects: [{ type: 'resumeLoop' }] };
 
     case 'scan': {
-      const match = resolveScan(ctx.config, event.card);
+      const match = resolveScan(ctx.config, event.card, ctx.cardKey);
       // Admin cards open settings from any state.
       if (match?.kind === 'admin') return { state, effects: [{ type: 'openSettings' }] };
       if (state.kind === 'feature' || !match) return { state, effects: [] };

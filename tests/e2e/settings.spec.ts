@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PUBLISHED_CONFIG_ENABLED } from '../../src/config/sync';
 import { readFile } from 'node:fs/promises';
-import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig } from './helpers';
+import { clickDialogButton, FIXTURES, importConfig, LION_UID, openSettings, scan, setUpKiosk, testAdminCardsV2, testCardsV2, testConfig, TIGER_UID } from './helpers';
 
 test('first run opens the setup guide', async ({ page }) => {
   await page.goto('./');
@@ -32,6 +32,41 @@ test('pair a new card, then reassign it', async ({ page }) => {
   await clickDialogButton(page, 'Reassign');
   await expect(row.getByRole('combobox')).toHaveValue('tiger.mp4');
   await expect(page.locator('[data-testid="cards-table"] tbody tr')).toHaveCount(1);
+});
+
+test('settings lists Card reader just above Diagnostics', async ({ page }) => {
+  await setUpKiosk(page);
+  const ids = await page.locator('[data-testid="settings"] > section').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
+  const reader = ids.indexOf('reader-section');
+  expect(reader).toBeGreaterThan(ids.indexOf('videos-section'));
+  expect(ids[reader + 1]).toBe('diagnostics-section');
+});
+
+test('quick pair from the Videos list, with reassign; the loop video cannot be paired', async ({ page }) => {
+  await setUpKiosk(page);
+  const row = (file: string) => page.locator(`[data-testid="videos-table"] tr[data-file="${file}"]`);
+  await expect(row('loop.mp4').getByTestId('quick-pair')).toBeDisabled();
+  await expect(row('lion.mp4').getByTestId('quick-pair')).toBeEnabled();
+
+  await row('lion.mp4').getByTestId('quick-pair').click();
+  await expect(page.getByTestId('quick-pair-dialog')).toBeVisible();
+  await expect(page.getByTestId('match-chooser')).toHaveCount(0);
+  await scan(page, '0A0B0C0D');
+  await expect(page.getByTestId('scan-status')).toContainText('Paired 0A 0B 0C 0D');
+  await expect(page.locator('[data-testid="cards-table"] tr[data-uid="0A0B0C0D"] select')).toHaveValue('lion.mp4');
+
+  // A card that plays another video is only moved after confirming.
+  await scan(page, TIGER_UID);
+  await expect(page.getByTestId('scan-status')).toContainText('tiger.mp4');
+  await clickDialogButton(page, 'Reassign');
+  await expect(page.getByTestId('scan-status')).toContainText('Paired');
+  await clickDialogButton(page, 'Done');
+  await expect(page.getByLabel(`Video for ${TIGER_UID}`)).toHaveValue('lion.mp4');
+
+  // Moving the loop to a video greys out its Pair button.
+  await row('tiger.mp4').getByRole('radio').check();
+  await expect(row('tiger.mp4').getByTestId('quick-pair')).toBeDisabled();
+  await expect(row('loop.mp4').getByTestId('quick-pair')).toBeEnabled();
 });
 
 test('admin cards reject video-card UIDs and vice versa', async ({ page }) => {

@@ -9,6 +9,7 @@ import { filePicker } from '../ui/filePicker';
 import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
 import { formatBytes } from '../videos/opfsStore';
 import { reactiveSection, type Section } from './section';
+import { quickPair } from './cards';
 import type { SettingsEnv } from './settingsView';
 
 export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
@@ -69,6 +70,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
 
     const rows = config.videos.map((v) => {
       const size = local.get(v.fileName);
+      const isLoop = config.loopVideo === v.fileName;
       const status =
         size === undefined
           ? h('span', { class: 'status bad' }, 'missing')
@@ -85,14 +87,31 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
             type: 'radio',
             name: 'loopVideo',
             'aria-label': `Use ${v.fileName} as loop video`,
-            checked: config.loopVideo === v.fileName,
+            checked: isLoop,
             onchange: () => void saveEdit(ctx, (c) => setLoopVideo(c, v.fileName)),
           }),
         ),
         h('td', { class: 'mono' }, v.fileName),
         h('td', {}, formatBytes(size ?? v.sizeBytes)),
         h('td', {}, status),
-        h('td', {}, h('button', { type: 'button', class: 'danger', disabled: busy, onclick: () => void deleteVideo(v.fileName) }, 'Delete')),
+        h(
+          'td',
+          { class: 'actions' },
+          h(
+            'button',
+            {
+              type: 'button',
+              'data-testid': 'quick-pair',
+              // The loop plays between cards, so no card can start it.
+              disabled: busy || isLoop,
+              title: isLoop ? 'The loop video plays between cards and can’t be paired' : null,
+              onclick: () => void quickPair(ctx, v.fileName),
+            },
+            'Pair',
+          ),
+          ' ',
+          h('button', { type: 'button', class: 'danger', disabled: busy, onclick: () => void deleteVideo(v.fileName) }, 'Delete'),
+        ),
       );
     });
 

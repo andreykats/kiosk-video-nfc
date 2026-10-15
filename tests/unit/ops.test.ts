@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAdminCard, cardsForVideo, findCard, ndefCardCount, pairCard, removeCard, removeVideo, resolveScan, scanMatches, setCardVideo, upsertVideo } from '../../src/config/ops';
+import { addAdminCard, cardMatch, cardsForVideo, checkPairing, findCard, pairCard, removeCard, removeVideo, resolveScan, scanMatches, setCardVideo, unrecognisedCardCount, upsertVideo } from '../../src/config/ops';
 import { emptyConfig, validateConfig } from '../../src/config/schema';
 
 describe('config ops', () => {
@@ -74,19 +74,30 @@ describe('matching scans to cards', () => {
     expect(scanMatches({ uid: '04A23B1C', ndefKey: null })).toEqual([{ kind: 'uid', value: '04A23B1C' }]);
   });
 
-  it('prefers the card ID over the UID', () => {
-    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: ID })).toMatchObject({ kind: 'video', entry: { fileName: 'tiger.mp4' } });
-    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: null })).toMatchObject({ kind: 'video', entry: { fileName: 'lion.mp4' } });
-    expect(resolveScan(config(), { uid: '11111111', ndefKey: ID })).toMatchObject({ kind: 'video', entry: { fileName: 'tiger.mp4' } });
+  it('identifies a card by the kiosk card key only', () => {
+    expect(cardMatch({ uid: '04A23B1C', ndefKey: ID }, 'uid')).toEqual({ kind: 'uid', value: '04A23B1C' });
+    expect(cardMatch({ uid: '04A23B1C', ndefKey: ID }, 'ndef')).toEqual({ kind: 'ndef', value: ID });
+    expect(cardMatch({ uid: '04A23B1C', ndefKey: null }, 'ndef')).toBeNull();
   });
 
-  it('falls back to the UID when the card ID is not paired', () => {
-    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: 'https://example.com/other' })).toMatchObject({ entry: { fileName: 'lion.mp4' } });
-    expect(resolveScan(config(), { uid: '11111111', ndefKey: null })).toBeNull();
+  it('plays video cards by the kiosk card key, never falling back to the other', () => {
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: ID }, 'ndef')).toMatchObject({ kind: 'video', entry: { fileName: 'tiger.mp4' } });
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: ID }, 'uid')).toMatchObject({ kind: 'video', entry: { fileName: 'lion.mp4' } });
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: 'https://example.com/other' }, 'ndef')).toBeNull();
+    expect(resolveScan(config(), { uid: '11111111', ndefKey: ID }, 'uid')).toBeNull();
+    expect(resolveScan(config(), { uid: '04A23B1C', ndefKey: null }, 'ndef')).toBeNull();
   });
 
-  it('lets an admin card win over a video card ID', () => {
-    expect(resolveScan(config(), { uid: 'ADADADAD', ndefKey: ID })).toMatchObject({ kind: 'admin' });
+  it('matches admin cards by UID whatever the card key, and lets them win over video cards', () => {
+    expect(resolveScan(config(), { uid: 'ADADADAD', ndefKey: ID }, 'ndef')).toMatchObject({ kind: 'admin' });
+    expect(resolveScan(config(), { uid: 'ADADADAD', ndefKey: null }, 'uid')).toMatchObject({ kind: 'admin' });
+  });
+
+  it('checks a scan before pairing it', () => {
+    expect(checkPairing(config(), { uid: 'ADADADAD', ndefKey: null }, 'uid')).toMatchObject({ kind: 'admin' });
+    expect(checkPairing(config(), { uid: '22222222', ndefKey: null }, 'ndef')).toEqual({ kind: 'no-card-id' });
+    expect(checkPairing(config(), { uid: '22222222', ndefKey: ID }, 'ndef')).toMatchObject({ kind: 'ok', match: { kind: 'ndef', value: ID }, existing: { fileName: 'tiger.mp4' } });
+    expect(checkPairing(config(), { uid: '22222222', ndefKey: ID }, 'uid')).toEqual({ kind: 'ok', match: { kind: 'uid', value: '22222222' }, existing: undefined });
   });
 
   it('edits and removes cards by match', () => {
@@ -98,7 +109,10 @@ describe('matching scans to cards', () => {
     expect(validateConfig(c).ok).toBe(true);
   });
 
-  it('counts cards that need the bridge', () => {
-    expect(ndefCardCount(config())).toBe(1);
+  it('counts cards a kiosk will not recognise', () => {
+    const c = addAdminCard(config(), { match: { kind: 'ndef', value: 'STAFF' }, label: '' });
+    expect(unrecognisedCardCount(c, 'uid', true)).toBe(1); // the card-ID video card
+    expect(unrecognisedCardCount(c, 'ndef', true)).toBe(1); // the UID video card
+    expect(unrecognisedCardCount(c, 'uid', false)).toBe(2); // plus the card-ID admin card, without the bridge
   });
 });

@@ -240,7 +240,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   const dispatch = (event: KioskEvent) => {
     if (disposed) return;
-    const next = transition(state, event, { config: ctx.config.get(), hasFile: (n) => ctx.videos.has(n) });
+    const next = transition(state, event, { config: ctx.config.get(), hasFile: (n) => ctx.videos.has(n), cardKey: ctx.scanner.cardKey });
     if (next.state.kind !== state.kind) watch.reset(performance.now());
     state = next.state;
     view.dataset.state = state.kind;

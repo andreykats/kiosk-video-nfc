@@ -96,6 +96,23 @@ describe('CardInput', () => {
     expect(saved).toEqual(['bridge', 'keyboard']);
   });
 
+  it('identifies cards by the chosen card key in bridge mode, and always by UID in keyboard mode', () => {
+    const keyboard = { scans: new Emitter<ScanEvent>(), destroy: vi.fn() };
+    const savedKeys: string[] = [];
+    const input = new CardInput({ keyboard, bridge: new BridgeScanner({ client: { WebSocket: new FakeBridge().WebSocket } }), mode: 'keyboard', saveMode: () => {}, cardKey: 'ndef', saveCardKey: (k) => savedKeys.push(k), queryPermission: async () => null });
+    let keyChanges = 0;
+    input.cardKeyChanged.subscribe(() => keyChanges++);
+    expect(input.cardKey).toBe('uid');
+    input.setMode('bridge');
+    expect(input.cardKey).toBe('ndef');
+    input.setCardKey('uid');
+    expect(input.cardKey).toBe('uid');
+    input.setMode('keyboard'); // still UID: no change
+    expect(keyChanges).toBe(2);
+    expect(savedKeys).toEqual(['uid']);
+    input.destroy();
+  });
+
   it('destroy closes the bridge and the keyboard listener', async () => {
     const { fake, input, keyboard } = setup('bridge');
     await tick();

@@ -26,7 +26,7 @@ export function openScanDialog<T>(
   return dialog;
 }
 
-export function scanMessage(dialog: DialogHandle<unknown>, text: string, kind: 'error' | 'info' = 'info'): void {
+export function scanMessage(dialog: DialogHandle<unknown>, text: string, kind: 'error' | 'info' | 'success' = 'info'): void {
   const status = dialog.body.querySelector<HTMLElement>('[data-testid="scan-status"]');
   if (!status) return;
   status.textContent = text;

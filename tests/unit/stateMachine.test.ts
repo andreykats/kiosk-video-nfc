@@ -16,7 +16,7 @@ const config: Config = {
   ],
   adminCards: [{ match: { kind: 'uid', value: 'ADADADAD' }, label: 'admin' }],
 };
-const ctx: KioskContext = { config, hasFile: (n) => n !== 'tiger.mp4' };
+const ctx: KioskContext = { config, hasFile: (n) => n !== 'tiger.mp4', cardKey: 'uid' };
 const playing = { kind: 'feature', fileName: 'lion.mp4' } as const;
 const scan = (uid: string, ndefKey: string | null = null) => ({ type: 'scan', card: { uid, ndefKey } }) as const;
 
@@ -52,9 +52,10 @@ describe('kiosk state machine', () => {
     expect(transition(initialKioskState, scan('11111111'), ctx)).toEqual({ state: initialKioskState, effects: [] });
   });
 
-  it('plays a card paired by card ID, and opens settings for an admin card ID', () => {
+  it('plays a card paired by card ID on a card-ID kiosk, and opens settings for an admin card ID', () => {
     const withIds: KioskContext = {
       ...ctx,
+      cardKey: 'ndef',
       config: {
         ...config,
         cards: [...config.cards, { match: { kind: 'ndef', value: 'https://topps.drey.dev/c/LION' }, fileName: 'lion.mp4', label: '' }],
@@ -63,6 +64,10 @@ describe('kiosk state machine', () => {
     };
     expect(transition(initialKioskState, scan('99999999', 'https://topps.drey.dev/c/LION'), withIds).effects).toEqual([{ type: 'playFeature', fileName: 'lion.mp4' }]);
     expect(transition(playing, scan('99999999', 'STAFF'), withIds).effects).toEqual([{ type: 'openSettings' }]);
+    // UID pairings don't play on a kiosk that identifies cards by card ID.
+    expect(transition(initialKioskState, scan('04A23B1C', 'https://example.com/other'), withIds).effects).toEqual([]);
+    // Nor card-ID pairings on a UID kiosk.
+    expect(transition(initialKioskState, scan('99999999', 'https://topps.drey.dev/c/LION'), { ...withIds, cardKey: 'uid' }).effects).toEqual([]);
   });
 
   it('warns but stays in the loop when the paired file is missing', () => {

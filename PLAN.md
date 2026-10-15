@@ -75,7 +75,7 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 - `sizeBytes` is used only to **warn** when a kiosk's local file size differs. It never blocks.
 - `label` on cards and admin cards, and `title` on videos, stay in the schema for compatibility, but the app no longer shows or edits them. New cards are saved with `label: ""`, and new videos get a title derived from the file name.
 - A `uid` match value is uppercase hex with no separators (see §6). An `ndef` match value (card ID) is 1–256 characters with no control characters. Each (kind, value) pair may appear at most once across `cards` and `adminCards`.
-- Scans resolve in this order: admin card by card ID, admin card by UID, video card by card ID, video card by UID (`resolveScan` in `src/config/ops.ts`).
+- Each kiosk has one **card identifier** (UID or NDEF card ID, stored per kiosk; keyboard mode is always UID). Scans resolve as: admin card by card ID or UID, then video card by the kiosk's card identifier only (`resolveScan` in `src/config/ops.ts`). Pairing uses the card identifier without asking; admin cards are always added by UID.
 - Every `cards[].fileName` and `loopVideo` must reference an entry in `videos`.
 - Write a `validateConfig(json): Result<Config, string[]>` function with clear error messages. Use it for published fetches, file imports and the IndexedDB load.
 - Include a `migrate()` hook keyed on `schemaVersion` so future versions can upgrade v1 configs.

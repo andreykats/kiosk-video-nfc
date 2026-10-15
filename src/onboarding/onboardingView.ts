@@ -2,7 +2,7 @@ import type { AppContext } from '../app/context';
 import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
-import { addAdminCard, cardsForVideo, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, scanMatches, useAsLoopInstead } from '../config/ops';
+import { addAdminCard, cardsForVideo, checkPairing, findAdminCard, findCard, pairCard, removeAdminCard, removeCard, scanMatches, useAsLoopInstead } from '../config/ops';
 import { emptyConfig, type CardMatch, type Config } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
@@ -10,7 +10,7 @@ import type { ScanEvent } from '../scan/scanEvent';
 import { formatMatch, formatUid } from '../scan/uid';
 import { installCallToAction } from '../settings/checklist';
 import { renderOfflineIndicator } from '../settings/diagnostics';
-import { matchAttrs } from '../settings/matchChooser';
+import { matchAttrs, pairingError, reassignText } from '../settings/pairing';
 import { readerControls } from '../settings/readerSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
@@ -406,24 +406,19 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
     view.rerender();
   };
 
-  // A card with a card ID is paired by it (any card written with the same ID
-  // plays the same video); Settings → Cards can pair by UID instead.
+  // Cards are identified by the kiosk's card key, chosen on the reader step.
   const unsubscribeScans = ctx.scanner.scans.subscribe((scan) => {
     if (!pairing || pairing.conflict) return;
-    const config = ctx.config.get();
-    const matches = scanMatches(scan);
-    const match = matches[0]!;
-    const admin = matches.map((m) => findAdminCard(config, m)).find((a) => a !== undefined);
-    const existing = findCard(config, match);
-    if (admin) {
-      pairing.message = { text: `${formatMatch(admin.match)} is an admin card. Use a different card.`, kind: 'error' };
-    } else if (existing?.fileName === pairing.fileName) {
-      pairing.message = { text: `${formatMatch(match)} already plays this video. Hold another card on the reader, or press Cancel.`, kind: 'info' };
-    } else if (existing) {
-      pairing.conflict = { match, otherFile: existing.fileName };
+    const check = checkPairing(ctx.config.get(), scan, ctx.scanner.cardKey);
+    if (check.kind !== 'ok') {
+      pairing.message = { text: pairingError(check), kind: 'error' };
+    } else if (check.existing?.fileName === pairing.fileName) {
+      pairing.message = { text: `${formatMatch(check.match)} already plays this video. Hold another card on the reader, or press Cancel.`, kind: 'info' };
+    } else if (check.existing) {
+      pairing.conflict = { match: check.match, otherFile: check.existing.fileName };
       pairing.message = null;
     } else {
-      void pair(match, pairing.fileName);
+      void pair(check.match, pairing.fileName);
       return;
     }
     view.rerender();
@@ -459,7 +454,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
       return h(
         'div',
         { class: 'pairing', 'data-testid': 'pair-conflict' },
-        h('p', {}, `${formatMatch(match)} plays “${otherFile}”. Use it for this video instead?${match.kind === 'ndef' ? ' This moves every card with this card ID.' : ''}`),
+        h('p', {}, `${reassignText(match, otherFile)} Use it for this video instead?`),
         h('button', { type: 'button', class: 'primary', onclick: () => void pair(match, fileName) }, 'Move card here'),
         ' ',
         cancel,

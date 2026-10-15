@@ -1,7 +1,7 @@
 import { Emitter } from '../app/emitter';
 import { BridgeScanner, usableReaders, type BridgeStatus } from './bridge/bridgeScanner';
 import { KeyboardScanner } from './keyboardScanner';
-import { readReaderMode, writeReaderMode, type ReaderMode } from './readerMode';
+import { readCardKey, readReaderMode, writeCardKey, writeReaderMode, type CardKey, type ReaderMode } from './readerMode';
 import type { ScanEvent } from './scanEvent';
 
 /** Chrome's "Apps on device" permission, which an https page needs to reach the bridge on 127.0.0.1. */
@@ -29,6 +29,8 @@ export interface CardInputDeps {
   bridge?: BridgeScanner;
   mode?: ReaderMode;
   saveMode?: (mode: ReaderMode) => void;
+  cardKey?: CardKey;
+  saveCardKey?: (key: CardKey) => void;
   queryPermission?: () => Promise<PermissionStatusLike | null>;
 }
 
@@ -39,13 +41,17 @@ export interface CardInputDeps {
  */
 export class CardInput {
   readonly scans = new Emitter<ScanEvent>();
-  /** Mode, permission or bridge status changed. */
+  /** Mode, card key, permission or bridge status changed. */
   readonly changed = new Emitter<void>();
+  /** The effective card key changed (also fires `changed`). */
+  readonly cardKeyChanged = new Emitter<void>();
   private mode_: ReaderMode;
+  private cardKey_: CardKey;
   private permission_: LoopbackPermission = 'unknown';
   private readonly keyboard: NonNullable<CardInputDeps['keyboard']>;
   private readonly bridge: BridgeScanner;
   private readonly saveMode: (mode: ReaderMode) => void;
+  private readonly saveCardKey: (key: CardKey) => void;
   private readonly unsubscribers: (() => void)[];
   private permissionStatus: PermissionStatusLike | null = null;
 
@@ -54,6 +60,8 @@ export class CardInput {
     this.bridge = deps.bridge ?? new BridgeScanner();
     this.mode_ = deps.mode ?? readReaderMode();
     this.saveMode = deps.saveMode ?? writeReaderMode;
+    this.cardKey_ = deps.cardKey ?? readCardKey();
+    this.saveCardKey = deps.saveCardKey ?? writeCardKey;
     this.unsubscribers = [
       this.keyboard.scans.subscribe((scan) => {
         if (this.mode_ === 'keyboard') this.scans.emit(scan);
@@ -69,6 +77,11 @@ export class CardInput {
 
   get mode(): ReaderMode {
     return this.mode_;
+  }
+
+  /** What identifies video cards on this kiosk. Keyboard mode only reads UIDs, so it's always the UID there. */
+  get cardKey(): CardKey {
+    return this.mode_ === 'keyboard' ? 'uid' : this.cardKey_;
   }
 
   get permission(): LoopbackPermission {
@@ -87,10 +100,22 @@ export class CardInput {
 
   setMode(mode: ReaderMode): void {
     if (mode === this.mode_) return;
+    const key = this.cardKey;
     this.mode_ = mode;
     this.saveMode(mode);
     this.apply();
     this.changed.emit();
+    if (this.cardKey !== key) this.cardKeyChanged.emit();
+  }
+
+  /** Kept even in keyboard mode, so it applies again when the kiosk switches back to the bridge. */
+  setCardKey(key: CardKey): void {
+    if (key === this.cardKey_) return;
+    const before = this.cardKey;
+    this.cardKey_ = key;
+    this.saveCardKey(key);
+    this.changed.emit();
+    if (this.cardKey !== before) this.cardKeyChanged.emit();
   }
 
   destroy(): void {

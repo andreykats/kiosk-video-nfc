@@ -3,6 +3,7 @@ import { log, logChanged } from '../app/log';
 import { formatUid } from '../scan/uid';
 import { formatBytes } from '../videos/opfsStore';
 import { h, replaceChildren } from '../ui/dom';
+import { CARD_KEY_LABELS } from './pairing';
 import { bridgeStatusText } from './readerSection';
 import { reactiveSection, type Section } from './section';
 
@@ -72,6 +73,7 @@ export function renderDiagnostics(ctx: AppContext): Section {
       ),
       row('Persisted', storage?.persisted == null ? 'unknown' : storage.persisted ? 'yes' : 'no — install the app to make storage persistent', 'diag-persisted'),
       row('Card reader', READER_MODE_TEXT[ctx.scanner.mode], 'diag-reader'),
+      row('Card identifier', CARD_KEY_LABELS[ctx.scanner.cardKey], 'diag-card-key'),
       ctx.scanner.mode === 'keyboard' ? null : row('Bridge app', bridgeStatusText(ctx), 'diag-bridge'),
       row(
         'Last scanned UID',

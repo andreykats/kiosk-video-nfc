@@ -28,23 +28,46 @@ export function scanMatches(card: CardIdentity): CardMatch[] {
   return card.ndefKey === null ? [uid] : [{ kind: 'ndef', value: card.ndefKey }, uid];
 }
 
+/**
+ * How a scanned card is identified as a video card on a kiosk that identifies
+ * cards by `key`. Null when the kiosk uses card IDs and this card has none.
+ */
+export function cardMatch(card: CardIdentity, key: CardMatch['kind']): CardMatch | null {
+  if (key === 'uid') return { kind: 'uid', value: card.uid };
+  return card.ndefKey === null ? null : { kind: 'ndef', value: card.ndefKey };
+}
+
 export type ResolvedScan = { kind: 'admin'; entry: AdminCardEntry } | { kind: 'video'; entry: CardEntry };
 
 /**
- * Admin cards win over video cards (an admin card must always open settings);
- * within each list the card ID wins over the UID.
+ * Admin cards win over video cards (an admin card must always open settings),
+ * and match by anything the scan carries. Video cards match only by the kiosk's
+ * card key.
  */
-export function resolveScan(config: Config, card: CardIdentity): ResolvedScan | null {
-  const matches = scanMatches(card);
-  for (const m of matches) {
+export function resolveScan(config: Config, card: CardIdentity, key: CardMatch['kind']): ResolvedScan | null {
+  for (const m of scanMatches(card)) {
     const entry = findAdminCard(config, m);
     if (entry) return { kind: 'admin', entry };
   }
-  for (const m of matches) {
-    const entry = findCard(config, m);
-    if (entry) return { kind: 'video', entry };
-  }
-  return null;
+  const match = cardMatch(card, key);
+  const entry = match && findCard(config, match);
+  return entry ? { kind: 'video', entry } : null;
+}
+
+/** Whether a scanned card can be paired as a video card, and what it's paired to already. */
+export type PairingCheck =
+  | { kind: 'admin'; entry: AdminCardEntry }
+  | { kind: 'no-card-id' }
+  | { kind: 'ok'; match: CardMatch; existing: CardEntry | undefined };
+
+export function checkPairing(config: Config, card: CardIdentity, key: CardMatch['kind']): PairingCheck {
+  const admin = scanMatches(card)
+    .map((m) => findAdminCard(config, m))
+    .find((a) => a !== undefined);
+  if (admin) return { kind: 'admin', entry: admin };
+  const match = cardMatch(card, key);
+  if (!match) return { kind: 'no-card-id' };
+  return { kind: 'ok', match, existing: findCard(config, match) };
 }
 
 export function findVideo(config: Config, fileName: string): VideoEntry | undefined {
@@ -122,7 +145,12 @@ export function removeAdminCard(config: Config, match: CardMatch): Config {
   return { ...config, adminCards: config.adminCards.filter((c) => !sameMatch(c.match, match)) };
 }
 
-/** Cards and admin cards recognised by card ID, which keyboard-mode kiosks can't read. */
-export function ndefCardCount(config: Config): number {
-  return [...config.cards, ...config.adminCards].filter((c) => c.match.kind === 'ndef').length;
+/**
+ * Cards a kiosk won't recognise: video cards paired by the other key, and,
+ * without the bridge, admin cards paired by card ID.
+ */
+export function unrecognisedCardCount(config: Config, key: CardMatch['kind'], readsCardIds: boolean): number {
+  const cards = config.cards.filter((c) => c.match.kind !== key).length;
+  const admins = readsCardIds ? 0 : config.adminCards.filter((c) => c.match.kind === 'ndef').length;
+  return cards + admins;
 }

@@ -1,8 +1,9 @@
 import type { AppContext } from '../app/context';
-import { ndefCardCount } from '../config/ops';
+import { unrecognisedCardCount } from '../config/ops';
 import { usableReaders } from '../scan/bridge/bridgeScanner';
-import { isReaderMode, type ReaderMode } from '../scan/readerMode';
+import { CARD_KEYS, isCardKey, isReaderMode, type ReaderMode } from '../scan/readerMode';
 import { h, replaceChildren } from '../ui/dom';
+import { CARD_KEY_LABELS } from './pairing';
 import { reactiveSection, type Section } from './section';
 
 export const BRIDGE_DOWNLOAD_URL = 'https://github.com/andreykats/nfc-browser-bridge/releases';
@@ -36,8 +37,9 @@ export function bridgeStatusText(ctx: AppContext): string {
 }
 
 /**
- * Mode select and bridge status. Choosing Bridge app connects straight away, so
- * Chrome's "Apps on device" prompt appears while staff are there to answer it.
+ * Mode select, card identifier and bridge status. Choosing Bridge app connects
+ * straight away, so Chrome's "Apps on device" prompt appears while staff are
+ * there to answer it.
  */
 export function readerControls(ctx: AppContext): Section {
   const el = h('div', { class: 'reader-controls', 'data-testid': 'reader-controls' });
@@ -53,9 +55,28 @@ export function readerControls(ctx: AppContext): Section {
       if (isReaderMode(select.value)) ctx.scanner.setMode(select.value);
     });
     const usesBridge = mode === 'bridge';
+    const cardKey = ctx.scanner.cardKey;
+    const keySelect = h(
+      'select',
+      { 'data-testid': 'card-key', 'aria-label': 'Card identifier', disabled: !usesBridge },
+      ...CARD_KEYS.map((k) => h('option', { value: k, selected: k === cardKey }, CARD_KEY_LABELS[k])),
+    );
+    keySelect.addEventListener('change', () => {
+      if (isCardKey(keySelect.value)) ctx.scanner.setCardKey(keySelect.value);
+    });
     replaceChildren(
       el,
       h('label', {}, 'Card reader input method: ', select),
+      h('label', {}, 'Card identifier: ', keySelect),
+      h(
+        'p',
+        { class: 'hint' },
+        !usesBridge
+          ? 'HID Keyboard readers only read the UID.'
+          : cardKey === 'ndef'
+            ? 'Cards are paired and played by the first URI or Text record on the card. Every card written with the same payload plays the same video.'
+            : 'Cards are paired and played by their UID. Each physical card is paired on its own.',
+      ),
       usesBridge
         ? h(
             'div',
@@ -80,14 +101,16 @@ export function renderReaderSection(ctx: AppContext): Section {
   const warn = reactiveSection(
     warning,
     () => {
-      const count = ndefCardCount(ctx.config.get());
+      const key = ctx.scanner.cardKey;
+      const count = unrecognisedCardCount(ctx.config.get(), key, ctx.scanner.mode === 'bridge');
+      const other = key === 'uid' ? CARD_KEY_LABELS.ndef : CARD_KEY_LABELS.uid;
       replaceChildren(
         warning,
-        ctx.scanner.mode === 'keyboard' && count > 0
+        count > 0
           ? h(
               'p',
-              { class: 'banner banner-warn', 'data-testid': 'reader-ndef-warning' },
-              `${count} card(s) are recognised by card ID, which needs the bridge app. They won’t work while this kiosk uses keyboard input.`,
+              { class: 'banner banner-warn', 'data-testid': 'reader-card-key-warning' },
+              `${count} card(s) in the config are identified by ${other}, so this kiosk won’t recognise them. It identifies cards by ${CARD_KEY_LABELS[key]}.`,
             )
           : null,
       );
