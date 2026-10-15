@@ -9,7 +9,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
    - **NFC Browser Bridge:** install the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge/releases) app first and turn on **Start at login** in its menu. The reader stays in its factory CCID mode.
 2. In Google Chrome, **while online**, open `<url>`. The **setup guide** opens and shows one step at a time:
    1. **Install the Topps Kiosk.** Use the **Install app** button. If there's no button, click the install icon at the right of the address bar, or open Chrome menu ⋮ → Cast, save, and share → Install page as app…. Chrome may only offer to install after you've clicked the page and spent about 30 seconds on it. Chrome then opens the app in its own window, and the guide carries on there.
-   2. **Connect the NFC reader.** Choose the **Card reader input method**: **HID Keyboard** or **NFC Browser Bridge**. For the bridge, choose **Allow** when Chrome asks about **Apps on device**, and pick the **Card identifier**: **NDEF payload** or **UID**. Then hold any card on the reader and check that the guide shows "Reader is working" (with its card ID, if it has one).
+   2. **Connect the NFC reader.** Choose the **Card reader input method**: **HID Keyboard** or **NFC Browser Bridge**. For the bridge, choose **Allow** when Chrome asks about **Apps on device**, and pick the **Card identifier**: **UID** (the default) or **NDEF payload**. Then hold any card on the reader and check that the guide shows "Reader is working" (with its card ID, if it has one).
    3. **Import configuration.**
       - On the first kiosk, choose **Start a new config**.
       - On every other kiosk, choose **Import a config file** and pick the `config.json` exported from the first kiosk.

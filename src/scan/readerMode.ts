@@ -22,8 +22,7 @@ export const CARD_KEYS: readonly CardKey[] = ['uid', 'ndef'];
 const MODE_KEY = 'kiosk.readerMode';
 const DEFAULT_MODE: ReaderMode = 'keyboard';
 const CARD_KEY_KEY = 'kiosk.cardKey';
-/** Bridge kiosks paired by card ID before this was a setting. */
-const DEFAULT_CARD_KEY: CardKey = 'ndef';
+const DEFAULT_CARD_KEY: CardKey = 'uid';
 
 export function isReaderMode(value: unknown): value is ReaderMode {
   return typeof value === 'string' && (READER_MODES as readonly string[]).includes(value);

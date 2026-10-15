@@ -84,7 +84,7 @@ Staff choose the **Card reader input method** and the **Card identifier** in Set
 | Mode | When to use it |
 |---|---|
 | **HID Keyboard** (default) | No software can be installed on the kiosk. Cards are matched by UID only. |
-| **NFC Browser Bridge** | The bridge app is installed. Cards are matched by the kiosk's card identifier: NDEF payload (the default) or UID. If the bridge app or the reader is missing, the kiosk screen says so. |
+| **NFC Browser Bridge** | The bridge app is installed. Cards are matched by the kiosk's card identifier: UID (the default) or NDEF payload. If the bridge app or the reader is missing, the kiosk screen says so. |
 
 ### NFC Browser Bridge
 

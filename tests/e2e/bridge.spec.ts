@@ -46,8 +46,9 @@ test('bridge mode: pair a tag by its tag ID, then tapping any tag with that ID p
   await expect(page.getByTestId('bridge-status')).toHaveAttribute('data-state', 'connected');
   await expect(page.getByTestId('bridge-status')).toContainText(READER);
 
-  // Bridge kiosks identify cards by NDEF payload unless staff choose UID.
-  await expect(page.getByTestId('card-key')).toHaveValue('ndef');
+  // Bridge kiosks identify tags by UID unless staff choose NDEF payload.
+  await expect(page.getByTestId('card-key')).toHaveValue('uid');
+  await page.getByTestId('card-key').selectOption('ndef');
   await page.getByRole('button', { name: 'Pair new tag' }).click();
   fake.placeCard(READER, ntag().withNdef([uriRecord(CARD_ID)]));
   await expect(page.getByTestId('match-chooser')).toHaveCount(0);
@@ -68,7 +69,8 @@ test('bridge mode: tags play by the kiosk tag identifier only, and keyboard scan
   const { fake } = await useFakeBridge(page);
   await setUpKiosk(page);
   await setReaderMode(page, 'bridge');
-  // The config's cards are paired by UID, which this kiosk doesn't use yet.
+  await page.getByTestId('card-key').selectOption('ndef');
+  // The config's cards are paired by UID, which this kiosk doesn't use now.
   await expect(page.getByTestId('reader-card-key-warning')).toContainText('2 tag(s)');
   await expect(page.getByTestId('card-unused')).toHaveCount(2);
   await page.getByTestId('back-to-kiosk').click();
@@ -96,6 +98,7 @@ test('quick pair rejects a tag without an NDEF payload on an NDEF kiosk', async 
   const { fake } = await useFakeBridge(page);
   await setUpKiosk(page);
   await setReaderMode(page, 'bridge');
+  await page.getByTestId('card-key').selectOption('ndef');
   await expect(page.getByTestId('bridge-status')).toHaveAttribute('data-state', 'connected');
   await page.locator('[data-testid="videos-table"] tr[data-file="tiger.mp4"]').getByTestId('quick-pair').click();
   await tap(page, fake, ntag());
@@ -109,6 +112,7 @@ test('admin tags are added by UID even on an NDEF kiosk, and open settings', asy
   const { fake } = await useFakeBridge(page);
   await setUpKiosk(page);
   await setReaderMode(page, 'bridge');
+  await page.getByTestId('card-key').selectOption('ndef');
   await expect(page.getByTestId('bridge-status')).toHaveAttribute('data-state', 'connected');
 
   const staff = ntag().withNdef([textRecord('STAFF')]);
@@ -158,7 +162,7 @@ test('keyboard mode never opens a connection to the bridge, and the mode and tag
   await expect(page.getByTestId('card-key')).toBeDisabled();
   await expect(page.getByTestId('card-key')).toHaveValue('uid');
   // Reader setup is manual: only HID Keyboard and the bridge are offered.
-  await expect(page.getByTestId('reader-mode').locator('option')).toHaveText(['HID Keyboard (Read tag’s UID only)', 'NFC Browser Bridge (Read tag’s NDEF payload)']);
+  await expect(page.getByTestId('reader-mode').locator('option')).toHaveText(['HID Keyboard (Read tag’s UID only)', 'NFC Browser Bridge (Read tag’s UID or NDEF payload)']);
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
   await scan(page, LION_UID);
@@ -168,10 +172,12 @@ test('keyboard mode never opens a connection to the bridge, and the mode and tag
   await openSettings(page);
   await setReaderMode(page, 'bridge');
   await expect(page.getByTestId('bridge-status')).toHaveAttribute('data-state', 'connected');
-  await page.getByTestId('card-key').selectOption('uid');
+  // UID is the default in bridge mode too.
+  await expect(page.getByTestId('card-key')).toHaveValue('uid');
+  await page.getByTestId('card-key').selectOption('ndef');
   await page.reload();
   await expect(page.getByTestId('reader-mode')).toHaveValue('bridge');
-  await expect(page.getByTestId('card-key')).toHaveValue('uid');
+  await expect(page.getByTestId('card-key')).toHaveValue('ndef');
 });
 
 test('diagnostics show the tag ID and records of the last bridge scan', async ({ page }) => {

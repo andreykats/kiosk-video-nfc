@@ -20,7 +20,7 @@ export function bridgeDownloadUrl(platform = navigator.platform): string {
 
 const MODE_LABELS: Record<ReaderMode, string> = {
   keyboard: 'HID Keyboard (Read tag’s UID only)',
-  bridge: 'NFC Browser Bridge (Read tag’s NDEF payload)',
+  bridge: 'NFC Browser Bridge (Read tag’s UID or NDEF payload)',
 };
 
 /** One line describing the bridge connection, for settings and diagnostics. */
