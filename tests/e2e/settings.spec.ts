@@ -193,6 +193,39 @@ test('the NDEF column lines up in the Tags and Admin tags tables', async ({ page
   expect(Math.abs((await x('cards-table')) - (await x('admin-list')))).toBeLessThan(1);
 });
 
+test('settings widens to keep long tag IDs on one line, and wraps them instead of scrolling sideways when the window is narrow', async ({ page, browser, baseURL }) => {
+  const settingsWidth = async (p: typeof page) => (await p.getByTestId('settings').boundingBox())!.width;
+  // Short strings: the usual width (70rem), even in a wide window.
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await setUpKiosk(page);
+  expect(await settingsWidth(page)).toBeLessThan(1200);
+
+  // A fresh kiosk whose tag has a long NDEF payload.
+  const LONG = 'https://topps.drey.dev/c/2026-series-one-chrome-refractor-autograph-LION-0001-of-0250';
+  const context = await browser.newContext({ baseURL, viewport: { width: 1920, height: 900 } });
+  const wide = await context.newPage();
+  await openSettings(wide);
+  const v = (fileName: string) => ({ fileName, title: '', sizeBytes: 0 });
+  await importConfig(wide, {
+    schemaVersion: 2,
+    updatedAt: null,
+    loopVideo: 'loop.mp4',
+    videos: [v('loop.mp4'), v('lion.mp4'), v('tiger.mp4')],
+    cards: [{ match: { kind: 'uid', value: LION_UID }, fileName: 'lion.mp4', label: '', otherId: { kind: 'ndef', value: LONG } }],
+    adminCards: [],
+  });
+  const ndef = wide.locator(`[data-testid="cards-table"] tr[data-uid="${LION_UID}"] [data-col="ndef"] .mono`);
+  await expect(ndef).toHaveText(LONG);
+  const oneLine = (await wide.getByTestId('cards-table').locator('th').first().boundingBox())!.height;
+  expect((await ndef.boundingBox())!.height).toBeLessThan(oneLine * 1.5);
+  expect(await settingsWidth(wide)).toBeGreaterThan(1200);
+
+  await wide.setViewportSize({ width: 900, height: 900 });
+  expect((await ndef.boundingBox())!.height).toBeGreaterThan(oneLine * 1.5);
+  expect(await wide.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(900);
+  await context.close();
+});
+
 test('export → import round-trip', async ({ page }) => {
   await setUpKiosk(page);
   const downloadPromise = page.waitForEvent('download');

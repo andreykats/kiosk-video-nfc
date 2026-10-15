@@ -28,7 +28,15 @@ html, body { margin: 0; height: 100%; background: #000; color: var(--text); }
 
 /* Settings */
 html[data-route='settings'], html[data-route='settings'] body { background: var(--bg); }
-.settings { max-width: 70rem; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
+/*
+ * Settings grows to fit its widest table row on one line, up to the window
+ * width. Prose is left out of that width (contain: inline-size), so it wraps to
+ * whatever width the tables need instead of stretching the page. In a narrow
+ * window, table cells wrap long strings rather than scroll sideways.
+ */
+.settings { box-sizing: border-box; width: fit-content; min-width: min(70rem, 100%); max-width: 100%; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
+.settings :is(p, li, dd, .banner, .log) { contain: inline-size; }
+.settings td { overflow-wrap: anywhere; }
 .settings section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
 .settings h1 { font-size: 1.3rem; margin: 0; flex: 1; }
 .settings h2 { font-size: 1.1rem; margin: 0 0 0.75rem; }
@@ -55,9 +63,10 @@ th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var
 th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
 .mono { font-family: ui-monospace, 'SF Mono', Consolas, monospace; }
 .uid, .chip, .actions { white-space: nowrap; }
-td.col-uid { width: 30%; }
+/* Fixed, not %: a percentage cell width inflates the table's natural width, and settings sizes to that. */
+td.col-uid { width: 15rem; }
 /* Row buttons (Pair, Delete, Remove) line up at the right edge. */
-td.actions { text-align: right; width: 1%; }
+td.actions { text-align: right; width: 1px; }
 .push-right { margin-left: auto; }
 .hint { color: var(--muted); font-size: 0.9rem; }
 .status.good, .good { color: var(--good); }

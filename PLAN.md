@@ -188,6 +188,8 @@ v1 configs (`{ "uid": … }` on each card) are upgraded on load and import.
 
 Sections, each a plain TS module rendering DOM:
 
+Layout: the page is at least 70rem wide and grows to fit its widest table row on one line, up to the window width (`width: fit-content`). Prose is left out of that width (`contain: inline-size`) and wraps instead. In a narrower window, table cells wrap long strings (`overflow-wrap: anywhere`) so the page never scrolls sideways. Table column widths must be fixed lengths, not percentages: a percentage cell width inflates the table's natural width.
+
 1. **Header:** "Back to kiosk" button, app version (injected from `package.json` via Vite `define`). No online/offline indicator (removed at the user's request).
 2. **Videos:**
    - Table showing file name, size, status (present / missing / size mismatch), **Tags** (how many tag pairings play the video; an NDEF pairing counts once however many physical tags share its ID) and **Plays**. There's no title column: the file name is the only name shown for a video, here, in the card dropdowns and in the setup guide.
