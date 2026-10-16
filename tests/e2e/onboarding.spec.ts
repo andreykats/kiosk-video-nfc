@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { copyFile, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { FakeBridge } from '../../src/scan/bridge/vendor/fakeBridge';
+import { DEFAULT_URL } from '../../src/scan/bridge/vendor/protocol';
 import { ADMIN_UID, FIXTURES, LION_UID, clickDialogButton, openSettings, scan, setUpKiosk, testConfig, waitForPlaying } from './helpers';
 
 const step = (page: Page, id: string) => page.getByTestId(`step-${id}`);
@@ -254,6 +256,47 @@ test('reader step: keyboard mode offers a copyable ACR1552U HID mode command on 
   await expect(step(windows, 'reader')).toContainText('use ACS’s configuration tool');
   await expect(windows.getByTestId('hid-mode-copy')).toHaveCount(0);
   await windows.close();
+});
+
+test('reader step: bridge mode on a Mac explains allowing the unsigned bridge app, until it connects', async ({ page }) => {
+  // No bridge at first: every connection attempt is refused.
+  let bridge: FakeBridge | null = null;
+  await page.routeWebSocket(DEFAULT_URL, (ws) => {
+    if (!bridge) return void ws.close();
+    const socket = new bridge.WebSocket(DEFAULT_URL);
+    socket.onmessage = (ev) => ws.send(String(ev.data));
+    socket.onclose = () => ws.close();
+    ws.onMessage((message) => socket.send(String(message)));
+    ws.onClose(() => socket.close());
+  });
+  await fakePlatform(page, 'MacIntel');
+  await page.goto('./');
+  await next(page);
+  await expect(step(page, 'reader')).toBeVisible();
+  const help = page.getByTestId('bridge-install-help');
+  await expect(help).toHaveCount(0);
+
+  await page.getByTestId('reader-mode').selectOption('bridge');
+  await expect(page.getByTestId('bridge-download')).toBeVisible();
+  await expect(help).toContainText('could not be verified');
+  await expect(help).toContainText('Privacy & Security');
+  await expect(help).toContainText('Open Anyway');
+
+  // The app starts: the page reconnects by itself and the steps go away.
+  bridge = new FakeBridge();
+  bridge.addReader('ACS ACR1552U');
+  await expect(page.getByTestId('bridge-status')).toHaveAttribute('data-state', 'connected', { timeout: 15_000 });
+  await expect(help).toHaveCount(0);
+});
+
+test('reader step: bridge mode on Windows has no macOS steps', async ({ page }) => {
+  await page.routeWebSocket(DEFAULT_URL, (ws) => ws.close());
+  await fakePlatform(page, 'Win32');
+  await page.goto('./');
+  await next(page);
+  await page.getByTestId('reader-mode').selectOption('bridge');
+  await expect(page.getByTestId('bridge-download')).toBeVisible();
+  await expect(page.getByTestId('bridge-install-help')).toHaveCount(0);
 });
 
 test('reset in the guide wipes videos and config and starts again at step 1', async ({ page }) => {

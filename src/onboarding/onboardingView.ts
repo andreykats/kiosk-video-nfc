@@ -199,6 +199,30 @@ function hidModeHelp(): HTMLElement {
   );
 }
 
+/**
+ * The bridge app isn't signed by Apple, so macOS blocks its first launch (and the
+ * first launch after each update) until it's allowed in Privacy & Security.
+ */
+function bridgeInstallHelp(): HTMLElement | null {
+  if (!navigator.platform.startsWith('Mac')) return null;
+  return h(
+    'div',
+    { class: 'bridge-install-help', 'data-testid': 'bridge-install-help' },
+    p('After downloading the bridge app on this Mac:', 'hint'),
+    h(
+      'ol',
+      { class: 'hint' },
+      h('li', {}, 'Open the downloaded NFC-Browser-Bridge-macos.dmg and drag NFC Browser Bridge to Applications.'),
+      h('li', {}, 'Open NFC Browser Bridge from Applications. macOS says it “could not be verified”: close that message. Don’t move it to the Trash.'),
+      h('li', {}, 'Open System Settings (Apple menu → System Settings) and click Privacy & Security in the sidebar.'),
+      h('li', {}, 'Scroll down to the Security section. Next to the message about NFC Browser Bridge, click Open Anyway.'),
+      h('li', {}, 'Type this Mac’s password if asked, and click Open Anyway again to confirm.'),
+      h('li', {}, 'The NFC Browser Bridge icon appears in the menu bar, and this page connects to it by itself.'),
+    ),
+    p('Open Anyway only shows for about an hour after macOS blocks the app. If it’s gone, open the app again first. This repeats after every update of the bridge app.', 'hint'),
+  );
+}
+
 function readerStep(ctx: AppContext, nav: Nav): StepView {
   let scanned: ScanEvent | null = null;
   const done = () => {
@@ -219,6 +243,7 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
           body: [
             p('Plug the NFC reader into a USB port. Choose how this kiosk reads tags, then hold any tag on the reader.'),
             controls.el,
+            ctx.scanner.mode === 'bridge' && ctx.scanner.bridgeStatus.state !== 'connected' ? bridgeInstallHelp() : null,
             scanned
               ? h('p', { class: 'success', 'data-testid': 'reader-status' }, 'Reader is working ✓')
               : h('p', { class: 'waiting', 'data-testid': 'reader-status' }, 'Waiting for a tag…'),
