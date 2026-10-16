@@ -41,7 +41,8 @@ html[data-route='settings'], html[data-route='settings'] body { background: var(
  * window, table cells wrap long strings rather than scroll sideways.
  */
 .settings { box-sizing: border-box; width: fit-content; min-width: min(70rem, 100%); max-width: 100%; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
-.settings :is(p, li, dd, .banner, .log) { contain: inline-size; }
+/* Not inline badges (span.banner): with no width of their own they'd wrap after every word. */
+.settings :is(p, li, dd, div.banner, .log) { contain: inline-size; }
 .settings td { overflow-wrap: anywhere; }
 .settings section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; }
 .settings h1 { font-size: 1.3rem; margin: 0; flex: 1; }
