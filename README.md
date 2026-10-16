@@ -51,11 +51,13 @@ Step 7 of the setup guide (**Open the kiosk at startup**) shows the command for 
 "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart
 ```
 
-**macOS:** run this in Terminal as the kiosk's user. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run`, `--uninstall` and `--url` are explained in `--help`):
+**macOS:** run this in Terminal as the kiosk's user. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run` and `--url` are explained in `--help`):
 
 ```
 curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
 ```
+
+It saves what it changed, so [public/mac-kiosk-autostart-uninstall.sh](public/mac-kiosk-autostart-uninstall.sh) can put it back. Once the kiosk has opened at startup, Settings → **Open at startup** shows the command to run it. That script opens the kiosk with `?autostart=removed` when it's done, so the app forgets the launch and shows the setup steps again.
 
 Chrome only applies the flags when it isn't already running, so the script makes sure Chrome doesn't open by itself at login.
 

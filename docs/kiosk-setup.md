@@ -60,7 +60,12 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
   - It removes Google Chrome from Login Items and turns off "Reopen windows when logging back in". The flags only take effect if Chrome isn't already running.
   - It turns on automatic login for that user. It asks for the user's password, then for an admin password. FileVault must be off; if it's on, the script says so and skips this step.
 
-  Add `-s -- --dry-run` after `bash` to see what it would change, `-s -- --uninstall` to undo it, or `-s -- --url <url>` for a different address. Restart the Mac to check it.
+  Add `-s -- --dry-run` after `bash` to see what it would change, or `-s -- --url <url>` for a different address. Restart the Mac to check it.
+- To undo it, run the command under **Stop opening at startup** in Settings → **Open at startup** (it shows once the kiosk has opened at startup):
+  ```
+  curl -fsSL https://topps.drey.dev/mac-kiosk-autostart-uninstall.sh | bash
+  ```
+  It removes the LaunchAgent and puts Login Items, "Reopen windows" and automatic login back to how they were before the setup script ran (it asks for an admin password to turn automatic login off). Then it opens the kiosk in Chrome with `?autostart=removed`, so the settings checklist shows **Opens at startup** as not done again. Close that tab.
 - Nightly restart: macOS can't schedule a restart, so schedule a shutdown and a power-on instead (desktop Macs only):
   ```
   sudo pmset repeat shutdown MTWRFSU 04:00:00 poweron MTWRFSU 04:05:00

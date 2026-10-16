@@ -3,7 +3,7 @@ import { checkAppCached, computeOfflineReadiness, type Readiness } from '../pwa/
 import type { InstallManager } from '../pwa/install';
 import type { ServiceWorkerManager } from '../pwa/sw';
 import { storageInfo, type StorageInfo, type VideoStore } from '../videos/opfsStore';
-import { lastAutostartLaunch } from './autostart';
+import { lastAutostartLaunch, onAutostartChange } from './autostart';
 import { Emitter } from './emitter';
 import { log } from './log';
 
@@ -73,6 +73,7 @@ export class ReadinessMonitor {
     videos.changed.subscribe(trigger);
     sw.changed.subscribe(trigger);
     install.changed.subscribe(trigger);
+    onAutostartChange(trigger);
     navigator.serviceWorker?.ready.then(trigger).catch(() => undefined);
   }
 

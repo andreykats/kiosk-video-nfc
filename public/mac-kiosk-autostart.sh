@@ -11,9 +11,10 @@ set -euo pipefail
 
 LABEL="dev.drey.topps-kiosk"
 AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
+# What this script changed, so mac-kiosk-autostart-uninstall.sh can put it back.
+STATE="$HOME/Library/Application Support/$LABEL/install-state"
 URL="https://topps.drey.dev/"
 DRY_RUN=0
-UNINSTALL=0
 KIOSK_USER="$(id -un)"
 
 say()  { printf '%s\n' "$*"; }
@@ -22,17 +23,18 @@ die()  { printf 'Error: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Usage: mac-kiosk-autostart.sh [--url <https-url>] [--dry-run] [--uninstall]
+Usage: mac-kiosk-autostart.sh [--url <https-url>] [--dry-run]
 
   --url <url>   Page to open (default https://topps.drey.dev/)
   --dry-run     Show what would change without changing anything
-  --uninstall   Stop opening the kiosk at login
 
 Sets up:
   - a LaunchAgent that opens Chrome in kiosk mode at login
   - Google Chrome removed from Login Items, and "Reopen windows" off,
     so Chrome isn't already running when the kiosk command runs
   - automatic login for this user (asks for passwords; needs FileVault off)
+
+It saves what was set before, so mac-kiosk-autostart-uninstall.sh can undo it.
 EOF
 }
 
@@ -40,7 +42,6 @@ while (($#)); do
   case "$1" in
     --url) [[ $# -ge 2 ]] || die "--url needs a value"; URL="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
-    --uninstall) UNINSTALL=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option: $1 (see --help)" ;;
   esac
@@ -54,6 +55,30 @@ done
 if [[ "$URL" == *\?* ]]; then LAUNCH_URL="$URL&autostart"; else LAUNCH_URL="$URL?autostart"; fi
 
 has_tty() { { : </dev/tty; } 2>/dev/null; }
+
+# The state file has one key=value per line. It's read line by line, never sourced.
+state_get() {
+  local line
+  [[ -f "$STATE" ]] || return 1
+  while IFS= read -r line; do
+    [[ "${line%%=*}" == "$1" ]] && { printf '%s' "${line#*=}"; return 0; }
+  done <"$STATE"
+  return 1
+}
+
+state_set() {
+  local tmp
+  [[ "$2" != *$'\n'* ]] || die "can't save a value with a line break for $1"
+  ((DRY_RUN)) && return
+  mkdir -p "$(dirname "$STATE")"
+  tmp="$(mktemp -t topps-kiosk)"
+  if [[ -f "$STATE" ]]; then grep -v "^$1=" "$STATE" >"$tmp" || true; fi
+  printf '%s=%s\n' "$1" "$2" >>"$tmp"
+  mv "$tmp" "$STATE"
+}
+
+# Keeps the first value: a second run mustn't save this script's own change as the one to restore.
+state_set_once() { state_get "$1" >/dev/null || state_set "$1" "$2"; }
 
 write_agent() {
   local tmp arg
@@ -86,8 +111,17 @@ remove_chrome_login_item() {
     say "Would remove Google Chrome from Login Items"
     return
   fi
+  local path
   # Needs permission for this terminal to control System Events; macOS asks once.
-  if osascript -e 'tell application "System Events" to delete (every login item whose name is "Google Chrome")' >/dev/null 2>&1; then
+  # Prints the removed item's path, or nothing if Chrome wasn't a login item.
+  if path="$(osascript -e 'tell application "System Events"
+      set found to every login item whose name is "Google Chrome"
+      if found is {} then return ""
+      set p to path of item 1 of found
+      delete (every login item whose name is "Google Chrome")
+      return p
+    end tell' 2>/dev/null)"; then
+    [[ -z "$path" ]] || state_set_once chrome_login_item "$path"
     say "✓ Google Chrome is not in Login Items"
   else
     warn "couldn't check Login Items. Remove Google Chrome from System Settings → General → Login Items by hand, if it's there."
@@ -99,6 +133,13 @@ disable_reopen_windows() {
     say "Would turn off \"Reopen windows when logging back in\""
     return
   fi
+  local before
+  case "$(defaults read com.apple.loginwindow TALLogoutSavesState 2>/dev/null || true)" in
+    1) before=true ;;
+    0) before=false ;;
+    *) before=unset ;;
+  esac
+  state_set_once reopen_windows "$before"
   defaults write com.apple.loginwindow TALLogoutSavesState -bool false
   say "✓ \"Reopen windows when logging back in\" is off"
 }
@@ -133,34 +174,19 @@ enable_autologin() {
   say "Turning on automatic login (sudo asks for an admin password)…"
   if sudo sysadminctl -autologin set -userName "$KIOSK_USER" -password "$pw" </dev/tty \
      && [[ "$(defaults read /Library/Preferences/com.apple.loginwindow autoLoginUser 2>/dev/null || true)" == "$KIOSK_USER" ]]; then
+    state_set_once autologin "$current"
     say "✓ Automatic login is on for $KIOSK_USER"
   else
     warn "couldn't turn on automatic login. Turn it on in System Settings → Users & Groups (needs an admin)."
   fi
 }
 
-uninstall() {
-  if [[ ! -e "$AGENT" ]]; then
-    say "Nothing to remove: $AGENT doesn't exist."
-  elif ((DRY_RUN)); then
-    say "Would remove $AGENT"
-  else
-    launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
-    rm -f "$AGENT"
-    say "✓ Removed $AGENT. The kiosk no longer opens at login."
-  fi
-  say "Automatic login was left as it is. To turn it off: sudo sysadminctl -autologin off"
-}
-
-if ((UNINSTALL)); then
-  uninstall
-  exit 0
-fi
 
 [[ -d "/Applications/Google Chrome.app" || -d "$HOME/Applications/Google Chrome.app" ]] \
   || die "Google Chrome isn't installed in /Applications. Install it and finish the kiosk setup guide first."
 
 ((DRY_RUN)) && say "Dry run: nothing will be changed."
+state_set launch_url "$LAUNCH_URL"
 write_agent
 remove_chrome_login_item
 disable_reopen_windows
@@ -170,5 +196,5 @@ if ((!DRY_RUN)); then
   say ""
   say "Done. Restart the Mac to check: after login, Chrome should open $URL fullscreen."
   say "If macOS shows \"Background Items Added\", leave it allowed (System Settings → General → Login Items)."
-  say "To exit kiosk mode press Cmd+Q. To undo: run this script with --uninstall."
+  say "To exit kiosk mode press Cmd+Q. To undo this, Settings → Open at startup shows the command."
 fi

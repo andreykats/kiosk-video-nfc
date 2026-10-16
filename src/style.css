@@ -121,7 +121,7 @@ span.banner { display: inline-block; margin: 0; padding: 0.2rem 0.5rem; }
 .orphans ul { list-style: none; padding: 0; }
 .orphans li { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); }
 
-.fatal { padding: 2rem; color: var(--text); }
+.fatal, .notice { padding: 2rem; color: var(--text); }
 
 /* First-launch setup guide: one centred card per step */
 html[data-route='setup'], html[data-route='setup'] body { background: var(--bg); }

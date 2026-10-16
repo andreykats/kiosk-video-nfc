@@ -358,4 +358,22 @@ test('a launch by the startup command turns Opens at startup green, in the check
   await expect(item).toHaveClass(/done/);
   await expect(section.getByTestId('autostart-status')).toContainText('This computer opened the kiosk at startup ✓');
   await expect(section.getByTestId('mac-autostart')).toHaveCount(0);
+
+  // Now it shows how to undo it: the uninstall script, which tells the kiosk with ?autostart=removed.
+  const uninstallUrl = new URL('mac-kiosk-autostart-uninstall.sh', page.url()).href;
+  await expect(section.getByTestId('mac-autostart-uninstall-command')).toHaveText(`curl -fsSL ${uninstallUrl} | bash`);
+  const script = await (await page.request.get(uninstallUrl)).text();
+  expect(script).toMatch(/^#!\/bin\/bash\n/);
+  expect(script).toContain('autostart=removed');
+
+  // The tab the script opens forgets the launch without starting a second kiosk, and the open settings follow.
+  const removed = await page.context().newPage();
+  await removed.goto('./?autostart=removed');
+  await expect(removed.getByTestId('autostart-removed')).toContainText('The kiosk no longer opens at startup');
+  await expect(removed.getByTestId('loop-video')).toHaveCount(0);
+  expect(new URL(removed.url()).search).toBe('');
+  await expect(item).toHaveClass(/todo/);
+  await expect(section.getByTestId('autostart-status')).toHaveCount(0);
+  await expect(section.getByTestId('mac-autostart-uninstall')).toHaveCount(0);
+  await expect(section.getByTestId('mac-autostart-command')).toBeVisible();
 });

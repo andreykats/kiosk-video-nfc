@@ -1,6 +1,6 @@
 import './style.css';
 import { isSettingsShortcut } from './admin/access';
-import { recordAutostartLaunch } from './app/autostart';
+import { readAutostartMarker } from './app/autostart';
 import type { AppContext, Route } from './app/context';
 import { Diagnostics } from './app/diagnostics';
 import { captureGlobalErrors, errorMessage, log } from './app/log';
@@ -25,15 +25,35 @@ function currentRoute(): Route {
   return 'kiosk';
 }
 
+/**
+ * The tab the uninstall script opens: only there to tell the kiosk, so it
+ * doesn't start a second kiosk next to the one already open.
+ */
+function showAutostartRemoved(root: HTMLElement): void {
+  root.replaceChildren(
+    h(
+      'div',
+      { class: 'notice', 'data-testid': 'autostart-removed' },
+      h('h1', {}, 'The kiosk no longer opens at startup'),
+      h('p', {}, 'This computer doesn’t open the kiosk by itself anymore. You can close this tab.'),
+    ),
+  );
+}
+
 function showFatal(root: HTMLElement, message: string): void {
   root.replaceChildren(h('div', { class: 'fatal', 'data-testid': 'fatal' }, h('h1', {}, 'The kiosk cannot start'), h('p', {}, message)));
 }
 
 async function boot(): Promise<void> {
   captureGlobalErrors();
-  const autostarted = recordAutostartLaunch();
-  log.start(`Kiosk started (v${__APP_VERSION__})${autostarted ? ' by the startup command' : ''}.`);
+  const marker = readAutostartMarker();
   const root = document.getElementById('app')!;
+  if (marker === 'removed') {
+    log.info('Startup command removed from this computer.');
+    showAutostartRemoved(root);
+    return;
+  }
+  log.start(`Kiosk started (v${__APP_VERSION__})${marker === 'launch' ? ' by the startup command' : ''}.`);
 
   // Created before any await so an early beforeinstallprompt isn't missed.
   const install = new InstallManager();
