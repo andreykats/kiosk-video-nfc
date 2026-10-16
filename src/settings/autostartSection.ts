@@ -4,7 +4,6 @@ import { copyableCommand, OPEN_TERMINAL, scriptUrl } from '../ui/terminalCommand
 import { reactiveSection, type Section } from './section';
 
 const MAC_AUTOSTART_SCRIPT = 'mac-kiosk-autostart.sh';
-const MAC_AUTOSTART_UNINSTALL_SCRIPT = 'mac-kiosk-autostart-uninstall.sh';
 const KIOSK_FLAGS = '--kiosk --autoplay-policy=no-user-gesture-required';
 
 /**
@@ -58,7 +57,7 @@ export function autostartHelp(): HTMLElement {
 }
 
 /**
- * How to undo the Mac script: its uninstall script, which also opens the kiosk
+ * How to undo the Mac script: the same script with --uninstall, which also opens the kiosk
  * with `?autostart=removed` so this section goes back to the setup steps. The
  * Windows shortcut and the other commands have no script to undo them.
  */
@@ -78,7 +77,7 @@ function autostartRemovalHelp(): HTMLElement[] {
         h('li', {}, 'If it asks for this Mac’s password, type it and press Return. Nothing shows while you type.'),
         h('li', {}, 'Chrome opens a tab saying the kiosk no longer opens at startup. Close that tab.'),
       ),
-      ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_UNINSTALL_SCRIPT)} | bash`, 'mac-autostart-uninstall'),
+      ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash -s -- --uninstall`, 'mac-autostart-uninstall'),
       h('p', { class: 'hint' }, 'It also turns automatic login and Chrome’s login settings back to how they were before the setup.'),
     ),
   ];

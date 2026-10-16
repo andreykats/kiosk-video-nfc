@@ -4,7 +4,7 @@
  * Windows Startup shortcut) opens the kiosk with `?autostart`, and the app
  * remembers that it saw it. Stored per kiosk, outside the setup-guide progress:
  * a reset doesn't remove the startup command from the computer. The uninstall
- * script (public/mac-kiosk-autostart-uninstall.sh) opens `?autostart=removed`,
+ * script (public/mac-kiosk-autostart.sh --uninstall) opens `?autostart=removed`,
  * which forgets it.
  */
 

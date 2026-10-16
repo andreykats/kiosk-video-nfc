@@ -57,7 +57,7 @@ Step 7 of the setup guide (**Open the kiosk at startup**) shows the command for 
 curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
 ```
 
-It saves what it changed, so [public/mac-kiosk-autostart-uninstall.sh](public/mac-kiosk-autostart-uninstall.sh) can put it back. Once the kiosk has opened at startup, Settings → **Open at startup** shows the command to run it. That script opens the kiosk with `?autostart=removed` when it's done, so the app forgets the launch and shows the setup steps again.
+It saves what it changed, so running it with `--uninstall` puts it back. Once the kiosk has opened at startup, Settings → **Open at startup** shows that command. It opens the kiosk with `?autostart=removed` when it's done, so the app forgets the launch and shows the setup steps again.
 
 Chrome only applies the flags when it isn't already running, so the script makes sure Chrome doesn't open by itself at login.
 
