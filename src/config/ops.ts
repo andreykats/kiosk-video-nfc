@@ -92,11 +92,28 @@ export function upsertVideo(config: Config, fileName: string, sizeBytes: number)
       videos: config.videos.map((v) => (v.fileName === fileName ? { ...v, sizeBytes } : v)),
     };
   }
-  const title = fileName.replace(/\.[^.]+$/, '');
   return {
     ...config,
-    videos: [...config.videos, { fileName, title, sizeBytes }],
+    videos: [...config.videos, { fileName, title: titleFor(fileName), sizeBytes }],
     loopVideo: config.loopVideo ?? fileName,
+  };
+}
+
+function titleFor(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, '');
+}
+
+/**
+ * Swaps a video's file for a new one in place: its cards and loop status move to
+ * `newName`. Callers must reject a `newName` that is already another video.
+ */
+export function replaceVideo(config: Config, oldName: string, newName: string, sizeBytes: number): Config {
+  const rename = (fileName: string) => (fileName === oldName ? newName : fileName);
+  return {
+    ...config,
+    videos: config.videos.map((v) => (v.fileName === oldName ? { fileName: newName, title: titleFor(newName), sizeBytes } : v)),
+    cards: config.cards.map((c) => (c.fileName === oldName ? { ...c, fileName: newName } : c)),
+    loopVideo: config.loopVideo === null ? null : rename(config.loopVideo),
   };
 }
 

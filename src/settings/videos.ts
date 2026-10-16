@@ -6,7 +6,7 @@ import { formatMatch } from '../scan/uid';
 import { confirmDialog, errorList, messageDialog } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
-import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
+import { importPickedFiles, importPickedFolder, importReplacement, type ImportHost } from '../videos/importFlow';
 import { formatBytes } from '../videos/opfsStore';
 import { reactiveSection, type Section } from './section';
 import { quickPair } from './cards';
@@ -72,6 +72,20 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
 
   const filesInput = filePicker({ folder: false, testId: 'import-files-input', onPick: (f) => void importPickedFiles(ctx, host, f) });
   const folderInput = filePicker({ folder: true, testId: 'import-folder-input', onPick: (f) => void importPickedFolder(ctx, host, f) });
+  /** The video the Replace picker was opened for. */
+  let replacing: string | null = null;
+  const replaceInput = filePicker({
+    folder: false,
+    multiple: false,
+    testId: 'replace-file-input',
+    onPick: (f) => {
+      if (replacing !== null) void importReplacement(ctx, host, replacing, f);
+    },
+  });
+  const replaceVideo = (fileName: string) => {
+    replacing = fileName;
+    replaceInput.click();
+  };
 
   function render() {
     const config = ctx.config.get();
@@ -120,6 +134,18 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
               onclick: () => void quickPair(ctx, v.fileName),
             },
             'Pair',
+          ),
+          ' ',
+          h(
+            'button',
+            {
+              type: 'button',
+              'data-testid': 'replace-video',
+              disabled: busy,
+              title: 'Swap in a new file for this video; its tags stay paired',
+              onclick: () => replaceVideo(v.fileName),
+            },
+            'Replace',
           ),
           ' ',
           h('button', { type: 'button', class: 'danger', disabled: busy, onclick: () => void deleteVideo(v.fileName) }, 'Delete'),
@@ -177,7 +203,7 @@ export function renderVideos(ctx: AppContext, env: SettingsEnv): Section {
     );
   }
 
-  const el = h('section', { 'data-testid': 'videos-section' }, h('h2', {}, 'Videos'), filesInput, folderInput, progress, body);
+  const el = h('section', { 'data-testid': 'videos-section' }, h('h2', {}, 'Videos'), filesInput, folderInput, replaceInput, progress, body);
   return reactiveSection(el, render, [
     (l) => ctx.config.changed.subscribe(l),
     (l) => ctx.videos.changed.subscribe(l),

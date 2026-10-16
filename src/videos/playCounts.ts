@@ -23,6 +23,10 @@ export class PlayCounts {
     this.save();
   }
 
+  reset(fileName: string): void {
+    if (this.counts.delete(fileName)) this.save();
+  }
+
   clear(): void {
     this.counts.clear();
     this.save();

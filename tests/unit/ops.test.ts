@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAdminCard, cardMatch, cardsForVideo, checkPairing, findCard, otherIdOf, pairCard, removeCard, removeVideo, resolveScan, scanMatches, setCardVideo, unrecognisedCardCount, upsertVideo } from '../../src/config/ops';
+import { addAdminCard, cardMatch, cardsForVideo, checkPairing, findCard, otherIdOf, pairCard, removeCard, removeVideo, replaceVideo, resolveScan, scanMatches, setCardVideo, unrecognisedCardCount, upsertVideo } from '../../src/config/ops';
 import { emptyConfig, validateConfig } from '../../src/config/schema';
 
 describe('config ops', () => {
@@ -40,6 +40,27 @@ describe('config ops', () => {
   it('only clears the loop when the last video is removed', () => {
     const c = removeVideo(upsertVideo(emptyConfig(), 'a.mp4', 1), 'a.mp4');
     expect(c.loopVideo).toBeNull();
+  });
+
+  it('replacing a video keeps its place, moves its cards and the loop, and leaves other cards alone', () => {
+    const c = replaceVideo(base(), 'lion.mp4', 'lion_v2.mp4', 30);
+    expect(c.videos).toEqual([
+      { fileName: 'loop.mp4', title: 'loop', sizeBytes: 10 },
+      { fileName: 'lion_v2.mp4', title: 'lion_v2', sizeBytes: 30 },
+    ]);
+    expect(c.cards.map((x) => [x.match.value, x.fileName])).toEqual([
+      ['04A23B1C', 'lion_v2.mp4'],
+      ['04A23B1D', 'loop.mp4'],
+    ]);
+    expect(c.loopVideo).toBe('lion_v2.mp4');
+    expect(validateConfig(c).ok).toBe(true);
+  });
+
+  it('replacing a video with the same name only updates its size', () => {
+    const c = replaceVideo(base(), 'loop.mp4', 'loop.mp4', 11);
+    expect(c.videos[0]).toEqual({ fileName: 'loop.mp4', title: 'loop', sizeBytes: 11 });
+    expect(c.cards).toEqual(base().cards);
+    expect(c.loopVideo).toBe('lion.mp4');
   });
 
   it('reassigning a card keeps one entry', () => {

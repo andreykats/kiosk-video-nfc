@@ -1,9 +1,9 @@
 import type { AppContext } from '../app/context';
 import { errorMessage, log } from '../app/log';
-import { upsertVideo } from '../config/ops';
+import { cardsForVideo, replaceVideo, upsertVideo } from '../config/ops';
 import { confirmDialog, errorList, messageDialog } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
-import { isVideoFile, planFileImport, planFolderImport, totalBytes, type ImportItem, type ImportPlan } from './importPlan';
+import { isVideoFile, planFileImport, planFolderImport, planReplace, totalBytes, type ImportItem, type ImportPlan } from './importPlan';
 import { checkFreeSpace, formatBytes, requestPersistence } from './opfsStore';
 
 /** Where an import runs: settings and the setup guide each provide one. */
@@ -29,8 +29,38 @@ function rejectedList(plan: ImportPlan): HTMLElement | null {
     : h('div', {}, h('p', {}, 'Skipped:'), errorList(plan.rejected.map((r) => `${r.name}: ${r.reason}`)));
 }
 
+function overwritesList(plan: ImportPlan): HTMLElement | null {
+  return plan.overwrites.length === 0
+    ? null
+    : h('div', {}, h('p', {}, 'These videos already exist on this kiosk and will be replaced:'), errorList(plan.overwrites));
+}
+
+/**
+ * After the new file is copied: moves the old video's tags and loop to it, starts
+ * its play count from 0, and deletes the old file. Returns a problem to report
+ * if the old file couldn't be deleted (it is then listed as not in the config).
+ */
+async function applyReplacement(ctx: AppContext, item: ImportItem, oldName: string): Promise<string | null> {
+  await ctx.config.update((c) => replaceVideo(c, oldName, item.fileName, item.file.size));
+  ctx.playCounts.reset(oldName);
+  ctx.playCounts.reset(item.fileName);
+  if (item.fileName === oldName) return null;
+  try {
+    await ctx.videos.delete(oldName);
+    return null;
+  } catch (e) {
+    log.error(`Deleting the replaced ${oldName} failed:`, e);
+    return `${item.fileName} replaced ${oldName}, but the old file could not be deleted: ${errorMessage(e)}`;
+  }
+}
+
 /** Copies items one by one with a progress bar. Returns null if refused up front. */
-async function runImport(ctx: AppContext, host: ImportHost, items: ImportItem[]): Promise<ImportOutcome | null> {
+async function runImport(
+  ctx: AppContext,
+  host: ImportHost,
+  items: ImportItem[],
+  headline: (outcome: ImportOutcome) => string = (o) => `Imported ${o.imported.length} of ${items.length} video(s).`,
+): Promise<ImportOutcome | null> {
   if (items.length === 0) return null;
   const spaceErr = await checkFreeSpace(totalBytes(items));
   if (spaceErr) {
@@ -70,7 +100,12 @@ async function runImport(ctx: AppContext, host: ImportHost, items: ImportItem[])
             label.textContent = `${item.fileName} — ${formatBytes(written)} of ${formatBytes(total)}`;
           },
         });
-        if (item.addToConfig) await ctx.config.update((c) => upsertVideo(c, item.fileName, item.file.size));
+        if (item.replaces !== undefined) {
+          const problem = await applyReplacement(ctx, item, item.replaces);
+          if (problem) outcome.failed.push(problem);
+        } else if (item.addToConfig) {
+          await ctx.config.update((c) => upsertVideo(c, item.fileName, item.file.size));
+        }
         outcome.imported.push(item.fileName);
       } catch (e) {
         if (abort.signal.aborted) break;
@@ -89,7 +124,7 @@ async function runImport(ctx: AppContext, host: ImportHost, items: ImportItem[])
   void ctx.readiness.recompute();
 
   if (host.summary === 'always' || outcome.failed.length > 0 || outcome.cancelled) {
-    const summary: (HTMLElement | string)[] = [`Imported ${outcome.imported.length} of ${items.length} video(s).`];
+    const summary: (HTMLElement | string)[] = [headline(outcome)];
     if (outcome.cancelled) summary.push(h('p', {}, 'Import was cancelled.'));
     if (outcome.failed.length > 0) summary.push(errorList(outcome.failed));
     await messageDialog(outcome.failed.length > 0 ? 'Import finished with errors' : 'Import finished', summary);
@@ -115,12 +150,7 @@ export async function importPickedFiles(
   if (plan.overwrites.length > 0 || plan.rejected.length > 0) {
     const ok = await confirmDialog({
       title: 'Import videos',
-      content: [
-        plan.overwrites.length > 0
-          ? h('div', {}, h('p', {}, 'These videos already exist on this kiosk and will be replaced:'), errorList(plan.overwrites))
-          : '',
-        rejectedList(plan) ?? '',
-      ],
+      content: [overwritesList(plan) ?? '', rejectedList(plan) ?? ''],
       confirmLabel: `Import ${plan.toImport.length}`,
     });
     if (!ok) return null;
@@ -129,11 +159,12 @@ export async function importPickedFiles(
 }
 
 /**
- * "Import folder": copies the config's videos that are missing on this kiosk,
- * and offers to add videos the config doesn't list.
+ * "Import folder": copies the config's videos that are missing on this kiosk or
+ * differ in size from the local copy, and offers to add videos the config
+ * doesn't list.
  */
 export async function importPickedFolder(ctx: AppContext, host: ImportHost, files: File[]): Promise<ImportOutcome | null> {
-  const plan = planFolderImport(ctx.config.get(), ctx.videos.names(), files);
+  const plan = planFolderImport(ctx.config.get(), ctx.videos.files(), files);
   const items = [...plan.toImport];
   if (plan.unlisted.length > 0) {
     const addUnlisted = await confirmDialog({
@@ -156,9 +187,50 @@ export async function importPickedFolder(ctx: AppContext, host: ImportHost, file
     ]);
     return null;
   }
-  if (plan.rejected.length > 0) {
-    const ok = await confirmDialog({ title: 'Import folder', content: [rejectedList(plan)!], confirmLabel: `Import ${items.length}` });
+  if (plan.overwrites.length > 0 || plan.rejected.length > 0) {
+    const ok = await confirmDialog({
+      title: 'Import folder',
+      content: [overwritesList(plan) ?? '', rejectedList(plan) ?? ''],
+      confirmLabel: `Import ${items.length}`,
+    });
     if (!ok) return null;
   }
   return runImport(ctx, host, items);
+}
+
+/**
+ * "Replace": copies one new file in place of config video `oldName`. Its tags
+ * and loop status move to the new file; its play count starts again from 0.
+ */
+export async function importReplacement(ctx: AppContext, host: ImportHost, oldName: string, files: File[]): Promise<ImportOutcome | null> {
+  if (files.length !== 1) {
+    await messageDialog('Choose one file', [`Pick the single video file to replace ${oldName} with.`]);
+    return null;
+  }
+  const config = ctx.config.get();
+  const plan = planReplace(config, ctx.videos.names(), oldName, files[0]!);
+  if ('error' in plan) {
+    await messageDialog('Cannot replace', [plan.error]);
+    return null;
+  }
+  const { item } = plan;
+  const tags = cardsForVideo(config, oldName).length;
+  const ok = await confirmDialog({
+    title: item.fileName === oldName ? `Replace ${oldName}?` : `Replace ${oldName} with ${item.fileName}?`,
+    content: [
+      h('p', {}, tags > 0 ? `Its ${tags} tag(s) stay paired and will play the new file.` : 'No tags are paired with it.'),
+      config.loopVideo === oldName ? h('p', {}, 'It stays the loop video.') : '',
+      h('p', {}, 'Its play count goes back to 0.'),
+      plan.overwritesUnlisted ? h('p', {}, `${item.fileName} is already on this kiosk (not in the config) and will be overwritten.`) : '',
+    ],
+    confirmLabel: 'Replace',
+  });
+  if (!ok) return null;
+  return runImport(ctx, host, [item], (o) =>
+    o.imported.length === 0
+      ? `${oldName} was not replaced.`
+      : item.fileName === oldName
+        ? `Replaced ${oldName}.`
+        : `Replaced ${oldName} with ${item.fileName}.`,
+  );
 }

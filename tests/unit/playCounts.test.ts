@@ -17,6 +17,17 @@ function memoryStorage(): Storage {
 }
 
 describe('PlayCounts', () => {
+  it('resets one video and keeps the others', () => {
+    const storage = memoryStorage();
+    const counts = new PlayCounts(storage);
+    counts.increment('lion.mp4');
+    counts.increment('tiger.mp4');
+    counts.reset('lion.mp4');
+    expect(counts.get('lion.mp4')).toBe(0);
+    expect(counts.get('tiger.mp4')).toBe(1);
+    expect(new PlayCounts(storage).get('lion.mp4')).toBe(0);
+  });
+
   it('counts plays per video, keeps them across instances, and clears them', () => {
     const storage = memoryStorage();
     const counts = new PlayCounts(storage);
