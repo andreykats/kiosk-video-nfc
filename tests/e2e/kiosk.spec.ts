@@ -84,6 +84,21 @@ test('Ctrl+Shift+S opens settings', async ({ page }) => {
   await expect(page).toHaveURL(/#\/settings$/);
 });
 
+test('moving the mouse shows the settings shortcut for 2 seconds', async ({ page }) => {
+  const hint = page.getByTestId('shortcut-hint');
+  await expect(hint).toContainText('Shift + S to open settings');
+  await expect(hint).not.toHaveClass(/shown/);
+  await page.mouse.move(100, 100);
+  await page.mouse.move(200, 150);
+  await expect(hint).toHaveClass(/shown/);
+  await page.waitForTimeout(1_000);
+  // Still moving keeps it up.
+  await page.mouse.move(250, 200);
+  await page.waitForTimeout(1_500);
+  await expect(hint).toHaveClass(/shown/);
+  await expect(hint).not.toHaveClass(/shown/, { timeout: 2_000 });
+});
+
 test('the kiosk goes fullscreen on the first click or tag scan', async ({ page }) => {
   const isFullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
   if (await isFullscreen()) await page.evaluate(() => document.exitFullscreen());

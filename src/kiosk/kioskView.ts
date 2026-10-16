@@ -5,6 +5,7 @@ import type { Diagnostics } from '../app/diagnostics';
 import { log } from '../app/log';
 import { h } from '../ui/dom';
 import { keepFullscreen } from './fullscreen';
+import { showShortcutHintOnMouseMove } from './shortcutHint';
 import { initialKioskState, transition, type KioskEffect, type KioskEvent, type KioskState } from './stateMachine';
 import { keepScreenOn } from './wakeLock';
 import { ProgressWatch, retryDelay } from './watchdog';
@@ -338,6 +339,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   view.addEventListener('contextmenu', blockContextMenu);
   const stopFullscreen = keepFullscreen();
   const stopWakeLock = keepScreenOn();
+  const stopShortcutHint = showShortcutHintOnMouseMove(view);
 
   const unsubscribers = [
     ctx.scanner.scans.subscribe((scan) => dispatch({ type: 'scan', card: scan })),
@@ -358,6 +360,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     window.removeEventListener('focus', onFocus);
     stopWakeLock();
     stopFullscreen();
+    stopShortcutHint();
     unsubscribers.forEach((u) => u());
     loop.clear();
     feature.clear();
