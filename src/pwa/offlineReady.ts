@@ -102,7 +102,8 @@ export async function checkAppCached(swError: string | null): Promise<ReadinessI
     }
     // Workbox keys precache entries with a __WB_REVISION__ query, hence ignoreSearch.
     const index = await caches.match(`${import.meta.env.BASE_URL}index.html`, { ignoreSearch: true });
-    if (!index) return { ok: false, error: 'The cached app is incomplete. Stay online and reload the page.' };
+    // Reloading doesn't help: an installed worker never downloads its files again. Its successor does.
+    if (!index) return { ok: false, error: 'The offline copy of the app is missing files. Stay online: the next app update downloads it again.' };
     return { ok: true };
   } catch (e) {
     return { ok: false, error: `Could not check the offline cache: ${e instanceof Error ? e.message : String(e)}` };

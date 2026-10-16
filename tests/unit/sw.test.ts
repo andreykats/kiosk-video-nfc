@@ -40,12 +40,35 @@ afterEach(() => {
 });
 
 describe('ServiceWorkerManager updates', () => {
-  it('switches to a new version found while launching', async () => {
-    const sw = launch(registration(() => new Promise(() => {}))); // check still running
+  it('switches to a version already waiting at launch only after the update check, once, to the newest', async () => {
+    let finishCheck!: () => void;
+    const reg = registration(() => new Promise<void>((r) => (finishCheck = r)));
+    const sw = new ServiceWorkerManager();
+    sw.start();
+    // workbox-window reports the waiting worker before registration finishes.
     options.onNeedRefresh?.();
+    options.onRegisteredSW?.('sw.js', reg as unknown as ServiceWorkerRegistration);
+    await settle();
+    // A newer worker may be installing: switching now would let the two
+    // workers' cache cleanups delete each other's files.
+    expect(updateSW).not.toHaveBeenCalled();
+    reg.waiting = {}; // the newest version, installed by the check
+    finishCheck();
+    await vi.waitFor(() => expect(updateSW).toHaveBeenCalledWith(true));
+    options.onNeedRefresh?.(); // workbox-window reporting the newer worker
     expect(updateSW).toHaveBeenCalledTimes(1);
-    expect(updateSW).toHaveBeenCalledWith(true);
     expect(sw.get().needRefresh).toBe(false);
+  });
+
+  it('offers a version that was waiting when the check outlasts the launch window', () => {
+    vi.useFakeTimers();
+    const sw = new ServiceWorkerManager();
+    sw.start();
+    options.onNeedRefresh?.();
+    options.onRegisteredSW?.('sw.js', registration(() => new Promise(() => {})) as unknown as ServiceWorkerRegistration);
+    vi.advanceTimersByTime(LAUNCH_UPDATE_WINDOW_MS);
+    expect(updateSW).not.toHaveBeenCalled();
+    expect(sw.get().needRefresh).toBe(true);
   });
 
   it('switches when the launch check leaves a waiting worker behind', async () => {
