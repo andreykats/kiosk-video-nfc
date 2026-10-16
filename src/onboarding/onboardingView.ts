@@ -47,7 +47,7 @@ interface Action {
 function stepCard(
   nav: Nav,
   step: StepId,
-  options: { title: string; body: (Node | string | null)[]; primary?: Action; secondary?: Action; wide?: boolean; busy?: boolean },
+  options: { title: string; body: (Node | string | null)[]; primary?: Action; secondary?: Action; size?: 'medium' | 'wide'; busy?: boolean },
 ): HTMLElement {
   const seq = stepSequence(nav.path());
   const index = seq.indexOf(step);
@@ -55,7 +55,7 @@ function stepCard(
     h('button', { type: 'button', class: cls, disabled: a.disabled, 'data-testid': a.testId, onclick: a.onClick }, a.label);
   return h(
     'div',
-    { class: `onboarding-card${options.wide ? ' wide' : ''}`, 'data-step': step, 'data-testid': `step-${step}` },
+    { class: `onboarding-card${options.size ? ` ${options.size}` : ''}`, 'data-step': step, 'data-testid': `step-${step}` },
     h(
       'div',
       { class: 'onboarding-progress' },
@@ -551,7 +551,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
       el,
       stepCard(nav, 'pair', {
         title: 'Pair videos with tags',
-        wide: true,
+        size: 'wide',
         busy,
         body: [
           p('Press Pair tag, then hold a tag on the reader. That tag will play the video. To pair several tags in a row, tick Keep pairing in the dialog. One video is the background loop and plays on repeat between tags. Tick Loop on another video to move it.'),
@@ -691,6 +691,8 @@ function autostartStep(_ctx: AppContext, nav: Nav): StepView {
     el,
     stepCard(nav, 'autostart', {
       title: 'Open the kiosk at startup',
+      // Wide enough for the Mac command on one line.
+      size: 'medium',
       body: [
         p('Set this computer to open the kiosk fullscreen every time it starts, with no one there to click.'),
         autostartHelp(),
