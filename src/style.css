@@ -23,8 +23,8 @@ html, body { margin: 0; height: 100%; background: #000; color: var(--text); }
 .focus-notice { position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; gap: 1rem; padding: 2rem; text-align: center; background: #000; color: #fff; }
 .focus-notice h1 { margin: 0; font-size: clamp(2rem, 6vw, 4.5rem); color: var(--warn); }
 .focus-notice p { margin: 0; font-size: clamp(1.25rem, 3vw, 2.25rem); }
-/* Shown for a moment when a mouse moves, like Chrome's "Press Esc to exit full screen". */
-.shortcut-hint { position: absolute; top: 1.5rem; left: 50%; z-index: 2; padding: 0.75rem 1.25rem; border-radius: 10px; background: rgb(32 33 36 / 92%); color: #fff; font-size: 1.15rem; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, -0.5rem); transition: opacity 0.2s, transform 0.2s; }
+/* Shown for a moment when a mouse moves, like Chrome's "Press Esc to exit full screen", and below that bubble so both can be read. */
+.shortcut-hint { position: absolute; top: 7rem; left: 50%; z-index: 2; padding: 0.75rem 1.25rem; border-radius: 10px; background: rgb(32 33 36 / 92%); color: #fff; font-size: 1.15rem; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, -0.5rem); transition: opacity 0.2s, transform 0.2s; }
 .shortcut-hint.shown { opacity: 1; transform: translate(-50%, 0); }
 .shortcut-hint kbd { display: inline-block; padding: 0.1rem 0.45rem; border: 1px solid #5f6368; border-radius: 5px; background: #3c4043; font: inherit; font-size: 0.95em; }
 .kiosk-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
