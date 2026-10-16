@@ -40,7 +40,7 @@ export function computeChecklist(i: ChecklistInputs): ChecklistItem[] {
       id: 'autostart',
       label: 'Opens at startup',
       done: i.autostartLaunched,
-      hint: 'Set the kiosk to open at startup (setup guide → Open at startup), then restart this computer.',
+      hint: 'See Open at startup below, then restart this computer.',
     },
   ];
 }

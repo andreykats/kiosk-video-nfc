@@ -1,4 +1,4 @@
-import { autostartUrl, lastAutostartLaunch } from '../app/autostart';
+import { lastAutostartLaunch } from '../app/autostart';
 import type { AppContext } from '../app/context';
 import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { saveEdit } from '../app/edits';
@@ -9,6 +9,7 @@ import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
 import type { ScanEvent } from '../scan/scanEvent';
 import { formatMatch, formatUid } from '../scan/uid';
+import { autostartHelp } from '../settings/autostartSection';
 import { renderOfflineIndicator } from '../settings/diagnostics';
 import { quickPair } from '../settings/cards';
 import { matchAttrs } from '../settings/pairing';
@@ -17,6 +18,7 @@ import { resetKiosk } from '../settings/resetSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
+import { copyableCommand, OPEN_TERMINAL, scriptUrl } from '../ui/terminalCommand';
 import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
 import { startFullscreen } from '../kiosk/fullscreen';
 import { readFlags, writeFlags } from './progress';
@@ -149,21 +151,6 @@ function welcomeStep(_ctx: AppContext, nav: Nav): StepView {
 }
 
 /** A Terminal command shown in full, with a button that copies it. */
-function copyableCommand(command: string, testId: string): HTMLElement[] {
-  const copy = h('button', { type: 'button', 'data-testid': `${testId}-copy` }, 'Copy command');
-  copy.addEventListener('click', () => {
-    navigator.clipboard.writeText(command).then(
-      () => (copy.textContent = 'Copied ✓'),
-      () => (copy.textContent = 'Couldn’t copy: select the command below and copy it'),
-    );
-  });
-  return [copy, h('p', { class: 'mono command', 'data-testid': `${testId}-command` }, command)];
-}
-
-const scriptUrl = (script: string) => new URL(`${import.meta.env.BASE_URL}${script}`, location.href).href;
-
-const OPEN_TERMINAL = 'Open Terminal: press ⌘ Space, type Terminal, then press Return.';
-
 const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
 
 /**
@@ -630,59 +617,6 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
     unsubscribe,
   );
   return view;
-}
-
-const MAC_AUTOSTART_SCRIPT = 'mac-kiosk-autostart.sh';
-const KIOSK_FLAGS = '--kiosk --autoplay-policy=no-user-gesture-required';
-
-/**
- * How to make this computer open the kiosk fullscreen at startup. Macs run a
- * script (public/mac-kiosk-autostart.sh) that adds a login item and turns on
- * automatic login; it reads its passwords from the terminal, so it can be piped
- * into bash. Windows uses a Startup shortcut. Either way Chrome opens the kiosk
- * with `?autostart`, which turns the checklist's "Opens at startup" green.
- */
-function autostartHelp(): HTMLElement {
-  const kioskUrl = autostartUrl(new URL(import.meta.env.BASE_URL, location.href).href);
-  const platform = navigator.platform;
-  if (platform.startsWith('Mac')) {
-    return h(
-      'div',
-      { class: 'autostart-help', 'data-testid': 'mac-autostart' },
-      h(
-        'ol',
-        { class: 'hint' },
-        h('li', {}, 'Press Copy command.'),
-        h('li', {}, OPEN_TERMINAL),
-        h('li', {}, 'Paste the command (⌘ V) and press Return.'),
-        h('li', {}, 'Type this Mac’s password each time it asks, and press Return. Nothing shows while you type.'),
-        h('li', {}, 'If macOS asks to let Terminal control System Events, choose OK.'),
-      ),
-      ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash`, 'mac-autostart'),
-    );
-  }
-  if (platform.startsWith('Win')) {
-    return h(
-      'div',
-      { class: 'autostart-help', 'data-testid': 'windows-autostart' },
-      h(
-        'ol',
-        { class: 'hint' },
-        h('li', {}, 'Press Copy command.'),
-        h('li', {}, 'Press Windows + R, type shell:startup, then press Enter. A folder opens.'),
-        h('li', {}, 'Right-click in the folder and choose New → Shortcut. Paste the command (Ctrl + V) and press Next.'),
-        h('li', {}, 'Name it Topps Kiosk and press Finish.'),
-        h('li', {}, 'Make Windows sign in automatically, so the shortcut runs after a restart.'),
-      ),
-      ...copyableCommand(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ${KIOSK_FLAGS} ${kioskUrl}`, 'windows-autostart'),
-    );
-  }
-  return h(
-    'div',
-    { class: 'autostart-help', 'data-testid': 'other-autostart' },
-    p('Set this computer to sign in automatically and run this command at login:', 'hint'),
-    ...copyableCommand(`google-chrome ${KIOSK_FLAGS} ${kioskUrl}`, 'other-autostart'),
-  );
 }
 
 function autostartStep(_ctx: AppContext, nav: Nav): StepView {

@@ -6,6 +6,7 @@ import { closeAllDialogs, isDialogOpen } from '../ui/dialog';
 import { h } from '../ui/dom';
 import { requestPersistence } from '../videos/opfsStore';
 import { renderAdminCards, renderCards } from './cards';
+import { renderAutostartSection } from './autostartSection';
 import { renderChecklist } from './checklist';
 import { renderConfigSection } from './configSection';
 import { renderDiagnostics } from './diagnostics';
@@ -61,6 +62,7 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
     renderConfigSection(ctx),
     renderReaderSection(ctx),
     renderDiagnostics(ctx),
+    renderAutostartSection(),
     renderInstallSection(ctx),
     renderResetSection(ctx),
   ];

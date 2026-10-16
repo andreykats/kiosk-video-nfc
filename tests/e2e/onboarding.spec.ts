@@ -336,11 +336,19 @@ test('reset in the guide wipes videos and config and starts again at step 1', as
   await expect(page.getByTestId('videos-section')).toContainText('No videos yet');
 });
 
-test('a launch by the startup command turns Opens at startup green', async ({ page }) => {
+test('a launch by the startup command turns Opens at startup green, in the checklist and its settings section', async ({ page }) => {
+  await fakePlatform(page, 'MacIntel');
   await setUpKiosk(page);
   const item = page.getByTestId('setup-checklist').locator('[data-item="autostart"]');
   await expect(item).toHaveClass(/todo/);
   await expect(item).toContainText('Opens at startup');
+  await expect(item).toContainText('See Open at startup below');
+  // Settings → Open at startup, just above Install as Chrome App, has the setup guide's instructions.
+  const ids = await page.locator('[data-testid="settings"] > section').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
+  expect(ids[ids.indexOf('install-section') - 1]).toBe('autostart-section');
+  const section = page.getByTestId('autostart-section');
+  await expect(section.getByTestId('mac-autostart-command')).toHaveText(`curl -fsSL ${new URL('mac-kiosk-autostart.sh', page.url()).href} | bash`);
+  await expect(section.getByTestId('autostart-status')).toHaveCount(0);
 
   await page.goto('./?autostart');
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
@@ -348,4 +356,6 @@ test('a launch by the startup command turns Opens at startup green', async ({ pa
   expect(new URL(page.url()).search).toBe('');
   await openSettings(page);
   await expect(item).toHaveClass(/done/);
+  await expect(section.getByTestId('autostart-status')).toContainText('This computer opened the kiosk at startup ✓');
+  await expect(section.getByTestId('mac-autostart')).toHaveCount(0);
 });
