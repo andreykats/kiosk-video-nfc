@@ -60,6 +60,27 @@ test('with Playback → interrupt on, a scan during a video starts the scanned v
   }
 });
 
+test('Playback → Videos fill the screen is on by default; off shows the whole video', async ({ page }) => {
+  const fit = (testId: string) => page.getByTestId(testId).evaluate((v) => getComputedStyle(v).objectFit);
+  expect(await fit('loop-video')).toBe('cover');
+  expect(await fit('feature-video')).toBe('cover');
+
+  await openSettings(page);
+  await expect(page.getByTestId('fill-screen')).toBeChecked();
+  await page.getByTestId('fill-screen').uncheck();
+  await page.reload();
+  await expect(page.getByTestId('fill-screen')).not.toBeChecked();
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  expect(await fit('loop-video')).toBe('contain');
+  expect(await fit('feature-video')).toBe('contain');
+
+  await openSettings(page);
+  await page.getByTestId('fill-screen').check();
+  await page.getByTestId('back-to-kiosk').click();
+  expect(await fit('loop-video')).toBe('cover');
+});
+
 test('an unknown tag does nothing', async ({ page }) => {
   await scan(page, 'DEADBEEF');
   await page.waitForTimeout(300);

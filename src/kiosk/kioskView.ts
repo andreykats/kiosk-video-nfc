@@ -1,4 +1,4 @@
-import { readInterruptPlayback } from './playbackOptions';
+import { readFillScreen, readInterruptPlayback } from './playbackOptions';
 import type { AppContext } from '../app/context';
 import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import type { Diagnostics } from '../app/diagnostics';
@@ -89,6 +89,8 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     h('p', { 'data-testid': 'bridge-notice-detail' }),
   );
   const view = h('div', { class: 'kiosk', 'data-testid': 'kiosk', 'data-state': 'loop' }, loopEl, featureEl, setupEl, focusEl, bridgeEl);
+  // Settings is its own route, so the choice is read each time the kiosk mounts.
+  view.classList.toggle('fill-screen', readFillScreen());
   root.replaceChildren(view);
 
   const loop = new VideoSlot(loopEl);
