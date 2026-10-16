@@ -18,6 +18,7 @@ import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
 import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
+import { startFullscreen } from '../kiosk/fullscreen';
 import { readFlags, writeFlags } from './progress';
 import { nextStep, previousStep, resumeStep, stepSequence, type ConfigPath, type StepId } from './steps';
 
@@ -727,6 +728,7 @@ function doneStep(ctx: AppContext, nav: Nav): StepView {
           testId: 'onboarding-start',
           onClick: () => {
             writeFlags({ completed: true });
+            startFullscreen();
             ctx.navigate('kiosk');
           },
         },

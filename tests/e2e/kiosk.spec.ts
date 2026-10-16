@@ -124,19 +124,43 @@ test('moving the mouse shows the settings shortcut for 2 seconds', async ({ page
   await expect(hint).not.toHaveClass(/shown/, { timeout: 2_000 });
 });
 
-test('the kiosk goes fullscreen on the first click or tag scan', async ({ page }) => {
-  const isFullscreen = () => page.evaluate(() => document.fullscreenElement !== null);
-  if (await isFullscreen()) await page.evaluate(() => document.exitFullscreen());
-  await expect.poll(isFullscreen).toBe(false);
+const isFullscreen = (page: Page) => page.evaluate(() => document.fullscreenElement !== null);
 
-  // A card scan is a key press, so it counts as the gesture Chrome needs.
+test('on a fresh load, clicks, scans and the settings shortcut stay windowed until ← Back to kiosk', async ({ page }) => {
+  await page.reload();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  // Playwright gives every page a user activation, so the kiosk's try at launch
+  // (meant for the AutomaticFullscreenAllowedForUrls policy) succeeds here. A
+  // real launch has none, so undo it and check what interactions do.
+  if (await isFullscreen(page)) await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(() => isFullscreen(page)).toBe(false);
+  await page.mouse.click(10, 10);
   await scan(page, 'DEADBEEF');
-  await expect.poll(isFullscreen).toBe(true);
+  await page.waitForTimeout(300);
+  expect(await isFullscreen(page)).toBe(false);
+  await page.keyboard.press('Control+Shift+KeyS');
+  await expect(page.getByTestId('settings')).toBeVisible();
+  expect(await isFullscreen(page)).toBe(false);
+
+  await page.getByTestId('back-to-kiosk').click();
+  await expect(page.getByTestId('kiosk')).toBeVisible();
+  await expect.poll(() => isFullscreen(page)).toBe(true);
+});
+
+test('once opened with ← Back to kiosk, the kiosk is fullscreen and goes back to it on any click or tag scan', async ({ page }) => {
+  // beforeEach opened the kiosk with ← Back to kiosk.
+  await expect.poll(() => isFullscreen(page)).toBe(true);
+  await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(() => isFullscreen(page)).toBe(false);
+
+  // A tag scan is a key press, so it counts as the gesture Chrome needs.
+  await scan(page, 'DEADBEEF');
+  await expect.poll(() => isFullscreen(page)).toBe(true);
 
   await page.evaluate(() => document.exitFullscreen());
-  await expect.poll(isFullscreen).toBe(false);
+  await expect.poll(() => isFullscreen(page)).toBe(false);
   await page.mouse.click(10, 10);
-  await expect.poll(isFullscreen).toBe(true);
+  await expect.poll(() => isFullscreen(page)).toBe(true);
 });
 
 const loopSrc = (page: Page) => page.getByTestId('loop-video').evaluate((v: HTMLVideoElement) => v.src);
