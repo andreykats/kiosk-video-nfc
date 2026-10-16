@@ -20,15 +20,19 @@ function writeFlag(key: string, fallback: boolean, on: boolean): void {
   }
 }
 
-/** Whether a tag scan may interrupt the playing video. Off: a video plays to the end first. */
+/**
+ * Whether a tag scan may interrupt the playing video. On by default; off: a
+ * video plays to the end first. (Off used to be the default, so only
+ * 'true' was ever stored: kiosks that never chose now get the new default.)
+ */
 const INTERRUPT_KEY = 'kiosk.interruptPlayback';
 
 export function readInterruptPlayback(): boolean {
-  return readFlag(INTERRUPT_KEY, false);
+  return readFlag(INTERRUPT_KEY, true);
 }
 
 export function writeInterruptPlayback(on: boolean): void {
-  writeFlag(INTERRUPT_KEY, false, on);
+  writeFlag(INTERRUPT_KEY, true, on);
 }
 
 /**

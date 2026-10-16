@@ -24,7 +24,14 @@ test('paired tag plays its video once, then the loop resumes where it paused', a
   expect(resumed.muted).toBe(false);
 });
 
-test('scans during a feature video are ignored', async ({ page }) => {
+test('with Playback → interrupt off, scans during a feature video are ignored', async ({ page }) => {
+  await openSettings(page);
+  await page.getByTestId('interrupt-playback').uncheck();
+  await page.reload();
+  await expect(page.getByTestId('interrupt-playback')).not.toBeChecked();
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+
   await scan(page, LION_UID);
   await waitForPlaying(page, 'feature-video', 'lion.mp4');
   await scan(page, TIGER_UID);
@@ -32,15 +39,12 @@ test('scans during a feature video are ignored', async ({ page }) => {
   expect((await videoState(page, 'feature-video')).file).toBe('lion.mp4');
 });
 
-test('with Playback → interrupt on, a scan during a video starts the scanned video at once', async ({ page }) => {
+test('with Playback → interrupt on (the default), a scan during a video starts the scanned video at once', async ({ page }) => {
   await openSettings(page);
-  // The Playback section sits right above Config, and the option is off by default.
+  // The Playback section sits right above Config, and the option is on by default.
   const sections = page.locator('[data-testid="settings"] > section');
   const ids = await sections.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
   expect(ids[ids.indexOf('config-section') - 1]).toBe('playback-section');
-  await expect(page.getByTestId('interrupt-playback')).not.toBeChecked();
-  await page.getByTestId('interrupt-playback').check();
-  await page.reload();
   await expect(page.getByTestId('interrupt-playback')).toBeChecked();
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
