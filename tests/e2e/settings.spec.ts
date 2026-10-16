@@ -36,12 +36,11 @@ test('pair a new tag, then reassign it', async ({ page }) => {
   await expect(page.locator('[data-testid="cards-table"] tbody tr')).toHaveCount(1);
 });
 
-test('settings lists Tag reader just above Diagnostics', async ({ page }) => {
+test('settings lists Tag reader below Videos, and Diagnostics just above Reset', async ({ page }) => {
   await setUpKiosk(page);
   const ids = await page.locator('[data-testid="settings"] > section').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
-  const reader = ids.indexOf('reader-section');
-  expect(reader).toBeGreaterThan(ids.indexOf('videos-section'));
-  expect(ids[reader + 1]).toBe('diagnostics-section');
+  expect(ids.indexOf('reader-section')).toBeGreaterThan(ids.indexOf('videos-section'));
+  expect(ids[ids.indexOf('reset-section') - 1]).toBe('diagnostics-section');
 });
 
 test('quick pair from the Videos list, with reassign; the loop video cannot be paired', async ({ page }) => {

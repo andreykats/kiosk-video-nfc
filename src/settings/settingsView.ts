@@ -61,9 +61,9 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
     renderPlaybackSection(),
     renderConfigSection(ctx),
     renderReaderSection(ctx),
-    renderDiagnostics(ctx),
     renderAutostartSection(),
     renderInstallSection(ctx),
+    renderDiagnostics(ctx),
     renderResetSection(ctx),
   ];
   const view = h('div', { class: 'settings', 'data-testid': 'settings' }, ...sections.map((s) => s.el));
