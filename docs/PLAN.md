@@ -206,9 +206,9 @@ Layout: the page is at least 70rem wide and grows to fit its widest table row on
    - **"Remove tag"** (next to Pair new tag) opens a scan modal: the scanned tag's pairing is found by any identifier the scan carries (so a tag paired by the other kind can be removed too), shown, and removed only after **Remove** is pressed. An NDEF pairing warns that every tag with that ID is unpaired. Admin tags are exempt: scanning one shows a message and removes nothing; they're removed only from the Admin tags table.
    - The UID column has a fixed width (`td.col-uid`), so NDEF lines up with the Admin tags table.
 4. **Admin cards:** a table like Videos: **UID**, **NDEF** (the `otherId`, if recorded) and Remove on the right (no label field). **"Add admin card"** opens the same scan modal, saves as soon as a valid card is scanned, and rejects UIDs already used as video cards.
-5. **Playback** (just above Config, `src/settings/playbackSection.ts`): **Tag scans interrupt the playing video**, off by default. Stored per kiosk in `localStorage` (`kiosk.interruptPlayback`). Off: scans during a tag's video are ignored until it ends. On: a video tag scanned during a video starts its video at once (`interruptible` in the state machine), and the same tag starts its video over. Admin tags open settings either way.
-6. **Config:** Export config, Update from published config, Import config from file, last applied `updatedAt`.
-7. **Install as Chrome App** (just above Diagnostics): optional, see §9.2.
+5. **Playback** (just above Tag reader, `src/settings/playbackSection.ts`): **Tag scans interrupt the playing video**, off by default. Stored per kiosk in `localStorage` (`kiosk.interruptPlayback`). Off: scans during a tag's video are ignored until it ends. On: a video tag scanned during a video starts its video at once (`interruptible` in the state machine), and the same tag starts its video over. Admin tags open settings either way.
+6. **Install as Chrome App** (just above Config): optional, see §9.2.
+7. **Config** (just above Diagnostics): Export config, Update from published config, Import config from file, last applied `updatedAt`.
 8. **Diagnostics** (just above Reset):
    - **Ready to work offline** indicator with a per-condition breakdown (see §9.3).
    - Storage usage/quota and persisted status.
@@ -260,7 +260,7 @@ Layout: the page is at least 70rem wide and grows to fit its widest table row on
 
 **Where the prompt appears:**
 
-- **Settings: an Install as Chrome App section** just above Diagnostics (`src/settings/installSection.ts`). It says installing is optional and shows "App installed ✓" once installed.
+- **Settings: an Install as Chrome App section** just above Config (`src/settings/installSection.ts`). It says installing is optional and shows "App installed ✓" once installed.
   - If a `beforeinstallprompt` event is saved, show an **Install** button that calls `prompt()` and awaits `userChoice`. A saved event can only be used once; if the user dismisses it, show the manual steps and wait for Chrome to fire the event again.
   - If no event is available yet, show manual steps: "Click the install icon at the right of the address bar, or Chrome menu ⋮ → Cast, save, and share → Install page as app…"
   - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The section must still work without it (the UI no longer mentions the 30 seconds).

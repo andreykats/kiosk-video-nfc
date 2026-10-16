@@ -59,10 +59,10 @@ export function mountSettings(root: HTMLElement, ctx: AppContext): () => void {
     renderCards(ctx),
     renderAdminCards(ctx),
     renderPlaybackSection(),
-    renderConfigSection(ctx),
     renderReaderSection(ctx),
     renderAutostartSection(),
     renderInstallSection(ctx),
+    renderConfigSection(ctx),
     renderDiagnostics(ctx),
     renderResetSection(ctx),
   ];

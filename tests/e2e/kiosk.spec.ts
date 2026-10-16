@@ -41,10 +41,10 @@ test('with Playback → interrupt off, scans during a feature video are ignored'
 
 test('with Playback → interrupt on (the default), a scan during a video starts the scanned video at once', async ({ page }) => {
   await openSettings(page);
-  // The Playback section sits right above Config, and the option is on by default.
+  // The Playback section sits right above Tag reader, and the option is on by default.
   const sections = page.locator('[data-testid="settings"] > section');
   const ids = await sections.evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
-  expect(ids[ids.indexOf('config-section') - 1]).toBe('playback-section');
+  expect(ids[ids.indexOf('reader-section') - 1]).toBe('playback-section');
   await expect(page.getByTestId('interrupt-playback')).toBeChecked();
   await page.getByTestId('back-to-kiosk').click();
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
