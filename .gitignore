@@ -5,3 +5,4 @@ test-results/
 playwright-report/
 *.local
 .DS_Store
+.vibe-visual-editor/

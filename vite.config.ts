@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import { VitePWA } from 'vite-plugin-pwa';
+import vibeVisualEditor, { hAdapter } from '@vibe-visual-editor/vite-plugin';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -24,6 +25,9 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(process.env.APP_VERSION?.trim() || `${pkg.version}-dev`),
   },
   plugins: [
+    // Dev server only (apply: 'serve'): maps rendered text back to source for the
+    // Vibe Visual Editor preview in VS Code. Production builds contain none of it.
+    vibeVisualEditor({ adapters: [hAdapter({ factory: 'h', from: '/src/ui/dom.ts' })] }),
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,
