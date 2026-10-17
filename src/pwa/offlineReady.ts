@@ -84,7 +84,7 @@ export function computeOfflineReadiness(inputs: ReadinessInputs): Readiness {
           id: 'persisted',
           label: 'Storage persisted',
           status: 'warn',
-          detail: 'Storage is not persistent, so Chrome may clear videos when the disk is full. Install the app (Settings → Install as Chrome App) to fix this.',
+          detail: 'Storage is not persistent, so Chrome may clear videos when the disk is full.',
         },
   );
 
