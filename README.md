@@ -112,7 +112,7 @@ A kiosk ignores pairings of the other kind, so a shared config can hold both. Se
 
 ### HID Keyboard mode on the ACR1552U
 
-The reader ships in CCID (smart card) mode. On a Mac, the setup guide's reader step (HID Keyboard chosen) has a **Copy command** button and steps for pasting it into Terminal: `curl -fsSL https://topps.drey.dev/acr1552-mode.sh -o /tmp/acr1552-mode.sh && bash /tmp/acr1552-mode.sh hid`. It asks for an admin password. A web page can't open Terminal itself, and a script downloaded by the browser is blocked by Gatekeeper, but one fetched with curl isn't. [`public/acr1552-mode.sh`](public/acr1552-mode.sh) also takes `get`, `ccid` and `both`. In HID-only mode the script can't switch the reader back, so it asks first; `both` keeps HID and CCID. It only changes the mode, so check the output settings below.
+The reader ships in CCID (smart card) mode. On a Mac, switch it by pasting this into Terminal: `curl -fsSL https://topps.drey.dev/acr1552-mode.sh -o /tmp/acr1552-mode.sh && bash /tmp/acr1552-mode.sh hid`. It asks for an admin password. A web page can't open Terminal itself, and a script downloaded by the browser is blocked by Gatekeeper, but one fetched with curl isn't. [`public/acr1552-mode.sh`](public/acr1552-mode.sh) also takes `get`, `ccid` and `both`. In HID-only mode the script can't switch the reader back, so it asks first; `both` keeps HID and CCID. It only changes the mode, so check the output settings below.
 
 Otherwise, use ACS's configuration tool (Windows only) **once per reader**:
 

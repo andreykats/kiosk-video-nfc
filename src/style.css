@@ -161,5 +161,5 @@ button.option:hover:not(:disabled) { border-color: var(--accent); }
 .onboarding-body .toolbar { margin-top: 1rem; }
 .settings section.danger-zone { border-color: #5a2a28; }
 .welcome-steps { margin: 0.25rem 0 1rem; padding-left: 1.4rem; line-height: 1.7; }
-.hid-mode-help ol, .bridge-install-help ol, .autostart-help ol { margin: 0.25rem 0 0.75rem; padding-left: 1.4rem; }
+.bridge-install-help ol, .autostart-help ol { margin: 0.25rem 0 0.75rem; padding-left: 1.4rem; }
 .command { word-break: break-all; user-select: all; font-size: 0.85rem; }

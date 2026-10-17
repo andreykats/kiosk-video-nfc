@@ -223,41 +223,6 @@ test('the guide resumes where it left off after a reload', async ({ page }) => {
   await expect(step(page, 'config')).toContainText('Started a new config ✓');
 });
 
-test('reader step: keyboard mode offers a copyable ACR1552U HID mode command on a Mac, and points elsewhere on Windows', async ({ page, context, browser, baseURL }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'MacIntel' }));
-  await page.goto('./');
-  await next(page);
-  await expect(step(page, 'reader')).toBeVisible();
-  await expect(page.getByTestId('reader-mode')).toHaveValue('keyboard');
-  const help = page.getByTestId('hid-mode-help');
-  await expect(help).toContainText('Open Terminal');
-
-  const scriptUrl = new URL('acr1552-mode.sh', baseURL).href;
-  const command = `curl -fsSL ${scriptUrl} -o /tmp/acr1552-mode.sh && bash /tmp/acr1552-mode.sh hid`;
-  await expect(page.getByTestId('hid-mode-command')).toHaveText(command);
-  await page.getByTestId('hid-mode-copy').click();
-  await expect(page.getByTestId('hid-mode-copy')).toHaveText('Copied ✓');
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
-
-  // The URL in the command serves the script itself.
-  const script = await (await page.request.get(scriptUrl)).text();
-  expect(script).toMatch(/^#!\/bin\/bash\n/);
-  expect(script).toContain('ACR1552U');
-
-  // Only for keyboard input.
-  await page.getByTestId('reader-mode').selectOption('bridge');
-  await expect(help).toHaveCount(0);
-
-  const windows = await browser.newPage();
-  await windows.addInitScript(() => Object.defineProperty(Navigator.prototype, 'platform', { get: () => 'Win32' }));
-  await windows.goto('./');
-  await next(windows);
-  await expect(step(windows, 'reader')).toContainText('use ACS’s configuration tool');
-  await expect(windows.getByTestId('hid-mode-copy')).toHaveCount(0);
-  await windows.close();
-});
-
 test('reader step: bridge mode on a Mac explains allowing the unsigned bridge app, until it connects', async ({ page }) => {
   // No bridge at first: every connection attempt is refused.
   let bridge: FakeBridge | null = null;

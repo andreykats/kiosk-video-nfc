@@ -18,7 +18,6 @@ import { resetKiosk } from '../settings/resetSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
 import { filePicker } from '../ui/filePicker';
-import { copyableCommand, OPEN_TERMINAL, scriptUrl } from '../ui/terminalCommand';
 import { importPickedFiles, importPickedFolder, type ImportHost } from '../videos/importFlow';
 import { startFullscreen } from '../kiosk/fullscreen';
 import { readFlags, writeFlags } from './progress';
@@ -150,43 +149,6 @@ function welcomeStep(_ctx: AppContext, nav: Nav): StepView {
   return { el, destroy: () => undefined };
 }
 
-/** A Terminal command shown in full, with a button that copies it. */
-const ACR1552_MODE_SCRIPT = 'acr1552-mode.sh';
-
-/**
- * Pasted into Terminal. A page can't start Terminal itself, and a script the
- * browser downloads is blocked by Gatekeeper; one fetched by curl isn't. The
- * script reruns itself with sudo, so it needs a real file (not a pipe into bash).
- */
-function hidModeCommand(): string {
-  return `curl -fsSL ${scriptUrl(ACR1552_MODE_SCRIPT)} -o /tmp/${ACR1552_MODE_SCRIPT} && bash /tmp/${ACR1552_MODE_SCRIPT} hid`;
-}
-
-/**
- * Keyboard input needs the reader in HID keyboard mode; the ACR1552U ships in
- * CCID mode. The switch script (public/acr1552-mode.sh) only runs on macOS.
- */
-function hidModeHelp(): HTMLElement {
-  if (!navigator.platform.startsWith('Mac')) {
-    return p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it, use ACS’s configuration tool.', 'hint');
-  }
-  return h(
-    'div',
-    { class: 'hid-mode-help', 'data-testid': 'hid-mode-help' },
-    p('Using an ACR1552U? It only types tags in HID keyboard mode. To switch it:', 'hint'),
-    h(
-      'ol',
-      { class: 'hint' },
-      h('li', {}, 'Press Copy command.'),
-      h('li', {}, OPEN_TERMINAL),
-      h('li', {}, 'Paste the command (⌘ V) and press Return.'),
-      h('li', {}, 'Type this Mac’s password and press Return. Nothing shows while you type.'),
-      h('li', {}, 'Type y and press Return to confirm.'),
-    ),
-    ...copyableCommand(hidModeCommand(), 'hid-mode'),
-  );
-}
-
 /**
  * The bridge app isn't signed by Apple, so macOS blocks its first launch (and the
  * first launch after each update) until it's allowed in Privacy & Security.
@@ -238,7 +200,6 @@ function readerStep(ctx: AppContext, nav: Nav): StepView {
             ctx.scanner.mode === 'keyboard'
               ? p('On a Mac, close Keyboard Setup Assistant if it opens. While it’s open, tag reads are lost.', 'hint')
               : null,
-            ctx.scanner.mode === 'keyboard' ? hidModeHelp() : null,
           ],
           primary: { label: 'Next', onClick: done, disabled: scanned === null && !readFlags().readerDone, testId: 'onboarding-next' },
           secondary: scanned ? undefined : { label: 'Skip', onClick: done, testId: 'onboarding-skip' },
