@@ -121,7 +121,7 @@ function welcomeStep(_ctx: AppContext, nav: Nav): StepView {
   replaceChildren(
     el,
     stepCard(nav, 'welcome', {
-      title: 'Welcome to the Topps Kiosk',
+      title: `Welcome to the ${__APP_NAME__}`,
       body: [
         p('This guide sets up this computer as a kiosk, one step at a time. You’ll:'),
         h(

@@ -1,23 +1,31 @@
 #!/bin/bash
 # Sets up a Mac to open the kiosk in Chrome kiosk mode at every login
 # (docs/kiosk-setup.md, "macOS"). Finish the setup guide in Chrome first, then
-# run this as the user the kiosk signs in as:
+# run this as the user the kiosk signs in as (the kiosk's Settings → Open at
+# startup shows this command with its own address):
 #
-#   curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
+#   curl -fsSL <kiosk>/mac-kiosk-autostart.sh | bash -s -- --url <kiosk>/
 #
 # To undo it, putting back what it changed:
 #
-#   curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash -s -- --uninstall
+#   curl -fsSL <kiosk>/mac-kiosk-autostart.sh | bash -s -- --uninstall
 #
-# Pass options after `bash -s --`, e.g. `... | bash -s -- --dry-run`.
+# Pass options after `bash -s --`, e.g. `... | bash -s -- --url <kiosk>/ --dry-run`.
 
 set -euo pipefail
 
-LABEL="dev.drey.topps-kiosk"
+LABEL="dev.drey.kiosk-video-nfc"
+# Earlier versions of this script used this label. A Mac set up by one keeps it,
+# so that running the setup again or --uninstall finds what that version set up.
+OLD_LABEL="dev.drey.topps-kiosk"
+if [[ ! -e "$HOME/Library/LaunchAgents/$LABEL.plist" && ! -d "$HOME/Library/Application Support/$LABEL" ]] \
+   && [[ -e "$HOME/Library/LaunchAgents/$OLD_LABEL.plist" || -d "$HOME/Library/Application Support/$OLD_LABEL" ]]; then
+  LABEL="$OLD_LABEL"
+fi
 AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
 # What setup changed and what was set before, so --uninstall can put it back.
 STATE="$HOME/Library/Application Support/$LABEL/install-state"
-URL="https://topps.drey.dev/"
+URL=""
 URL_GIVEN=0
 DRY_RUN=0
 UNINSTALL=0
@@ -29,10 +37,10 @@ die()  { printf 'Error: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<'EOF'
-Usage: mac-kiosk-autostart.sh [--url <https-url>] [--dry-run]
+Usage: mac-kiosk-autostart.sh --url <https-url> [--dry-run]
        mac-kiosk-autostart.sh --uninstall [--dry-run]
 
-  --url <url>   Page to open (default https://topps.drey.dev/)
+  --url <url>   The kiosk's address, opened at login
   --dry-run     Show what would change without changing anything
   --uninstall   Undo the setup, putting back what it changed
 
@@ -62,10 +70,14 @@ done
 [[ "$(uname -s)" == Darwin ]] || die "this script is for macOS"
 ((EUID != 0)) || die "run it as the kiosk's user, without sudo (it asks for an admin password when it needs one)"
 ((!(UNINSTALL && URL_GIVEN))) || die "--uninstall doesn't take --url: it reads the address from the setup it undoes"
-[[ "$URL" =~ ^https://[^[:space:]#]+$ ]] || die "--url must be an https:// address without a #, got: $URL"
+((UNINSTALL || URL_GIVEN)) || die "--url is missing. Copy the command from the kiosk's Settings → Open at startup."
 
 # The kiosk sees ?autostart and marks "Opens at startup" done in its setup checklist.
-if [[ "$URL" == *\?* ]]; then LAUNCH_URL="$URL&autostart"; else LAUNCH_URL="$URL?autostart"; fi
+LAUNCH_URL=""
+if ((URL_GIVEN)); then
+  [[ "$URL" =~ ^https://[^[:space:]#]+$ ]] || die "--url must be an https:// address without a #, got: $URL"
+  if [[ "$URL" == *\?* ]]; then LAUNCH_URL="$URL&autostart"; else LAUNCH_URL="$URL?autostart"; fi
+fi
 
 has_tty() { { : </dev/tty; } 2>/dev/null; }
 
@@ -86,7 +98,7 @@ state_set() {
   [[ "$2" != *$'\n'* ]] || die "can't save a value with a line break for $1"
   ((DRY_RUN)) && return
   mkdir -p "$(dirname "$STATE")"
-  tmp="$(mktemp -t topps-kiosk)"
+  tmp="$(mktemp -t kiosk-video-nfc)"
   if [[ -f "$STATE" ]]; then grep -v "^$1=" "$STATE" >"$tmp" || true; fi
   printf '%s=%s\n' "$1" "$2" >>"$tmp"
   mv "$tmp" "$STATE"
@@ -99,7 +111,7 @@ state_set_once() { state_get "$1" >/dev/null || state_set "$1" "$2"; }
 
 write_agent() {
   local tmp arg
-  tmp="$(mktemp -t topps-kiosk)"
+  tmp="$(mktemp -t kiosk-video-nfc)"
   # plutil escapes the values, so any URL is safe to put in the plist.
   plutil -create xml1 "$tmp"
   plutil -insert Label -string "$LABEL" "$tmp"
@@ -315,9 +327,12 @@ ask_autologin_off() {
 # Opening it with ?autostart=removed makes it forget that.
 tell_kiosk() {
   local url="$1"
-  [[ "$url" == *autostart ]] || url="$LAUNCH_URL"
+  # Empty when nothing was set up, so there's no saved address to tell.
+  if [[ ! "$url" =~ ^https://[^[:space:]#]+[?\&]autostart$ ]]; then
+    say "If the kiosk's settings still say it opens at startup, open the kiosk in Chrome with ?autostart=removed added to its address."
+    return
+  fi
   url="${url}=removed"
-  [[ "$url" =~ ^https://[^[:space:]#]+[?\&]autostart=removed$ ]] || url="$LAUNCH_URL=removed"
   if ! open -Ra "Google Chrome" >/dev/null 2>&1; then
     say "Google Chrome isn't installed. If the kiosk is set up in another Chrome, open $url there to update its settings."
     return

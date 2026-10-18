@@ -4,7 +4,7 @@
 
 ## Context
 
-**Today.** The kiosk (`andreykats/topps-nfc-kiosk`, this repo; live at https://topps.drey.dev; TypeScript + Vite PWA; Chrome on Windows and macOS) reads cards through an ACS reader in USB HID keyboard mode. `src/scan/keyboardScanner.ts` parses the typed UID. That mode only gives the UID and loses scans whenever the window isn't focused (the full-screen "Paused" notice).
+**Today.** The kiosk (`andreykats/kiosk-video-nfc-website`, this repo; TypeScript + Vite PWA; Chrome on Windows and macOS) reads cards through an ACS reader in USB HID keyboard mode. `src/scan/keyboardScanner.ts` parses the typed UID. That mode only gives the UID and loses scans whenever the window isn't focused (the full-screen "Paused" notice).
 
 **What's new.** A separate project, `andreykats/nfc-browser-bridge` (Plan 1), adds a native tray / menu-bar **bridge app**. It exposes the OS smart-card service to web pages over `ws://127.0.0.1:38241/v1`. It also ships a dependency-free TypeScript client in its `client/` folder (`protocol`, `client`, `tlv`, `ndef`, `ntag`, `fakeBridge`). Its protocol is frozen in its `docs/PROTOCOL.md`.
 

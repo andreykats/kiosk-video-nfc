@@ -1,4 +1,5 @@
 declare const __APP_VERSION__: string;
+declare const __APP_NAME__: string;
 
 // Chrome implements FileSystemHandle.move() for the origin private file system,
 // but it is not in the WHATWG spec yet, so lib.dom doesn't declare it.

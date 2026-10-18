@@ -1,6 +1,6 @@
 # Kiosk machine setup
 
-Follow these steps once on each kiosk computer. Replace `<url>` with the published site, e.g. `https://topps.drey.dev/`.
+Follow these steps once on each kiosk computer. Replace `<url>` with the published site's address, ending in `/`.
 
 ## Both Windows and macOS
 
@@ -31,7 +31,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
    **Use this command for the live kiosk, not the installed app's icon.** Chrome opens the installed app in a window with its own title bar (app name, Uninstall, extensions, ⋮ menu), which the page can't hide. The app goes fullscreen, which hides the bar, once someone opens the kiosk from settings or the setup guide (← Back to kiosk, Start kiosk, or an admin card held in settings), and returns to fullscreen on any click or card scan after that. It can't go fullscreen by itself at launch, and until someone opens the kiosk that way, clicks and scans leave it windowed so that settings doesn't open fullscreen. Kiosk mode starts fullscreen with no Chrome bars at all.
 
-   If you do run the installed app directly and want it fullscreen at launch without a click, set the Chrome policy `AutomaticFullscreenAllowedForUrls` to `https://topps.drey.dev` on that machine, for example through your device management.
+   If you do run the installed app directly and want it fullscreen at launch without a click, set the Chrome policy `AutomaticFullscreenAllowedForUrls` to the site's origin on that machine, for example through your device management.
 6. Turn off sleep, the screen saver and notifications. (While the kiosk view is showing, the app also asks Chrome to keep the screen awake, and asks again if the system takes that away, but don't rely on that alone: power saving can refuse it.)
 7. **Restart the computer every night**, outside opening hours (see the sections below). The app recovers from stalled or broken videos by itself. But if Chrome's page crashes, it shows a "sad tab" and stays like that until Chrome restarts. The app only updates itself when it starts, so the nightly restart is also what installs app updates.
 8. **Offline test:** disconnect the network and restart the computer. Check that the loop plays and that a test card works. Then reconnect.
@@ -53,17 +53,17 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 
 - On step 7 of the setup guide (**Open the kiosk at startup**), press **Copy command** and run it in Terminal, signed in as the user the kiosk uses. It's this command:
   ```
-  curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
+  curl -fsSL <url>mac-kiosk-autostart.sh | bash -s -- --url <url>
   ```
   It sets up the Mac to open the kiosk at login:
   - It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart`.
   - It removes Google Chrome from Login Items and turns off "Reopen windows when logging back in". The flags only take effect if Chrome isn't already running.
   - It turns on automatic login for that user. It asks for the user's password, then for an admin password. FileVault must be off; if it's on, the script says so and skips this step.
 
-  Add `-s -- --dry-run` after `bash` to see what it would change, or `-s -- --url <url>` for a different address. Restart the Mac to check it.
+  Add `--dry-run` at the end to see what it would change. Restart the Mac to check it.
 - To undo it, run the command under **Stop opening at startup** in Settings → **Open at startup** (it shows once the kiosk has opened at startup):
   ```
-  curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash -s -- --uninstall
+  curl -fsSL <url>mac-kiosk-autostart.sh | bash -s -- --uninstall
   ```
   It removes the LaunchAgent and puts Login Items, "Reopen windows" and automatic login back to how they were before the setup script ran (it asks for an admin password to turn automatic login off). Then it opens the kiosk in Chrome with `?autostart=removed`, so the settings checklist shows **Opens at startup** as not done again. Close that tab.
 - Nightly restart: macOS can't schedule a restart, so schedule a shutdown and a power-on instead (desktop Macs only):

@@ -1,4 +1,8 @@
-# Agent instructions: Topps NFC kiosk
+# Agent instructions: kiosk-video-nfc
+
+## Keep it generic
+
+The code, tests and docs describe a generic kiosk ("Kiosk" in local builds). Only the published app is branded: its name comes from the `APP_NAME` Actions variable and its domain from the Pages settings (README → Deployment). Don't write "Topps" into the source, and use `example.com` in test card IDs. Mentions of `topps.drey.dev` belong only where the text is about the live deployment. The NFC Browser Bridge (separate repo) never mentions it.
 
 ## Deploying
 

@@ -1,4 +1,4 @@
-# Topps Kiosk — Implementation Plan
+# Kiosk — Implementation Plan
 
 ## 1. Goal
 
@@ -58,8 +58,8 @@ Single-page app with **hash routing**: `#/` is the kiosk view and `#/settings` i
     { "fileName": "lion.mp4", "title": "Lion", "sizeBytes": 1048576000 }
   ],
   "cards": [
-    { "match": { "kind": "uid", "value": "04A23B1C5D8000" }, "fileName": "lion.mp4", "label": "Lion card", "otherId": { "kind": "ndef", "value": "https://topps.drey.dev/c/LION" } },
-    { "match": { "kind": "ndef", "value": "https://topps.drey.dev/c/BRONCOS-12" }, "fileName": "broncos.mp4", "label": "" }
+    { "match": { "kind": "uid", "value": "04A23B1C5D8000" }, "fileName": "lion.mp4", "label": "Lion card", "otherId": { "kind": "ndef", "value": "https://example.com/c/LION" } },
+    { "match": { "kind": "ndef", "value": "https://example.com/c/BRONCOS-12" }, "fileName": "broncos.mp4", "label": "" }
   ],
   "adminCards": [
     { "match": { "kind": "uid", "value": "04FF001122AA80" }, "label": "Front desk admin" }
@@ -265,7 +265,7 @@ Layout: the page is at least 70rem wide and grows to fit its widest table row on
   - If no event is available yet, show manual steps: "Click the install icon at the right of the address bar, or Chrome menu ⋮ → Cast, save, and share → Install page as app…"
   - Chrome only offers install after the user has clicked the page once and spent about 30 seconds on it, so the button may appear late. The section must still work without it (the UI no longer mentions the 30 seconds).
 - **First-launch setup guide (`#/setup`, `src/onboarding/`):** one centred card per step, with Back/Next. From step 2 on, a **Reset** button left of Back does the same as Settings → Reset configuration, then shows step 1. Step 1 has no Reset (a kiosk at step 1 has nothing to reset) and shows the app version instead of Back. It opens instead of the kiosk until it's finished, unless the kiosk can already play its loop video. It resumes at the first unfinished step after a reload, including when Chrome opens the newly installed app in its own window. Steps:
-  1. **Welcome to the Topps Kiosk**: lists the steps ahead, with **Get started** (sets `welcomeDone`, so a reload resumes past it). No install prompt: installing is optional and lives in settings (§9.2).
+  1. **Welcome to the Kiosk**: lists the steps ahead, with **Get started** (sets `welcomeDone`, so a reload resumes past it). No install prompt: installing is optional and lives in settings (§9.2).
   2. **Connect the NFC reader**: "hold any card on it". Next is enabled once a scan arrives, and the step can be skipped.
   3. **Import configuration**: **Import a config file** or **Start a new config**. The guide doesn't offer the published `config.json`; configs are copied between kiosks as files.
   4. New config → **Add videos** (files or a whole folder); the import moves straight on to step 5. Imported config → **Copy the videos** (folder import of the listed videos that are missing). This step can't be skipped: its only button is **Choose folder** until every listed video is on the kiosk. If a folder has only some of them, the step lists what's still needed. Then **Next** appears (the guide moves on by itself after a complete import).

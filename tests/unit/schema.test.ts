@@ -32,7 +32,7 @@ describe('validateConfig', () => {
   });
 
   it('keeps a tag’s display-only otherId, and checks it', () => {
-    const otherId = { kind: 'ndef', value: 'https://topps.drey.dev/c/LION' } as const;
+    const otherId = { kind: 'ndef', value: 'https://example.com/c/LION' } as const;
     const c = valid();
     const withOther = { ...c, cards: [{ ...c.cards[0]!, otherId }], adminCards: [{ ...c.adminCards[0]!, otherId: { kind: 'ndef', value: 'STAFF' } }] };
     const r = validateConfig(withOther);
@@ -85,7 +85,7 @@ describe('validateConfig', () => {
 
   it('accepts card IDs and rejects empty, long or control-character ones', () => {
     const c = valid();
-    c.cards[0]!.match = { kind: 'ndef', value: 'https://topps.drey.dev/c/BRONCOS-12' };
+    c.cards[0]!.match = { kind: 'ndef', value: 'https://example.com/c/BRONCOS-12' };
     expect(errorsOf(c)).toEqual([]);
     for (const value of ['', 'x'.repeat(257), 'a\nb']) {
       const d = valid();

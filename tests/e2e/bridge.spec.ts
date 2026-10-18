@@ -5,7 +5,7 @@ import { DEFAULT_URL } from '../../src/scan/bridge/vendor/protocol';
 import { clickDialogButton, LION_UID, openSettings, scan, setUpKiosk, waitForPlaying } from './helpers';
 
 const READER = 'ACS ACR1255U-J1';
-const CARD_ID = 'https://topps.drey.dev/c/TIGER';
+const CARD_ID = 'https://example.com/c/TIGER';
 
 const uidBytes = (hex: string) => Uint8Array.from(hex.match(/../g)!.map((b) => parseInt(b, 16)));
 let serial = 0;

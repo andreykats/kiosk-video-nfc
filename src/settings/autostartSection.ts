@@ -6,6 +6,9 @@ import { reactiveSection, type Section } from './section';
 const MAC_AUTOSTART_SCRIPT = 'mac-kiosk-autostart.sh';
 const KIOSK_FLAGS = '--kiosk --autoplay-policy=no-user-gesture-required';
 
+/** This kiosk's address, which the Mac script opens at login. */
+const appUrl = () => new URL(import.meta.env.BASE_URL, location.href).href;
+
 /**
  * How to make this computer open the kiosk fullscreen at startup. Macs run a
  * script (public/mac-kiosk-autostart.sh) that adds a login item and turns on
@@ -14,7 +17,7 @@ const KIOSK_FLAGS = '--kiosk --autoplay-policy=no-user-gesture-required';
  * with `?autostart`, which turns the checklist's "Opens at startup" green.
  */
 export function autostartHelp(): HTMLElement {
-  const kioskUrl = autostartUrl(new URL(import.meta.env.BASE_URL, location.href).href);
+  const kioskUrl = autostartUrl(appUrl());
   const platform = navigator.platform;
   if (platform.startsWith('Mac')) {
     return h(
@@ -29,7 +32,7 @@ export function autostartHelp(): HTMLElement {
         h('li', {}, 'Type this Mac’s password each time it asks, and press Return. Nothing shows while you type.'),
         h('li', {}, 'If macOS asks to let Terminal control System Events, choose OK.'),
       ),
-      ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash`, 'mac-autostart'),
+      ...copyableCommand(`curl -fsSL ${scriptUrl(MAC_AUTOSTART_SCRIPT)} | bash -s -- --url ${appUrl()}`, 'mac-autostart'),
     );
   }
   if (platform.startsWith('Win')) {
@@ -42,7 +45,7 @@ export function autostartHelp(): HTMLElement {
         h('li', {}, 'Press Copy command.'),
         h('li', {}, 'Press Windows + R, type shell:startup, then press Enter. A folder opens.'),
         h('li', {}, 'Right-click in the folder and choose New → Shortcut. Paste the command (Ctrl + V) and press Next.'),
-        h('li', {}, 'Name it Topps Kiosk and press Finish.'),
+        h('li', {}, `Name it ${__APP_NAME__} and press Finish.`),
         h('li', {}, 'Make Windows sign in automatically, so the shortcut runs after a restart.'),
       ),
       ...copyableCommand(`"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ${KIOSK_FLAGS} ${kioskUrl}`, 'windows-autostart'),

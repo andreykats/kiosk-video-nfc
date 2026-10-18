@@ -14,7 +14,7 @@ const fakePlatform = (page: Page, platform: string) =>
 async function throughReader(page: Page) {
   await page.goto('./');
   await expect(step(page, 'welcome')).toContainText('Step 1 of 8');
-  await expect(step(page, 'welcome')).toContainText('Welcome to the Topps Kiosk');
+  await expect(step(page, 'welcome')).toContainText('Welcome to the Kiosk');
   // Step 1 shows the version where Back would be, and no Reset: a kiosk at step 1 has nothing to reset.
   await expect(page.getByTestId('onboarding-version')).toHaveText(/^v\d+\.\d+\.\d+(-dev)?$/);
   await expect(page.getByTestId('onboarding-reset')).toHaveCount(0);
@@ -106,7 +106,7 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   // Step 7 on a Mac: a copyable command that runs the auto-start script.
   await expect(step(page, 'autostart')).toContainText('Step 7 of 8');
   const scriptUrl = new URL('mac-kiosk-autostart.sh', page.url()).href;
-  const command = `curl -fsSL ${scriptUrl} | bash`;
+  const command = `curl -fsSL ${scriptUrl} | bash -s -- --url ${new URL('./', page.url()).href}`;
   await expect(page.getByTestId('mac-autostart-command')).toHaveText(command);
   await page.getByTestId('mac-autostart-copy').click();
   await expect(page.getByTestId('mac-autostart-copy')).toHaveText('Copied ✓');
@@ -312,7 +312,7 @@ test('a launch by the startup command turns Opens at startup green, in the check
   const ids = await page.locator('[data-testid="settings"] > section').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')));
   expect(ids[ids.indexOf('install-section') - 1]).toBe('autostart-section');
   const section = page.getByTestId('autostart-section');
-  await expect(section.getByTestId('mac-autostart-command')).toHaveText(`curl -fsSL ${new URL('mac-kiosk-autostart.sh', page.url()).href} | bash`);
+  await expect(section.getByTestId('mac-autostart-command')).toHaveText(`curl -fsSL ${new URL('mac-kiosk-autostart.sh', page.url()).href} | bash -s -- --url ${new URL('./', page.url()).href}`);
   await expect(section.getByTestId('autostart-status')).toHaveCount(0);
 
   await page.goto('./?autostart');

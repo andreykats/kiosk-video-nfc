@@ -52,6 +52,9 @@ jobs:
           # "/<repo>" for a project site; vite.config.ts normalises it.
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
           APP_VERSION: ${{ steps.version.outputs.version }}
+          # The published app's name, from the repo's Actions variables
+          # (Settings → Secrets and variables → Actions). Unset: "Kiosk".
+          APP_NAME: ${{ vars.APP_NAME }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:

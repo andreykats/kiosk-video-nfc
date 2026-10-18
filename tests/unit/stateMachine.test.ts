@@ -79,16 +79,16 @@ describe('kiosk state machine', () => {
       cardKey: 'ndef',
       config: {
         ...config,
-        cards: [...config.cards, { match: { kind: 'ndef', value: 'https://topps.drey.dev/c/LION' }, fileName: 'lion.mp4', label: '' }],
+        cards: [...config.cards, { match: { kind: 'ndef', value: 'https://example.com/c/LION' }, fileName: 'lion.mp4', label: '' }],
         adminCards: [...config.adminCards, { match: { kind: 'ndef', value: 'STAFF' }, label: '' }],
       },
     };
-    expect(transition(initialKioskState, scan('99999999', 'https://topps.drey.dev/c/LION'), withIds).effects).toEqual([{ type: 'playFeature', fileName: 'lion.mp4' }]);
+    expect(transition(initialKioskState, scan('99999999', 'https://example.com/c/LION'), withIds).effects).toEqual([{ type: 'playFeature', fileName: 'lion.mp4' }]);
     expect(transition(playing, scan('99999999', 'STAFF'), withIds).effects).toEqual([{ type: 'openSettings' }]);
     // UID pairings don't play on a kiosk that identifies cards by card ID.
     expect(transition(initialKioskState, scan('04A23B1C', 'https://example.com/other'), withIds).effects).toEqual([]);
     // Nor card-ID pairings on a UID kiosk.
-    expect(transition(initialKioskState, scan('99999999', 'https://topps.drey.dev/c/LION'), { ...withIds, cardKey: 'uid' }).effects).toEqual([]);
+    expect(transition(initialKioskState, scan('99999999', 'https://example.com/c/LION'), { ...withIds, cardKey: 'uid' }).effects).toEqual([]);
   });
 
   it('warns but stays in the loop when the paired file is missing', () => {

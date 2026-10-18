@@ -5,7 +5,7 @@ import { mimeRecord, textRecord, uriRecord } from '../../src/scan/bridge/vendor/
 import type { ScanEvent } from '../../src/scan/scanEvent';
 
 const R = 'ACS ACR1255U-J1';
-const URL_ID = 'https://topps.drey.dev/c/BRONCOS-12';
+const URL_ID = 'https://example.com/c/BRONCOS-12';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());

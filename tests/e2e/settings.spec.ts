@@ -202,7 +202,7 @@ test('settings widens to keep long tag IDs on one line, and wraps them instead o
   expect(await settingsWidth(page)).toBeLessThan(1200);
 
   // A fresh kiosk whose tag has a long NDEF payload.
-  const LONG = 'https://topps.drey.dev/c/2026-series-one-chrome-refractor-autograph-LION-0001-of-0250';
+  const LONG = 'https://example.com/c/2026-series-one-chrome-refractor-autograph-LION-0001-of-0250';
   const context = await browser.newContext({ baseURL, viewport: { width: 1920, height: 900 } });
   const wide = await context.newPage();
   await openSettings(wide);

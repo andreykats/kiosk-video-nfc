@@ -7,15 +7,22 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
   version: string;
 };
 
+// The deploy workflow passes the published app's name (see deploy.yml); local
+// builds use a generic one.
+const appName = process.env.APP_NAME?.trim() || 'Kiosk';
+
 /**
  * GitHub Pages project sites live under `/<repo>/`. The deploy workflow passes the
- * path reported by actions/configure-pages (e.g. "/topps-nfc-kiosk", or "" for a
+ * path reported by actions/configure-pages (e.g. "/kiosk-video-nfc-website", or "" for a
  * user site) in BASE_PATH; locally we default to the repo name.
  */
 function resolveBase(raw: string | undefined): string {
-  const trimmed = (raw ?? '/topps-nfc-kiosk/').trim().replace(/^\/+|\/+$/g, '');
+  const trimmed = (raw ?? '/kiosk-video-nfc-website/').trim().replace(/^\/+|\/+$/g, '');
   return trimmed === '' ? '/' : `/${trimmed}/`;
 }
+
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 export default defineConfig({
   base: resolveBase(process.env.BASE_PATH),
@@ -23,8 +30,13 @@ export default defineConfig({
     // The deploy workflow passes the release number (see deploy.yml); anything
     // built locally is marked as a dev build.
     __APP_VERSION__: JSON.stringify(process.env.APP_VERSION?.trim() || `${pkg.version}-dev`),
+    __APP_NAME__: JSON.stringify(appName),
   },
   plugins: [
+    {
+      name: 'app-name',
+      transformIndexHtml: (html) => html.replaceAll('%APP_NAME%', escapeHtml(appName)),
+    },
     // Dev server only (apply: 'serve'): maps rendered text back to source for the
     // Vibe Visual Editor preview in VS Code. Production builds contain none of it.
     vibeVisualEditor({ adapters: [hAdapter({ factory: 'h', from: '/src/ui/dom.ts' })] }),
@@ -32,8 +44,8 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: false,
       manifest: {
-        name: 'Topps Kiosk',
-        short_name: 'Topps Kiosk',
+        name: appName,
+        short_name: appName,
         description: 'Plays a looping video and switches to tag-specific videos on NFC scans.',
         start_url: './',
         scope: './',

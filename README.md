@@ -1,11 +1,11 @@
-# Topps Kiosk
+# Kiosk
 
 A browser kiosk for Google Chrome on Windows and macOS. While idle it plays a loop video fullscreen. When someone scans a paired NFC card, it plays that card's video once and then goes back to the loop. Cards that aren't paired do nothing.
 
 - **Reader:** an ACS NFC reader (ACR1552U or ACR1255U-J1), read one of two ways, chosen per kiosk in Settings → **Card reader**:
   - **HID Keyboard:** the reader types the card UID and then Enter. Nothing to install.
   - **NFC Browser Bridge:** the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge) app, running in the tray or menu bar, passes cards to the page. It also reads the card's **card ID** (NDEF), and taps work even when the kiosk window isn't focused.
-- **Hosting:** GitHub Pages at **https://topps.drey.dev/**. After the first load, the app works offline (it's an installable PWA).
+- **Hosting:** GitHub Pages (see [Deployment](#deployment)). After the first load, the app works offline (it's an installable PWA). Below, `<url>` stands for the site's address, ending in `/`.
 - **Videos:** each kiosk imports its own copies into browser storage (the origin private file system). Videos are never uploaded to GitHub.
 - **Config:** a `config.json` file lists the videos, card pairings and admin cards. You set it up on one kiosk, export it, and import it on the others (see [Sharing config changes](#sharing-config-changes)).
 
@@ -35,7 +35,7 @@ By default, scanning a card while a card video is playing does nothing: the vide
 For a live kiosk, start Chrome with this command instead of opening the installed app's icon:
 
 ```
-chrome --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/
+chrome --kiosk --autoplay-policy=no-user-gesture-required <url>
 ```
 
 | Flag | What it does |
@@ -43,18 +43,18 @@ chrome --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev
 | `--kiosk` | Opens the site fullscreen with no Chrome toolbars, tabs or title bar. |
 | `--autoplay-policy=no-user-gesture-required` | Lets videos play with sound without anyone clicking first. Without it, Chrome plays them muted. |
 
-Step 7 of the setup guide (**Open the kiosk at startup**) shows the command for this computer with a **Copy command** button. The startup command opens `https://topps.drey.dev/?autostart`: the app records that launch, which turns **Opens at startup** green in the settings checklist, and removes `?autostart` from the address.
+Step 7 of the setup guide (**Open the kiosk at startup**) shows the command for this computer with a **Copy command** button. The startup command opens `<url>?autostart`: the app records that launch, which turns **Opens at startup** green in the settings checklist, and removes `?autostart` from the address.
 
 **Windows:** press Win+R, run `shell:startup`, and in that folder create a shortcut with this target, so it starts at login:
 
 ```
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart
 ```
 
-**macOS:** run this in Terminal as the kiosk's user. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required https://topps.drey.dev/?autostart` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run` and `--url` are explained in `--help`):
+**macOS:** run this in Terminal as the kiosk's user. It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart` at login, stops Chrome from opening by itself, and turns on automatic login ([public/mac-kiosk-autostart.sh](public/mac-kiosk-autostart.sh); `--dry-run` and `--url` are explained in `--help`):
 
 ```
-curl -fsSL https://topps.drey.dev/mac-kiosk-autostart.sh | bash
+curl -fsSL <url>mac-kiosk-autostart.sh | bash -s -- --url <url>
 ```
 
 It saves what it changed, so running it with `--uninstall` puts it back. Once the kiosk has opened at startup, Settings → **Open at startup** shows that command. It opens the kiosk with `?autostart=removed` when it's done, so the app forgets the launch and shows the setup steps again.
@@ -63,7 +63,7 @@ Chrome only applies the flags when it isn't already running, so the script makes
 
 - **Exiting kiosk mode:** Alt+F4 on Windows, Cmd+Q on a Mac.
 - **Same data as the installed app:** the kiosk-mode window uses the same storage as the installed app, so it has the same videos and config. Do the setup guide first (in the installed app or a normal Chrome window), then switch to the launch command.
-- **Why not the app icon:** Chrome opens the installed app in a window with its own title bar (app name, Uninstall, extensions and the ⋮ menu), and a web page can't hide that bar. The app goes fullscreen, which hides it, once someone opens the kiosk from settings or the setup guide (← Back to kiosk, Start kiosk, or an admin card in settings), and on any click or card scan after that, but it can't do that by itself at launch. Kiosk mode is fullscreen from the start. The only way to make the installed app fullscreen at launch without a click is the Chrome admin policy `AutomaticFullscreenAllowedForUrls` set to `https://topps.drey.dev`, which Chrome only honours on managed machines.
+- **Why not the app icon:** Chrome opens the installed app in a window with its own title bar (app name, Uninstall, extensions and the ⋮ menu), and a web page can't hide that bar. The app goes fullscreen, which hides it, once someone opens the kiosk from settings or the setup guide (← Back to kiosk, Start kiosk, or an admin card in settings), and on any click or card scan after that, but it can't do that by itself at launch. Kiosk mode is fullscreen from the start. The only way to make the installed app fullscreen at launch without a click is the Chrome admin policy `AutomaticFullscreenAllowedForUrls` set to the site's origin, which Chrome only honours on managed machines.
 - **Keep the window focused:** the reader types into whichever window has focus, so nothing else should be open on top of the kiosk.
 
 Full machine setup, including sleep settings and an offline test: [docs/kiosk-setup.md](docs/kiosk-setup.md).
@@ -96,7 +96,7 @@ Staff choose the **Card reader input method** and the **Card identifier** in Set
 
 1. Install the bridge app from its [Releases page](https://github.com/andreykats/nfc-browser-bridge/releases) and let it start at login (see its README).
 2. Keep the reader in its factory **CCID** mode. No ACS tool needed.
-3. In Settings → **Card reader**, choose **NFC Browser Bridge**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to `https://topps.drey.dev`.
+3. In Settings → **Card reader**, choose **NFC Browser Bridge**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to the site's origin.
 4. Hold a card on the reader. Settings → Diagnostics shows its UID, card ID and NDEF records.
 
 ### Card identifier
@@ -112,7 +112,7 @@ A kiosk ignores pairings of the other kind, so a shared config can hold both. Se
 
 ### HID Keyboard mode on the ACR1552U
 
-The reader ships in CCID (smart card) mode. On a Mac, switch it by pasting this into Terminal: `curl -fsSL https://topps.drey.dev/acr1552-mode.sh -o /tmp/acr1552-mode.sh && bash /tmp/acr1552-mode.sh hid`. It asks for an admin password. A web page can't open Terminal itself, and a script downloaded by the browser is blocked by Gatekeeper, but one fetched with curl isn't. [`public/acr1552-mode.sh`](public/acr1552-mode.sh) also takes `get`, `ccid` and `both`. In HID-only mode the script can't switch the reader back, so it asks first; `both` keeps HID and CCID. It only changes the mode, so check the output settings below.
+The reader ships in CCID (smart card) mode. On a Mac, switch it by pasting this into Terminal: `curl -fsSL <url>acr1552-mode.sh -o /tmp/acr1552-mode.sh && bash /tmp/acr1552-mode.sh hid`. It asks for an admin password. A web page can't open Terminal itself, and a script downloaded by the browser is blocked by Gatekeeper, but one fetched with curl isn't. [`public/acr1552-mode.sh`](public/acr1552-mode.sh) also takes `get`, `ccid` and `both`. In HID-only mode the script can't switch the reader back, so it asks first; `both` keeps HID and CCID. It only changes the mode, so check the output settings below.
 
 Otherwise, use ACS's configuration tool (Windows only) **once per reader**:
 
@@ -132,7 +132,7 @@ Otherwise, use ACS's configuration tool (Windows only) **once per reader**:
 
 ```sh
 npm install
-npm run dev          # http://localhost:5173/topps-nfc-kiosk/ (no service worker in dev)
+npm run dev          # http://localhost:5173/kiosk-video-nfc-website/ (no service worker in dev)
 npm test             # unit tests (Vitest)
 npm run test:e2e     # end-to-end tests (Playwright, uses your installed Google Chrome)
 npm run build        # type-check + production build into dist/
@@ -153,9 +153,11 @@ window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter' }));
 
 `.github/workflows/deploy.yml` runs the unit tests, builds, and deploys to GitHub Pages on every push to `main`. In the repo, **Settings → Pages → Source** is set to **GitHub Actions**, with the custom domain `topps.drey.dev` and HTTPS enforced.
 
+The published app's name (window title, installed app name, setup guide) comes from the `APP_NAME` variable under **Settings → Secrets and variables → Actions → Variables**, set to `Topps Kiosk`. Without it, and in local builds, the app is called `Kiosk`. Keep the source generic: what's specific to the published app goes in these repo settings, not in the code.
+
 Every deploy gets the next version number: v1.0.1, v1.0.2, and so on. The workflow finds the highest `v1.0.N` tag, builds with `1.0.(N+1)`, and pushes that tag once the deploy succeeds. The version shows in the settings header and on step 1 of the setup guide. To start a new series (e.g. v1.1.1), change `version` in `package.json` to `1.1.0`. Local builds show `<package version>-dev`.
 
-The workflow sets Vite's `base` from the Pages path, which is `/` on the custom domain. Local builds default to `/topps-nfc-kiosk/`, which you can override with `BASE_PATH=/other-name npm run build`.
+The workflow sets Vite's `base` from the Pages path, which is `/` on the custom domain. Local builds default to `/kiosk-video-nfc-website/`, which you can override with `BASE_PATH=/other-name npm run build`.
 
 `config.json` is never precached by the service worker, so **Update from published config** would always fetch the latest file if it's switched back on.
 

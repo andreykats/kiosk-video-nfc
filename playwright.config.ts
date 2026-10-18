@@ -10,7 +10,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 60_000,
   use: {
-    baseURL: `http://localhost:${PORT}/topps-nfc-kiosk/`,
+    baseURL: `http://localhost:${PORT}/kiosk-video-nfc-website/`,
     trace: 'retain-on-failure',
   },
   projects: [
@@ -27,7 +27,7 @@ export default defineConfig({
   ],
   webServer: {
     command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}/topps-nfc-kiosk/`,
+    url: `http://localhost:${PORT}/kiosk-video-nfc-website/`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

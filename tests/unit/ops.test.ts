@@ -77,7 +77,7 @@ describe('config ops', () => {
 });
 
 describe('matching scans to cards', () => {
-  const ID = 'https://topps.drey.dev/c/BRONCOS-12';
+  const ID = 'https://example.com/c/BRONCOS-12';
   const config = () => {
     let c = upsertVideo(emptyConfig(), 'loop.mp4', 1);
     c = upsertVideo(c, 'lion.mp4', 1);
