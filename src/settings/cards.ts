@@ -1,11 +1,11 @@
 import type { AppContext } from '../app/context';
 import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
-import { addAdminCard, checkPairing, findAdminCard, findCard, otherIdOf, pairCard, removeAdminCard, removeCard, scanMatches, setCardVideo } from '../config/ops';
+import { addAdminCard, cardsForVideo, checkPairing, findAdminCard, findCard, otherIdOf, pairCard, removeAdminCard, removeCard, scanMatches, setCardVideo } from '../config/ops';
 import { matchId, type CardEntry, type CardMatch } from '../config/schema';
 import { formatMatch, matchKindLabel } from '../scan/uid';
 import { confirmDialog, type DialogAction, type DialogHandle } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
-import { identifierCells, matchAttrs, pairingError, reassignText } from './pairing';
+import { identifierCells, matchAttrs, pairCountText, pairingError, reassignText } from './pairing';
 import { openScanDialog, scanMessage } from './scanModal';
 import { reactiveSection, type Section } from './section';
 import { saveEdit } from '../app/edits';
@@ -86,10 +86,14 @@ async function pairNewCard(ctx: AppContext): Promise<void> {
  * Pairs scanned cards with one video (Settings → Videos → Pair, and the setup
  * guide). Each card is paired as soon as it's scanned; staff are asked only
  * before moving a card that plays another video. The dialog closes after one
- * card unless "Keep pairing" is ticked.
+ * card unless "Keep pairing" is ticked, and shows how many tags play the video.
  */
 export async function quickPair(ctx: AppContext, fileName: string): Promise<void> {
   const keep = h('input', { type: 'checkbox', 'data-testid': 'keep-pairing' });
+  const count = h('p', { class: 'hint', 'data-testid': 'quick-pair-count' });
+  const showCount = () => {
+    count.textContent = pairCountText(cardsForVideo(ctx.config.get(), fileName).length);
+  };
   let paired = false;
   const idle = (): DialogAction<string>[] => [{ label: paired ? 'Done' : 'Cancel', value: null }];
   const save = async (d: DialogHandle<string>, match: CardMatch, otherId: CardMatch | undefined) => {
@@ -99,6 +103,7 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
       return;
     }
     paired = true;
+    showCount();
     if (!keep.checked) return d.close(matchId(match));
     d.setActions(idle());
     scanMessage(d, `Paired ${formatMatch(match)} ✓ Scan another tag, or press Done.`, 'success');
@@ -135,7 +140,8 @@ export async function quickPair(ctx: AppContext, fileName: string): Promise<void
       return false; // closing the dialog stops listening
     },
   });
-  dialog.body.append(h('label', { class: 'keep-pairing' }, keep, ' Keep pairing tags to this video'));
+  showCount();
+  dialog.body.append(count, h('label', { class: 'keep-pairing' }, keep, ' Keep pairing tags to this video'));
   dialog.setActions(idle());
   await dialog.result;
 }

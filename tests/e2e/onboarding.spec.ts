@@ -70,9 +70,14 @@ test('first launch: new config → add videos → pair tags and pick the loop', 
   // With Keep pairing ticked, more cards pair to the same video until Done.
   await page.locator('tr[data-file="lion.mp4"]').getByTestId('pair-card').click();
   await page.getByTestId('keep-pairing').check();
+  // The dialog counts the video's tags as they're paired.
+  const dialogCount = page.getByTestId('quick-pair-count');
+  await expect(dialogCount).toHaveText('1 tag paired');
   await scan(page, '0A0B0C0D');
   await expect(page.getByTestId('scan-status')).toContainText('Paired');
+  await expect(dialogCount).toHaveText('2 tags paired');
   await scan(page, '0A0B0C0E');
+  await expect(dialogCount).toHaveText('3 tags paired');
   await expect(count('lion.mp4')).toHaveText('3 tags paired');
   // A card already paired here is reported, and the dialog keeps waiting.
   await page.waitForTimeout(1600);

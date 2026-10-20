@@ -22,6 +22,11 @@ export function reassignText(match: CardMatch, otherFile: string): string {
   return `${formatMatch(match)} plays “${otherFile}”.${match.kind === 'ndef' ? ' Reassigning moves every tag with this tag ID.' : ''}`;
 }
 
+/** How many pairings play a video. In NDEF mode, every tag with the same payload is one. */
+export function pairCountText(count: number): string {
+  return count === 0 ? 'No tags yet' : `${count} tag${count === 1 ? '' : 's'} paired`;
+}
+
 /** DOM attributes identifying a card in tables and chips (data-uid kept for UID cards). */
 export function matchAttrs(match: CardMatch): Record<string, string> {
   return match.kind === 'uid' ? { 'data-match': matchId(match), 'data-uid': match.value } : { 'data-match': matchId(match) };

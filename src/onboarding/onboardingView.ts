@@ -12,7 +12,7 @@ import { formatMatch, formatUid } from '../scan/uid';
 import { autostartHelp } from '../settings/autostartSection';
 import { renderOfflineIndicator } from '../settings/diagnostics';
 import { quickPair } from '../settings/cards';
-import { matchAttrs } from '../settings/pairing';
+import { matchAttrs, pairCountText } from '../settings/pairing';
 import { readerControls } from '../settings/readerSection';
 import { resetKiosk } from '../settings/resetSection';
 import { closeAllDialogs, confirmDialog, errorList } from '../ui/dialog';
@@ -474,12 +474,7 @@ function pairStep(ctx: AppContext, nav: Nav): StepView {
           h(
             'div',
             { class: 'pair-cell' },
-            // Counts pairings: in NDEF mode, every card with the same payload is one.
-            h(
-              'span',
-              { class: 'hint', 'data-testid': 'pair-count' },
-              isLoop ? 'Plays on repeat between tags' : cards.length === 0 ? 'No tags yet' : `${cards.length} tag${cards.length === 1 ? '' : 's'} paired`,
-            ),
+            h('span', { class: 'hint', 'data-testid': 'pair-count' }, isLoop ? 'Plays on repeat between tags' : pairCountText(cards.length)),
             h(
               'button',
               {
