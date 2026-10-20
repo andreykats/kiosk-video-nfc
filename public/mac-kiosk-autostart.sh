@@ -23,6 +23,8 @@ if [[ ! -e "$HOME/Library/LaunchAgents/$LABEL.plist" && ! -d "$HOME/Library/Appl
   LABEL="$OLD_LABEL"
 fi
 AGENT="$HOME/Library/LaunchAgents/$LABEL.plist"
+# Screen settings macOS uses before anyone logs in. Each user has their own copy too.
+SYSTEM_DISPLAYS="/Library/Preferences/com.apple.windowserver.displays.plist"
 # What setup changed and what was set before, so --uninstall can put it back.
 STATE="$HOME/Library/Application Support/$LABEL/install-state"
 URL=""
@@ -49,6 +51,8 @@ Sets up:
   - Google Chrome removed from Login Items, and "Reopen windows" off,
     so Chrome isn't already running when the kiosk command runs
   - automatic login for this user (asks for passwords; needs FileVault off)
+  - a check that the login screen has the same screen rotation saved as this
+    user, offering to fix it (asks for an admin password)
 
 It saves what was set before. --uninstall removes the LaunchAgent, puts Login
 Items, "Reopen windows" and automatic login back as they were (asks for an
@@ -210,6 +214,78 @@ enable_autologin() {
   fi
 }
 
+# Prints "<display UUID> <rotation> <key path of the rotation>" for each screen
+# saved in a WindowServer display plist, under $2 (DisplaySets or DisplayAnyUserSets).
+saved_rotations() {
+  local plist="$1" key="$2" configs displays i j path uuid rotation
+  configs="$(plutil -extract "$key.Configs" raw -o - "$plist" 2>/dev/null)" || return 0
+  [[ "$configs" =~ ^[0-9]+$ ]] || return 0
+  for ((i = 0; i < configs; i++)); do
+    displays="$(plutil -extract "$key.Configs.$i.DisplayConfig" raw -o - "$plist" 2>/dev/null)" || continue
+    [[ "$displays" =~ ^[0-9]+$ ]] || continue
+    for ((j = 0; j < displays; j++)); do
+      path="$key.Configs.$i.DisplayConfig.$j"
+      uuid="$(plutil -extract "$path.UUID" raw -o - "$plist" 2>/dev/null)" || continue
+      rotation="$(plutil -extract "$path.Rotation" raw -o - "$plist" 2>/dev/null)" || continue
+      # Saved as an integer or a real (90 or 90.000000).
+      rotation="${rotation%%.*}"
+      [[ "$uuid" =~ ^[0-9A-Fa-f-]+$ && "$rotation" =~ ^[0-9]+$ ]] || continue
+      printf '%s %s %s\n' "$uuid" "$rotation" "$path.Rotation"
+    done
+  done
+}
+
+# macOS saves each screen's rotation for the user and, system-wide, for the login
+# screen. Some screens reconnect right after startup; if that happens while the
+# Mac logs in automatically, the screen gets the login screen's rotation and
+# keeps it. So the two must match.
+check_display_rotation() {
+  local host user_plist user_rotations uuid rotation path want stale="" type answer failed=0
+  host="$(ioreg -rd1 -c IOPlatformExpertDevice | sed -nE 's/.*"IOPlatformUUID" = "([0-9A-Fa-f-]+)".*/\1/p')"
+  user_plist="$HOME/Library/Preferences/ByHost/com.apple.windowserver.displays.$host.plist"
+  if [[ -n "$host" && -r "$user_plist" && -r "$SYSTEM_DISPLAYS" ]]; then
+    user_rotations="$(saved_rotations "$user_plist" DisplaySets)"
+    while read -r uuid rotation path; do
+      [[ -n "$uuid" ]] || continue
+      # Skips screens this user has no rotation for, or more than one (one per screen arrangement).
+      want="$(awk -v u="$uuid" '$1 == u { print $2 }' <<<"$user_rotations" | sort -u)"
+      [[ "$want" =~ ^[0-9]+$ ]] || continue
+      [[ "$rotation" == "$want" ]] || stale+="$path $want"$'\n'
+    done < <(saved_rotations "$SYSTEM_DISPLAYS" DisplayAnyUserSets; saved_rotations "$SYSTEM_DISPLAYS" DisplaySets)
+  fi
+  if [[ -z "$stale" ]]; then
+    say "✓ The login screen has the same screen rotation saved as $KIOSK_USER"
+    return
+  fi
+
+  local problem="the login screen has a different screen rotation saved than $KIOSK_USER, so the screen can come up rotated after a restart"
+  if ((DRY_RUN)); then
+    say "Would offer to fix it: $problem"
+    return
+  fi
+  if ! has_tty; then
+    warn "$problem. Run this script in Terminal to fix it."
+    return
+  fi
+  read -rp "Warning: $problem. Save $KIOSK_USER's rotation for the login screen too? [Y/n] " answer </dev/tty
+  if [[ "$answer" == [nN]* ]]; then
+    say "Screen rotation was left as it is."
+    return
+  fi
+  say "Saving the screen rotation (sudo asks for an admin password)…"
+  while read -r path want; do
+    [[ -n "$path" ]] || continue
+    # Keeps the type macOS saved it as.
+    if plutil -extract "$path" xml1 -o - "$SYSTEM_DISPLAYS" 2>/dev/null | grep -q '<real>'; then type=-float; else type=-integer; fi
+    sudo plutil -replace "$path" "$type" "$want" "$SYSTEM_DISPLAYS" </dev/tty || failed=1
+  done <<<"$stale"
+  if ((failed)); then
+    warn "couldn't save the screen rotation for the login screen. To reset it, run: sudo rm $SYSTEM_DISPLAYS (macOS saves it again at the next restart, with no rotation)"
+  else
+    say "✓ The login screen has the same screen rotation saved as $KIOSK_USER (takes effect after a restart)"
+  fi
+}
+
 set_up() {
   [[ -d "/Applications/Google Chrome.app" || -d "$HOME/Applications/Google Chrome.app" ]] \
     || die "Google Chrome isn't installed in /Applications. Install it and finish the kiosk setup guide first."
@@ -220,6 +296,7 @@ set_up() {
   remove_chrome_login_item
   disable_reopen_windows
   enable_autologin
+  check_display_rotation
 
   if ((!DRY_RUN)); then
     say ""

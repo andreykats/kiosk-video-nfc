@@ -59,6 +59,7 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
   - It adds a LaunchAgent that runs `open -na "Google Chrome" --args --kiosk --autoplay-policy=no-user-gesture-required <url>?autostart`.
   - It removes Google Chrome from Login Items and turns off "Reopen windows when logging back in". The flags only take effect if Chrome isn't already running.
   - It turns on automatic login for that user. It asks for the user's password, then for an admin password. FileVault must be off; if it's on, the script says so and skips this step.
+  - It checks that the screen rotation macOS saved for the login screen matches the user's. If they differ, it offers to save the user's rotation for the login screen too (it asks for an admin password). Otherwise a screen that reconnects while the Mac logs in can come up rotated and stay that way.
 
   Add `--dry-run` at the end to see what it would change. Restart the Mac to check it.
 - To undo it, run the command under **Stop opening at startup** in Settings → **Open at startup** (it shows once the kiosk has opened at startup):
@@ -87,4 +88,5 @@ Follow these steps once on each kiosk computer. Replace `<url>` with the publish
 | Something went wrong overnight or before a restart | Diagnostics → **Event log** keeps the last 200 entries across restarts, with a line for each time the kiosk started. Press **Copy log** and paste it into a message to whoever looks after the kiosk. |
 | "Setup required … can't be played" | The loop video failed twice in a row. The kiosk keeps retrying (up to every 5 minutes) and clears the message once the loop plays. If it doesn't clear, re-import the loop video. |
 | Settings says "A new version of the app is available" | A new version was published while the kiosk was running. The app picks it up the next time it starts (for example after the nightly restart). To switch now, press **Reload** when no one is watching. The app never updates or reloads itself while it's running. |
+| Mac: the screen comes up rotated after a restart | macOS saves a screen's rotation for the login screen as well as for the user, and the login screen's was left over from an earlier setting. Set the rotation in System Settings → Displays, then run the setup command again: it offers to fix the login screen's rotation. Restart to check. |
 | Videos disappeared | Storage wasn't persisted and Chrome cleared it. Install the app (Settings → **Install as Chrome App**), re-import the videos, and check **Persisted: yes**. |
