@@ -150,7 +150,7 @@ test('bridge mode: a tap the reader reads only in part asks the visitor to scan 
   partial.uid = partial.uid.subarray(0, 3);
   await tap(page, fake, partial);
   await expect(hint).toHaveClass(/shown/);
-  await expect(hint).toHaveText('Couldn’t read the tag. Please scan again.');
+  await expect(hint).toHaveText('Please scan again');
   await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop');
   await waitForPlaying(page, 'loop-video', 'loop.mp4');
   await expect(hint).not.toHaveClass(/shown/, { timeout: 5_000 });

@@ -15,7 +15,7 @@ export interface ScanAgainHint {
  * try again. It sits over whatever is playing without stopping it.
  */
 export function scanAgainHint(view: HTMLElement): ScanAgainHint {
-  const el = h('div', { class: 'scan-again-hint', 'data-testid': 'scan-again-hint', role: 'status' }, 'Couldn’t read the tag. Please scan again.');
+  const el = h('div', { class: 'scan-again-hint', 'data-testid': 'scan-again-hint', role: 'status' }, 'Please scan again');
   view.append(el);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
