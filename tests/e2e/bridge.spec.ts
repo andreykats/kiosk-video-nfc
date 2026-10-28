@@ -136,6 +136,33 @@ test('admin tags are added by UID even on an NDEF kiosk, and open settings', asy
   await expect(page.getByTestId('settings')).toBeVisible();
 });
 
+test('bridge mode: a tap the reader reads only in part asks the visitor to scan again', async ({ page }) => {
+  const { fake } = await useFakeBridge(page);
+  await setUpKiosk(page);
+  await setReaderMode(page, 'bridge');
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  const hint = page.getByTestId('scan-again-hint');
+  await expect(hint).not.toHaveClass(/shown/);
+
+  // A weak read: the reader answers 3 of the 7 UID bytes.
+  const partial = ntag(LION_UID);
+  partial.uid = partial.uid.subarray(0, 3);
+  await tap(page, fake, partial);
+  await expect(hint).toHaveClass(/shown/);
+  await expect(hint).toHaveText('Couldn’t read the tag. Please scan again.');
+  await expect(page.getByTestId('kiosk')).toHaveAttribute('data-state', 'loop');
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  await expect(hint).not.toHaveClass(/shown/, { timeout: 5_000 });
+
+  await tap(page, fake, partial);
+  await expect(hint).toHaveClass(/shown/);
+  // Scanning again with a good read plays the video and clears the message.
+  await tap(page, fake, ntag(LION_UID));
+  await waitForPlaying(page, 'feature-video', 'lion.mp4');
+  await expect(hint).not.toHaveClass(/shown/);
+});
+
 test('bridge mode shows a notice while the bridge app is not running', async ({ page }) => {
   const { fake } = await useFakeBridge(page);
   await setUpKiosk(page);

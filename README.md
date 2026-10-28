@@ -101,6 +101,8 @@ Staff choose the **Card reader input method** and the **Card identifier** in Set
 
 On a Mac the bridge also watches for a reader that is plugged in but stopped working, and restarts it over USB as if it had been replugged. The kiosk screen says "The NFC reader isn’t responding. Restarting it…" meanwhile, and "Unplug it and plug it back in" if that didn't help. Reader changes, restarts and the screen notices are written to Settings → Diagnostics → log.
 
+A tag the reader reads only in part (weak signal, e.g. a tag on a foil pack, gives a UID that's too short) plays nothing. The kiosk screen then shows "Couldn’t read the tag. Please scan again." for a moment over the video, and the log records the partial UID.
+
 ### Card identifier
 
 Each kiosk identifies video cards one way, chosen under **Card identifier** in Settings → **Card reader**. Pairing never asks; it uses this setting.

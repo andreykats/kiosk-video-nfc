@@ -95,6 +95,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export class BridgeScanner {
   readonly scans = new Emitter<ScanEvent>();
   readonly changed = new Emitter<void>();
+  /** A tag was tapped but its UID couldn't be read in full (weak RF, e.g. a tag on a foil pack), so it doesn't scan. */
+  readonly unreadable = new Emitter<void>();
   /** Off on kiosks that identify tags by UID: nothing there uses the NDEF data, so taps skip reading it. */
   readsCardIds = true;
   private client: BridgeClient | null = null;
@@ -189,6 +191,7 @@ export class BridgeScanner {
     if (reader?.kind === 'sam') return;
     if (ev.uid === null || !isCanonicalUid(ev.uid)) {
       log.warn(`Tag on "${ev.reader}" has no usable UID (${ev.uid ?? 'none'}); ignored.`);
+      this.unreadable.emit();
       return;
     }
     const at = this.opts.now();

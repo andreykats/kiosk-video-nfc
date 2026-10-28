@@ -128,6 +128,28 @@ describe('BridgeScanner', () => {
     expect(scans).toHaveLength(2);
   });
 
+  it('reports a tag whose UID came back cut short as unreadable, and scans nothing', async () => {
+    const { fake, scanner, scans } = setup();
+    const unreadable = vi.fn();
+    scanner.unreadable.subscribe(unreadable);
+    scanner.start();
+    await tick();
+    log.clear();
+    // A weak read: the reader answers 3 of the 7 UID bytes with success.
+    const partial = tag(8);
+    partial.uid = partial.uid.subarray(0, 3);
+    fake.placeCard(R, partial);
+    await tick();
+    expect(scans).toEqual([]);
+    expect(unreadable).toHaveBeenCalledTimes(1);
+    expect(log.recent().map((e) => `${e.level} ${e.message}`)).toEqual([`warn Tag on "${R}" has no usable UID (041020); ignored.`]);
+    fake.removeCard(R);
+    fake.placeCard(R, tag(8));
+    await tick();
+    expect(scans.map((s) => s.uid)).toEqual(['04102030405008']);
+    expect(unreadable).toHaveBeenCalledTimes(1);
+  });
+
   it('ignores SAM slots', async () => {
     const { fake, scanner, scans } = setup();
     fake.addReader('ACS ACR1552 1S CL Reader SAM 0', 'sam');

@@ -6,6 +6,7 @@ import { log } from '../app/log';
 import { h } from '../ui/dom';
 import { bridgeNotice } from './bridgeNotice';
 import { keepFullscreen } from './fullscreen';
+import { scanAgainHint } from './scanAgainHint';
 import { showShortcutHintOnMouseMove } from './shortcutHint';
 import { initialKioskState, transition, type KioskEffect, type KioskEvent, type KioskState } from './stateMachine';
 import { keepScreenOn } from './wakeLock';
@@ -341,9 +342,14 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
   const stopFullscreen = keepFullscreen();
   const stopWakeLock = keepScreenOn();
   const stopShortcutHint = showShortcutHintOnMouseMove(view);
+  const scanAgain = scanAgainHint(view);
 
   const unsubscribers = [
-    ctx.scanner.scans.subscribe((scan) => dispatch({ type: 'scan', card: scan })),
+    ctx.scanner.scans.subscribe((scan) => {
+      scanAgain.hide();
+      dispatch({ type: 'scan', card: scan });
+    }),
+    ctx.scanner.unreadable.subscribe(() => scanAgain.show()),
     ctx.scanner.changed.subscribe(onReaderChange),
     ctx.config.changed.subscribe(() => void startLoop()),
     ctx.videos.changed.subscribe(() => {
@@ -362,6 +368,7 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
     stopWakeLock();
     stopFullscreen();
     stopShortcutHint();
+    scanAgain.dispose();
     unsubscribers.forEach((u) => u());
     loop.clear();
     feature.clear();

@@ -27,6 +27,9 @@ html, body { margin: 0; height: 100%; background: #000; color: var(--text); }
 .shortcut-hint { position: absolute; top: 7rem; left: 50%; z-index: 2; padding: 0.75rem 1.25rem; border-radius: 10px; background: rgb(32 33 36 / 92%); color: #fff; font-size: 1.15rem; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, -0.5rem); transition: opacity 0.2s, transform 0.2s; }
 .shortcut-hint.shown { opacity: 1; transform: translate(-50%, 0); }
 .shortcut-hint kbd { display: inline-block; padding: 0.1rem 0.45rem; border: 1px solid #5f6368; border-radius: 5px; background: #3c4043; font: inherit; font-size: 0.95em; }
+/* Shown for a moment after a tap the reader couldn't read; over the video, which keeps playing. */
+.scan-again-hint { position: absolute; top: 50%; left: 50%; z-index: 2; box-sizing: border-box; width: max-content; max-width: 80vw; padding: 1.25rem 2rem; border-radius: 16px; background: rgb(32 33 36 / 92%); color: #fff; font-size: clamp(1.5rem, 3.5vw, 2.75rem); text-align: center; text-wrap: balance; pointer-events: none; opacity: 0; transform: translate(-50%, -45%); transition: opacity 0.2s, transform 0.2s; }
+.scan-again-hint.shown { opacity: 1; transform: translate(-50%, -50%); }
 .kiosk-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 /* Settings → Playback → Videos fill the screen: zoom and crop around the centre instead of letterboxing. */
 .kiosk.fill-screen .kiosk-video { object-fit: cover; }

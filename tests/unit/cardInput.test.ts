@@ -34,7 +34,7 @@ function setup(mode: ReaderMode, permission: PermissionState | null = 'prompt', 
   const scans: ScanEvent[] = [];
   input.scans.subscribe((s) => scans.push(s));
   const typeUid = (uid: string) => keyboard.scans.emit({ uid, at: 0, source: 'keyboard', ndefKey: null, records: null });
-  return { fake, input, scans, typeUid, perm, saved, keyboard };
+  return { fake, bridge, input, scans, typeUid, perm, saved, keyboard };
 }
 
 describe('CardInput', () => {
@@ -55,6 +55,21 @@ describe('CardInput', () => {
     fake.placeCard(R, FakeTag.ntag('NTAG213'));
     await tick();
     expect(scans.map((s) => s.source)).toEqual(['bridge']);
+  });
+
+  it('passes on unreadable taps in bridge mode only', async () => {
+    const { fake, bridge, input } = setup('bridge');
+    const unreadable = vi.fn();
+    input.unreadable.subscribe(unreadable);
+    await tick();
+    const partial = FakeTag.ntag('NTAG213');
+    partial.uid = partial.uid.subarray(0, 3);
+    fake.placeCard(R, partial);
+    await tick();
+    expect(unreadable).toHaveBeenCalledTimes(1);
+    input.setMode('keyboard');
+    bridge.unreadable.emit();
+    expect(unreadable).toHaveBeenCalledTimes(1);
   });
 
   it('keyboard mode stays on the keyboard even when Chrome already allows the bridge', async () => {

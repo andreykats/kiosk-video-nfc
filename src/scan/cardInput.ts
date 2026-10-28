@@ -41,6 +41,8 @@ export interface CardInputDeps {
  */
 export class CardInput {
   readonly scans = new Emitter<ScanEvent>();
+  /** A tap the reader couldn't read (bridge mode only; a keyboard-mode reader types nothing for one). */
+  readonly unreadable = new Emitter<void>();
   /** Mode, card key, permission or bridge status changed. */
   readonly changed = new Emitter<void>();
   /** The effective card key changed (also fires `changed`). */
@@ -68,6 +70,9 @@ export class CardInput {
       }),
       this.bridge.scans.subscribe((scan) => {
         if (this.mode_ === 'bridge') this.scans.emit(scan);
+      }),
+      this.bridge.unreadable.subscribe(() => {
+        if (this.mode_ === 'bridge') this.unreadable.emit();
       }),
       this.bridge.changed.subscribe(() => this.changed.emit()),
     ];
