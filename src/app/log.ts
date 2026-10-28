@@ -23,7 +23,7 @@ function describe(part: unknown): string {
   }
 }
 
-function safeLocalStorage(): Storage | null {
+export function safeLocalStorage(): Storage | null {
   try {
     return globalThis.localStorage ?? null;
   } catch {

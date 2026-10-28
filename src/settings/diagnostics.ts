@@ -1,5 +1,6 @@
 import type { AppContext } from '../app/context';
-import { formatLog, log, logChanged, type LogEntry } from '../app/log';
+import { errorMessage, formatLog, log, logChanged, type LogEntry } from '../app/log';
+import { uploadFolder, uploadId, uploadLog } from '../app/logUpload';
 import { formatUid } from '../scan/uid';
 import { formatBytes } from '../videos/opfsStore';
 import { h, replaceChildren } from '../ui/dom';
@@ -48,6 +49,38 @@ function copyLogButton(): HTMLButtonElement {
   return button;
 }
 
+/**
+ * Uploads the whole log for whoever looks after the kiosk to read; the line under the buttons
+ * tells them which folder it went to.
+ */
+function uploadLogControls(): { button: HTMLButtonElement; status: HTMLElement } {
+  const label = 'Upload log';
+  const button = h('button', { type: 'button', 'data-testid': 'upload-log' }, label);
+  const status = h('p', { class: 'hint', 'data-testid': 'upload-log-status', role: 'status' });
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    button.textContent = 'Uploading…';
+    status.textContent = '';
+    const folder = uploadFolder(uploadId(), new Date(), __APP_VERSION__);
+    uploadLog(log.recent(), folder)
+      .then(
+        () => {
+          status.textContent = `Uploaded to ${folder}`;
+          log.info('Log uploaded to', folder);
+        },
+        (e: unknown) => {
+          status.textContent = `Couldn’t upload the log: ${errorMessage(e)}`;
+          log.warn('Couldn’t upload the log:', errorMessage(e));
+        },
+      )
+      .finally(() => {
+        button.disabled = false;
+        button.textContent = label;
+      });
+  });
+  return { button, status };
+}
+
 function row(label: string, value: Node | string, testId?: string): HTMLElement {
   return h('div', { class: 'diag-row' }, h('dt', {}, label), h('dd', { 'data-testid': testId }, value));
 }
@@ -88,6 +121,7 @@ export function renderOfflineIndicator(ctx: AppContext): Section {
 
 export function renderDiagnostics(ctx: AppContext): Section {
   const offline = renderOfflineIndicator(ctx);
+  const upload = uploadLogControls();
   const body = h('dl', { class: 'diag' });
   const logList = h('ol', { class: 'log', reversed: true });
 
@@ -134,6 +168,7 @@ export function renderDiagnostics(ctx: AppContext): Section {
           )
         : null,
       row('Since start', sinceStart(ctx), 'diag-since-start'),
+      row('Log upload ID', h('span', { class: 'mono' }, uploadId()), 'diag-upload-id'),
       row(
         'Autoplay',
         h('span', { class: ctx.diagnostics.autoplay === 'ok' || ctx.diagnostics.autoplay === 'unknown' ? '' : 'banner banner-warn' }, AUTOPLAY_TEXT[ctx.diagnostics.autoplay]),
@@ -166,6 +201,9 @@ export function renderDiagnostics(ctx: AppContext): Section {
       h('summary', {}, 'Event log'),
       h('p', { class: 'hint' }, 'Kiosk starts, warnings, errors and other events, newest first. Kept across restarts (the last 200).'),
       copyLogButton(),
+      ' ',
+      upload.button,
+      upload.status,
       logList,
     ),
   );

@@ -228,3 +228,40 @@ test('Diagnostics counts playback failures since start, and the event log surviv
   expect(copied).toMatch(/^\d{4}-\d\d-\d\dT[\d:.]+Z START Kiosk started \(v/m);
   expect(copied).toContain('ERROR Loop video "loop.mp4" failed');
 });
+
+test('Upload log sends the event log to the logs bucket and says where it went', async ({ page }) => {
+  const uploads: { name: string; body: string }[] = [];
+  await page.route('https://firebasestorage.googleapis.com/**', async (route) => {
+    const url = new URL(route.request().url());
+    uploads.push({ name: url.searchParams.get('name') ?? '', body: route.request().postData() ?? '' });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+  await page.getByTestId('kiosk').press('Control+Shift+S');
+  const id = (await page.getByTestId('diag-upload-id').textContent()) ?? '';
+  expect(id).toMatch(/^kiosk-[0-9A-F]{8}$/);
+
+  const eventLog = page.getByTestId('event-log');
+  await eventLog.locator('summary').click();
+  await eventLog.getByTestId('upload-log').click();
+  const status = eventLog.getByTestId('upload-log-status');
+  await expect(status).toContainText(`Uploaded to kiosk-video-nfc/${id}/`);
+  expect(uploads).toHaveLength(1);
+  const [upload] = uploads;
+  expect(upload?.name).toMatch(new RegExp(`^kiosk-video-nfc/${id}/\\d{8}T\\d{6}Z_v[0-9A-Za-z.+-]+/kiosk\\.log$`));
+  expect(upload?.body).toMatch(/^\d{4}-\d\d-\d\dT[\d:.]+Z START Kiosk started \(v/m);
+  // The same ID after a restart, and the upload itself is in the log.
+  await page.reload();
+  await expect(page.getByTestId('diag-upload-id')).toHaveText(id);
+  await eventLog.locator('summary').click();
+  await expect(eventLog.locator('li.info', { hasText: 'Log uploaded to kiosk-video-nfc/' })).toHaveCount(1);
+});
+
+test('Upload log reports a failed upload', async ({ page }) => {
+  await page.route('https://firebasestorage.googleapis.com/**', (route) => route.fulfill({ status: 403, body: '' }));
+  await page.getByTestId('kiosk').press('Control+Shift+S');
+  const eventLog = page.getByTestId('event-log');
+  await eventLog.locator('summary').click();
+  await eventLog.getByTestId('upload-log').click();
+  await expect(eventLog.getByTestId('upload-log-status')).toHaveText('Couldn’t upload the log: the server answered HTTP 403');
+  await expect(eventLog.getByTestId('upload-log')).toBeEnabled();
+});
