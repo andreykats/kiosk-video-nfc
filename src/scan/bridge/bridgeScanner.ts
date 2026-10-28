@@ -6,14 +6,23 @@ import { isCanonicalUid } from '../uid';
 import { BridgeClient, type BridgeClientOptions } from './vendor/client';
 import { describeRecord, matchKey, TNF_NAMES, type NdefRecord } from './vendor/ndef';
 import { isType2, readNdef } from './vendor/ntag';
-import type { CardPresentEvent, Reader, ServiceStatus } from './vendor/protocol';
+import type { CardPresentEvent, Reader, RecoveryAction, RecoveryEvent, RecoveryState, ServiceStatus, UsbReader } from './vendor/protocol';
 
 export type BridgeStatus =
   | { state: 'off' }
   | { state: 'connecting' }
   /** Connecting for a while without reaching the bridge: it isn't running, or Chrome blocked the connection. */
   | { state: 'unreachable' }
-  | { state: 'connected'; version: string; service: ServiceStatus; readers: Reader[] }
+  | {
+      state: 'connected';
+      version: string;
+      service: ServiceStatus;
+      readers: Reader[];
+      /** Readers on USB, plugged in whether or not they work; null if the bridge can't see USB (not macOS). */
+      usbReaders: UsbReader[] | null;
+      /** The bridge bringing a stuck reader back; null if the bridge can't see USB. */
+      recovery: RecoveryState | null;
+    }
   | { state: 'protocol-mismatch'; message: string };
 
 export interface BridgeScannerOptions {
@@ -31,6 +40,33 @@ export interface BridgeScannerOptions {
 export function usableReaders(readers: readonly Reader[]): Reader[] {
   return readers.filter((r) => r.kind !== 'sam');
 }
+
+/** One line for the log; card changes don't change it. Null for states not worth logging. */
+export function describeBridgeStatus(s: BridgeStatus): string | null {
+  switch (s.state) {
+    case 'off':
+    case 'connecting':
+    case 'protocol-mismatch': // logged as an error when it happens
+      return null;
+    case 'unreachable':
+      return 'not reachable';
+    case 'connected': {
+      const names = (list: readonly { name: string }[]) => list.map((r) => r.name).join(', ') || 'none';
+      const parts = [`bridge v${s.version}`, `readers: ${names(usableReaders(s.readers))}`];
+      if (s.service !== 'ready') parts.push('smart-card service unavailable');
+      if (s.usbReaders) parts.push(`on USB: ${names(s.usbReaders)}`);
+      if (s.recovery && s.recovery !== 'idle') parts.push(`recovery ${s.recovery}`);
+      return `connected (${parts.join('; ')})`;
+    }
+  }
+}
+
+const RECOVERY_TEXT: Record<RecoveryAction, string> = {
+  reopen: 'The bridge reconnected to the smart-card service',
+  usb_reset: 'The bridge reset the tag reader over USB',
+  failed: 'The bridge could not bring the tag reader back; it needs unplugging and plugging back in',
+  recovered: 'The tag reader works again',
+};
 
 function textOf(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes);
@@ -63,6 +99,7 @@ export class BridgeScanner {
   private unreachableTimer: ReturnType<typeof setTimeout> | undefined;
   private lastUid: string | null = null;
   private lastAt = -Infinity;
+  private logged: string | null = null;
   private readonly unsubscribers: (() => void)[] = [];
   private readonly opts: Required<Omit<BridgeScannerOptions, 'client'>> & { client: BridgeClientOptions };
 
@@ -94,11 +131,19 @@ export class BridgeScanner {
         if (state === 'connecting') this.onConnecting();
         // 'open' is reported through hello/readers, which carry the details.
       }),
-      client.on('readers', ({ service, readers }) => {
+      client.on('readers', ({ service, readers, usbReaders, recovery }) => {
         if (client.state !== 'open') return;
         clearTimeout(this.unreachableTimer);
-        this.setStatus({ state: 'connected', version: client.version ?? 'unknown', service, readers });
+        this.setStatus({
+          state: 'connected',
+          version: client.version ?? 'unknown',
+          service,
+          readers,
+          usbReaders: usbReaders ?? null,
+          recovery: recovery ?? null,
+        });
       }),
+      client.on('recovery', (ev) => logRecovery(ev)),
       client.on('card_present', (ev) => void this.onCard(client, ev)),
       client.on('error', (e) => {
         log.error('Tag reader bridge:', e.message);
@@ -125,8 +170,22 @@ export class BridgeScanner {
     }, this.opts.unreachableAfterMs);
   }
 
+  /** Reset the readers over USB, as if unplugged and plugged back in. Returns the readers reset. */
+  async resetReaders(): Promise<string[]> {
+    if (!this.client) throw new Error('The tag reader bridge is off.');
+    const reset = await this.client.resetReaders();
+    log.info(`Reset the tag reader from settings: ${reset.join(', ') || 'no reader on USB'}.`);
+    return reset;
+  }
+
   private setStatus(status: BridgeStatus): void {
     this.status_ = status;
+    const text = describeBridgeStatus(status);
+    if (text !== null && text !== this.logged) {
+      const degraded = status.state !== 'connected' || usableReaders(status.readers).length === 0 || (status.recovery ?? 'idle') !== 'idle';
+      (degraded ? log.warn : log.info)(`Tag reader bridge: ${text}.`);
+    }
+    if (text !== null) this.logged = text;
     this.changed.emit();
   }
 
@@ -159,4 +218,11 @@ export class BridgeScanner {
     }
     this.scans.emit({ uid: ev.uid, at, source: 'bridge', ndefKey, records: summarize(records) });
   }
+}
+
+function logRecovery(ev: RecoveryEvent): void {
+  const text = ev.action === 'recovered' ? `${RECOVERY_TEXT.recovered}.` : `${RECOVERY_TEXT[ev.action]}: ${ev.reason}.`;
+  if (ev.action === 'failed') log.error(text);
+  else if (ev.action === 'recovered') log.info(text);
+  else log.warn(text);
 }

@@ -4,6 +4,7 @@ import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import type { Diagnostics } from '../app/diagnostics';
 import { log } from '../app/log';
 import { h } from '../ui/dom';
+import { bridgeNotice } from './bridgeNotice';
 import { keepFullscreen } from './fullscreen';
 import { showShortcutHintOnMouseMove } from './shortcutHint';
 import { initialKioskState, transition, type KioskEffect, type KioskEvent, type KioskState } from './stateMachine';
@@ -318,16 +319,14 @@ export function mountKiosk(root: HTMLElement, ctx: AppContext): () => void {
 
   // In bridge mode there is no fallback: if the bridge app or the reader is
   // missing, cards can't play, so say so instead of silently ignoring taps.
+  let shownProblem: string | null = null;
   const updateBridgeNotice = () => {
-    const status = ctx.scanner.bridgeStatus;
-    const problem =
-      ctx.scanner.mode !== 'bridge' || ctx.scanner.bridgeReady || status.state === 'off' || status.state === 'connecting'
-        ? null
-        : status.state === 'connected'
-          ? 'Plug in the NFC reader.'
-          : status.state === 'protocol-mismatch'
-            ? 'The bridge app needs updating.'
-            : 'Start the NFC Browser Bridge app on this computer.';
+    const problem = ctx.scanner.mode === 'bridge' ? bridgeNotice(ctx.scanner.bridgeStatus, ctx.scanner.bridgeReady) : null;
+    if (problem !== shownProblem) {
+      if (problem !== null) log.warn(`Showing "Tag reader not available": ${problem}`);
+      else log.info('Tag reader available again; notice hidden.');
+      shownProblem = problem;
+    }
     bridgeEl.hidden = problem === null;
     bridgeEl.querySelector('[data-testid="bridge-notice-detail"]')!.textContent = problem ?? '';
   };

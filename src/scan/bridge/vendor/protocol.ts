@@ -1,4 +1,4 @@
-// Copied from andreykats/nfc-browser-bridge client/src/protocol.ts at commit 3a6ef36 (pre-v0.1.0). Don't edit here; re-copy to update.
+// Copied from andreykats/nfc-browser-bridge client/src/protocol.ts at commit 20996c1. Don't edit here; re-copy to update.
 // @ts-nocheck -- written for the bridge's own tsconfig (no noUncheckedIndexedAccess); type-checked and tested there.
 // NFC Browser Bridge wire protocol, version 1. Mirrors docs/PROTOCOL.md exactly.
 
@@ -20,21 +20,44 @@ export interface Reader {
   card: CardInfo | null;
 }
 
+/** A smart-card reader seen on USB, whether or not the smart-card service lists it. */
+export interface UsbReader {
+  name: string;
+}
+
+export type RecoveryState = "idle" | "recovering" | "failed";
+
+/** What `hello`, `readers` and `list_readers` report. */
+export interface ReaderStatus {
+  service: ServiceStatus;
+  readers: Reader[];
+  /** Only where the bridge can see USB (macOS). A reader here but not in `readers` is plugged in but not working. */
+  usbReaders?: UsbReader[];
+  /** Present whenever `usbReaders` is. "failed": the reader needs unplugging and plugging back in. */
+  recovery?: RecoveryState;
+}
+
 // ---- Server events ----
 
-export interface HelloEvent {
+export interface HelloEvent extends ReaderStatus {
   event: "hello";
   protocol: number;
   app: "nfc-browser-bridge";
   version: string;
-  service: ServiceStatus;
-  readers: Reader[];
 }
 
-export interface ReadersEvent {
+export interface ReadersEvent extends ReaderStatus {
   event: "readers";
-  service: ServiceStatus;
-  readers: Reader[];
+}
+
+export type RecoveryAction = "reopen" | "usb_reset" | "failed" | "recovered";
+
+/** A step the bridge took to bring a stuck reader back. For logs. */
+export interface RecoveryEvent {
+  event: "recovery";
+  action: RecoveryAction;
+  reason: string;
+  readers: string[];
 }
 
 export interface CardPresentEvent {
@@ -49,7 +72,7 @@ export interface CardRemovedEvent {
   reader: string;
 }
 
-export type ServerEvent = HelloEvent | ReadersEvent | CardPresentEvent | CardRemovedEvent;
+export type ServerEvent = HelloEvent | ReadersEvent | RecoveryEvent | CardPresentEvent | CardRemovedEvent;
 
 // ---- Client requests ----
 
@@ -72,8 +95,12 @@ export interface ResetRequest {
   type: "reset";
   reader: string;
 }
+/** Reset every smart-card reader on USB, as if replugged. */
+export interface ResetReadersRequest {
+  type: "reset_readers";
+}
 
-export type Request = PingRequest | ListReadersRequest | TransmitRequest | ResetRequest;
+export type Request = PingRequest | ListReadersRequest | TransmitRequest | ResetRequest | ResetReadersRequest;
 
 export interface ApduResponse {
   /** Response body without the status word, uppercase hex. */
@@ -84,9 +111,10 @@ export interface ApduResponse {
 
 export interface ResultMap {
   ping: Record<string, never>;
-  list_readers: { service: ServiceStatus; readers: Reader[] };
+  list_readers: ReaderStatus;
   transmit: { responses: ApduResponse[] };
   reset: { atr: string };
+  reset_readers: { reset: string[] };
 }
 
 // ---- Responses ----
@@ -101,7 +129,8 @@ export type ErrorCode =
   | "transmit_failed"
   | "blocked_write"
   | "pcsc_unavailable"
-  | "busy";
+  | "busy"
+  | "unsupported";
 
 export interface ErrorBody {
   code: ErrorCode;

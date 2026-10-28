@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { log } from '../../src/app/log';
 import { BridgeScanner } from '../../src/scan/bridge/bridgeScanner';
 import { FakeBridge, FakeTag } from '../../src/scan/bridge/vendor/fakeBridge';
 import { mimeRecord, textRecord, uriRecord } from '../../src/scan/bridge/vendor/ndef';
@@ -137,5 +138,56 @@ describe('BridgeScanner', () => {
     fake.start();
     await tick(10_000);
     expect(scanner.status.state).toBe('connected');
+  });
+
+  it('reports the readers on USB and the recovery state, and logs changes and recovery steps', async () => {
+    const { fake, scanner } = setup();
+    log.clear();
+    scanner.start();
+    await tick();
+    expect(scanner.status).toMatchObject({ state: 'connected', usbReaders: null, recovery: null });
+
+    fake.setUsbReaders([R]);
+    await tick();
+    expect(scanner.status).toMatchObject({ usbReaders: [{ name: R }], recovery: 'idle' });
+
+    // The reader drops out while still plugged in; the bridge resets it.
+    fake.removeReader(R);
+    fake.recoveryStep('usb_reset', 'the reader is on USB but the smart card service does not list it');
+    fake.setRecovery('recovering');
+    await tick();
+    fake.addReader(R);
+    fake.recoveryStep('recovered', 'the reader works again');
+    fake.setRecovery('idle');
+    await tick();
+    // A card coming and going is not a status change.
+    fake.placeCard(R, tag(9));
+    await tick();
+    fake.removeCard(R);
+    await tick();
+
+    expect(log.recent().map((e) => `${e.level} ${e.message}`)).toEqual([
+      'info Tag reader bridge: connected (bridge v0.0.0-fake; readers: ACS ACR1255U-J1).',
+      'info Tag reader bridge: connected (bridge v0.0.0-fake; readers: ACS ACR1255U-J1; on USB: ACS ACR1255U-J1).',
+      'warn Tag reader bridge: connected (bridge v0.0.0-fake; readers: none; on USB: ACS ACR1255U-J1).',
+      'warn The bridge reset the tag reader over USB: the reader is on USB but the smart card service does not list it.',
+      'warn Tag reader bridge: connected (bridge v0.0.0-fake; readers: none; on USB: ACS ACR1255U-J1; recovery recovering).',
+      'warn Tag reader bridge: connected (bridge v0.0.0-fake; readers: ACS ACR1255U-J1; on USB: ACS ACR1255U-J1; recovery recovering).',
+      'info The tag reader works again.',
+      'info Tag reader bridge: connected (bridge v0.0.0-fake; readers: ACS ACR1255U-J1; on USB: ACS ACR1255U-J1).',
+    ]);
+  });
+
+  it('resets the readers through the bridge', async () => {
+    const { fake, scanner } = setup();
+    scanner.start();
+    await tick();
+    await expect(scanner.resetReaders()).rejects.toMatchObject({ code: 'unsupported' });
+    fake.setUsbReaders([R]);
+    await tick();
+    await expect(scanner.resetReaders()).resolves.toEqual([R]);
+    expect(fake.readerResets).toBe(1);
+    scanner.stop();
+    await expect(scanner.resetReaders()).rejects.toThrow('off');
   });
 });

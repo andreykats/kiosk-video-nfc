@@ -121,4 +121,18 @@ describe('CardInput', () => {
     expect(fake.connections).toBe(0);
     expect(keyboard.destroy).toHaveBeenCalled();
   });
+
+  it('a reader the bridge gave up on is not ready, even while listed', async () => {
+    const { fake, input } = setup('bridge');
+    await tick();
+    expect(input.bridgeReady).toBe(true);
+    fake.setUsbReaders([R]);
+    fake.setRecovery('failed');
+    await tick();
+    expect(input.bridgeReady).toBe(false);
+    fake.setRecovery('idle');
+    await tick();
+    expect(input.bridgeReady).toBe(true);
+    input.destroy();
+  });
 });

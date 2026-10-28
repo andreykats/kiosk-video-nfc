@@ -161,6 +161,27 @@ test('bridge mode asks for the reader when the bridge has none', async ({ page }
   await expect(page.getByTestId('bridge-notice')).toContainText('Plug in the NFC reader');
 });
 
+test('bridge mode: staff can reset the reader, and a plugged-in reader that stops working says so', async ({ page }) => {
+  const { fake } = await useFakeBridge(page);
+  fake.setUsbReaders([READER]);
+  await setUpKiosk(page);
+  await setReaderMode(page, 'bridge');
+  await page.getByTestId('reset-reader').click();
+  await expect(page.getByTestId('reset-reader-note')).toHaveText(`Reset ${READER}.`);
+  expect(fake.readerResets).toBe(1);
+
+  await page.getByTestId('back-to-kiosk').click();
+  await waitForPlaying(page, 'loop-video', 'loop.mp4');
+  // Still on USB but no longer listed: the bridge restarts it.
+  fake.removeReader(READER);
+  await expect(page.getByTestId('bridge-notice')).toContainText('The NFC reader isn’t responding. Restarting it…');
+  fake.setRecovery('failed');
+  await expect(page.getByTestId('bridge-notice')).toContainText('Unplug it and plug it back in.');
+  fake.addReader(READER);
+  fake.setRecovery('idle');
+  await expect(page.getByTestId('bridge-notice')).toBeHidden();
+});
+
 test('keyboard mode never opens a connection to the bridge, and the mode and tag identifier are kept across reloads', async ({ page }) => {
   const { connections } = await useFakeBridge(page);
   await setUpKiosk(page);

@@ -1,4 +1,5 @@
 import type { AppContext } from '../app/context';
+import { errorMessage, log } from '../app/log';
 import { unrecognisedCardCount } from '../config/ops';
 import { usableReaders } from '../scan/bridge/bridgeScanner';
 import { CARD_KEYS, isCardKey, isReaderMode, type ReaderMode } from '../scan/readerMode';
@@ -39,9 +40,11 @@ export function bridgeStatusText(ctx: AppContext): string {
       return `${s.message}. Update the bridge app or reload the kiosk.`;
     case 'connected': {
       const prefix = `Connected (bridge v${s.version})`;
-      if (s.service !== 'ready') return `${prefix} — no smart-card service; plug in the reader`;
+      if (s.recovery === 'failed') return `${prefix} — the reader isn’t responding; unplug it and plug it back in`;
       const readers = usableReaders(s.readers);
-      return readers.length === 0 ? `${prefix} — no reader plugged in` : `${prefix} — ${readers.map((r) => r.name).join(', ')}`;
+      if (readers.length > 0) return `${prefix} — ${readers.map((r) => r.name).join(', ')}`;
+      if (s.usbReaders?.length) return `${prefix} — ${s.usbReaders.map((r) => r.name).join(', ')} is plugged in but not responding; restarting it`;
+      return s.service !== 'ready' ? `${prefix} — no smart-card service; plug in the reader` : `${prefix} — no reader plugged in`;
     }
   }
 }
@@ -53,6 +56,24 @@ export function bridgeStatusText(ctx: AppContext): string {
  */
 export function readerControls(ctx: AppContext): Section {
   const el = h('div', { class: 'reader-controls', 'data-testid': 'reader-controls' });
+  // Kept across re-renders, which happen on every reader change.
+  let resetting = false;
+  let resetNote = '';
+  const resetReader = async () => {
+    resetting = true;
+    resetNote = '';
+    render();
+    try {
+      const reset = await ctx.scanner.resetReaders();
+      resetNote = reset.length > 0 ? `Reset ${reset.join(', ')}.` : 'No tag reader is plugged in.';
+    } catch (e) {
+      resetNote = `Couldn’t reset the reader: ${errorMessage(e)}`;
+      log.warn('Resetting the tag reader failed:', e);
+    } finally {
+      resetting = false;
+      render();
+    }
+  };
   const render = () => {
     const mode = ctx.scanner.mode;
     const status = ctx.scanner.bridgeStatus;
@@ -95,6 +116,15 @@ export function readerControls(ctx: AppContext): Section {
             status.state === 'connected'
               ? null
               : h('p', {}, h('a', { href: bridgeDownloadUrl(), 'data-testid': 'bridge-download' }, 'Download the bridge app')),
+            // Only bridges that can see USB (macOS) can reset the reader.
+            status.state === 'connected' && status.usbReaders !== null
+              ? h(
+                  'p',
+                  { class: 'toolbar' },
+                  h('button', { type: 'button', 'data-testid': 'reset-reader', disabled: resetting, onclick: () => void resetReader() }, resetting ? 'Resetting…' : 'Reset reader'),
+                  h('span', { class: 'hint', 'data-testid': 'reset-reader-note' }, resetNote || 'Restarts the reader as if it were unplugged and plugged back in.'),
+                )
+              : null,
             ctx.scanner.permission === 'denied'
               ? h('p', { class: 'banner banner-warn' }, 'Chrome is blocking this site from reaching the bridge app. Click the site settings icon left of the address bar, set “Apps on device” to Allow, then reload.')
               : h('p', { class: 'hint' }, 'The first connection makes Chrome ask to allow “Apps on device”. Choose Allow.'),

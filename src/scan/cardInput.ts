@@ -92,10 +92,15 @@ export class CardInput {
     return this.bridge.status;
   }
 
-  /** The bridge is connected and has a reader that can take a visitor's card. */
+  /** The bridge is connected and has a working reader that can take a visitor's card. */
   get bridgeReady(): boolean {
     const s = this.bridge.status;
-    return s.state === 'connected' && s.service === 'ready' && usableReaders(s.readers).length > 0;
+    return s.state === 'connected' && s.service === 'ready' && usableReaders(s.readers).length > 0 && s.recovery !== 'failed';
+  }
+
+  /** Reset the bridge's readers over USB, as if unplugged and plugged back in. Returns the readers reset. */
+  resetReaders(): Promise<string[]> {
+    return this.bridge.resetReaders();
   }
 
   setMode(mode: ReaderMode): void {
