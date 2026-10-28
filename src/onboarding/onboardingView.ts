@@ -4,7 +4,7 @@ import { IdleTimer, SETTINGS_IDLE_MS, SETTINGS_SHORTCUT_LABEL } from '../admin/a
 import { saveEdit } from '../app/edits';
 import { errorMessage, log } from '../app/log';
 import { addAdminCard, otherIdOf, cardsForVideo, findAdminCard, findCard, removeAdminCard, scanMatches, useAsLoopInstead } from '../config/ops';
-import { emptyConfig, type CardMatch, type Config } from '../config/schema';
+import { emptyConfig, type Config, type UidMatch } from '../config/schema';
 import type { AppliedInfo } from '../config/store';
 import { downloadConfig, readConfigFile } from '../config/sync';
 import type { ScanEvent } from '../scan/scanEvent';
@@ -522,14 +522,14 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
   // visitor cards, and none of those may open settings.
   const unsubscribe = ctx.scanner.scans.subscribe(async (scan) => {
     const config = ctx.config.get();
-    const match: CardMatch = { kind: 'uid', value: scan.uid };
+    const match: UidMatch = { kind: 'uid', value: scan.uid };
     const otherId = otherIdOf(scan, match);
     const card = scanMatches(scan)
       .map((m) => findCard(config, m))
       .find((c) => c !== undefined);
     if (card) {
       message = { text: `${formatMatch(card.match)} plays “${card.fileName}”. Use a different tag for admin.`, kind: 'error' };
-    } else if (findAdminCard(config, match)) {
+    } else if (findAdminCard(config, scan.uid)) {
       message = { text: `${formatUid(scan.uid)} is already an admin tag.`, kind: 'error' };
     } else if (await saveEdit(ctx, (c) => addAdminCard(c, { match, label: '', ...(otherId && { otherId }) }))) {
       message = { text: `Added ${formatUid(scan.uid)} as an admin tag ✓`, kind: 'success' };
@@ -557,7 +557,7 @@ function adminStep(ctx: AppContext, nav: Nav): StepView {
                       'span',
                       { class: 'chip mono', ...matchAttrs(a.match) },
                       formatMatch(a.match),
-                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin tag ${a.match.value}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.match)) }, '×'),
+                      h('button', { type: 'button', class: 'chip-remove', 'aria-label': `Remove admin tag ${a.match.value}`, onclick: () => void saveEdit(ctx, (c) => removeAdminCard(c, a.match.value)) }, '×'),
                     ),
                   ),
                 )

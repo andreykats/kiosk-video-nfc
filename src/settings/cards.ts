@@ -1,7 +1,7 @@
 import type { AppContext } from '../app/context';
 import { SETTINGS_SHORTCUT_LABEL } from '../admin/access';
 import { addAdminCard, cardsForVideo, checkPairing, findAdminCard, findCard, otherIdOf, pairCard, removeAdminCard, removeCard, scanMatches, setCardVideo } from '../config/ops';
-import { matchId, type CardEntry, type CardMatch } from '../config/schema';
+import { matchId, type CardEntry, type CardMatch, type UidMatch } from '../config/schema';
 import { formatMatch, matchKindLabel } from '../scan/uid';
 import { confirmDialog, type DialogAction, type DialogHandle } from '../ui/dialog';
 import { h, replaceChildren } from '../ui/dom';
@@ -158,9 +158,7 @@ async function removeTagByScan(ctx: AppContext): Promise<void> {
     onScan: (scan, d) => {
       const config = ctx.config.get();
       d.setActions([{ label: 'Cancel', value: null }]);
-      const admin = scanMatches(scan)
-        .map((m) => findAdminCard(config, m))
-        .find((a) => a !== undefined);
+      const admin = findAdminCard(config, scan.uid);
       if (admin) {
         scanMessage(d, `${formatMatch(admin.match)} is an admin tag. Remove it under Admin tags, or scan another tag.`, 'error');
         return false;
@@ -207,8 +205,8 @@ async function addNewAdminCard(ctx: AppContext): Promise<void> {
         scanMessage(d, `${formatMatch(card.match)} is paired to video "${card.fileName}". Remove it from tags first, or scan another tag.`, 'error');
         return false;
       }
-      const match: CardMatch = { kind: 'uid', value: scan.uid };
-      if (findAdminCard(config, match)) {
+      const match: UidMatch = { kind: 'uid', value: scan.uid };
+      if (findAdminCard(config, scan.uid)) {
         scanMessage(d, `${formatMatch(match)} is already an admin tag. Scan another tag.`, 'error');
         return false;
       }
@@ -312,7 +310,7 @@ export function renderAdminCards(ctx: AppContext): Section {
                         class: 'danger',
                         onclick: async () => {
                           const ok = await confirmDialog({ title: 'Remove admin tag?', content: [formatMatch(card.match)], confirmLabel: 'Remove', danger: true });
-                          if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.match));
+                          if (ok) await saveEdit(ctx, (c) => removeAdminCard(c, card.match.value));
                         },
                       },
                       'Remove',

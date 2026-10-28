@@ -48,7 +48,7 @@ describe('BridgeScanner', () => {
     await tick();
     expect(scans).toHaveLength(1);
     expect(scans[0]).toMatchObject({ uid: '04102030405001', source: 'bridge', ndefKey: URL_ID });
-    expect(scans[0]!.records.map((r) => r.type)).toEqual(['T', 'U', 'text/plain']);
+    expect(scans[0]!.records!.map((r) => r.type)).toEqual(['T', 'U', 'text/plain']);
   });
 
   it('falls back to the first Text record, without its language code', async () => {
@@ -67,6 +67,17 @@ describe('BridgeScanner', () => {
     fake.placeCard(R, tag(3));
     await tick();
     expect(scans[0]).toMatchObject({ uid: '04102030405003', ndefKey: null, records: [] });
+  });
+
+  it('skips the NDEF read when it is not reading card IDs', async () => {
+    const { fake, scanner, scans } = setup();
+    scanner.readsCardIds = false;
+    scanner.start();
+    await tick();
+    fake.placeCard(R, tag(6).withNdef([uriRecord(URL_ID)]));
+    await tick();
+    expect(scans).toEqual([{ uid: '04102030405006', at: 10_000, source: 'bridge', ndefKey: null, records: null }]);
+    expect(fake.apduLog).toEqual([]);
   });
 
   it('does not treat a card already on the reader at connect time as a tap', async () => {

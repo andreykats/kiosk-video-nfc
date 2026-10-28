@@ -12,8 +12,8 @@ export function findCard(config: Config, match: CardMatch): CardEntry | undefine
   return config.cards.find((c) => sameMatch(c.match, match));
 }
 
-export function findAdminCard(config: Config, match: CardMatch): AdminCardEntry | undefined {
-  return config.adminCards.find((c) => sameMatch(c.match, match));
+export function findAdminCard(config: Config, uid: string): AdminCardEntry | undefined {
+  return config.adminCards.find((c) => c.match.value === uid);
 }
 
 /** What a scan tells us about a card. `ndefKey` is only known when read through the bridge. */
@@ -51,14 +51,12 @@ export type ResolvedScan = { kind: 'admin'; entry: AdminCardEntry } | { kind: 'v
 
 /**
  * Admin cards win over video cards (an admin card must always open settings),
- * and match by anything the scan carries. Video cards match only by the kiosk's
- * card key.
+ * and match by UID whatever the kiosk's card key. Video cards match only by the
+ * kiosk's card key.
  */
 export function resolveScan(config: Config, card: CardIdentity, key: CardMatch['kind']): ResolvedScan | null {
-  for (const m of scanMatches(card)) {
-    const entry = findAdminCard(config, m);
-    if (entry) return { kind: 'admin', entry };
-  }
+  const admin = findAdminCard(config, card.uid);
+  if (admin) return { kind: 'admin', entry: admin };
   const match = cardMatch(card, key);
   const entry = match && findCard(config, match);
   return entry ? { kind: 'video', entry } : null;
@@ -71,9 +69,7 @@ export type PairingCheck =
   | { kind: 'ok'; match: CardMatch; existing: CardEntry | undefined };
 
 export function checkPairing(config: Config, card: CardIdentity, key: CardMatch['kind']): PairingCheck {
-  const admin = scanMatches(card)
-    .map((m) => findAdminCard(config, m))
-    .find((a) => a !== undefined);
+  const admin = findAdminCard(config, card.uid);
   if (admin) return { kind: 'admin', entry: admin };
   const match = cardMatch(card, key);
   if (!match) return { kind: 'no-card-id' };
@@ -172,16 +168,11 @@ export function addAdminCard(config: Config, card: AdminCardEntry): Config {
   return { ...config, adminCards: [...rest, card] };
 }
 
-export function removeAdminCard(config: Config, match: CardMatch): Config {
-  return { ...config, adminCards: config.adminCards.filter((c) => !sameMatch(c.match, match)) };
+export function removeAdminCard(config: Config, uid: string): Config {
+  return { ...config, adminCards: config.adminCards.filter((c) => c.match.value !== uid) };
 }
 
-/**
- * Cards a kiosk won't recognise: video cards paired by the other key, and,
- * without the bridge, admin cards paired by card ID.
- */
-export function unrecognisedCardCount(config: Config, key: CardMatch['kind'], readsCardIds: boolean): number {
-  const cards = config.cards.filter((c) => c.match.kind !== key).length;
-  const admins = readsCardIds ? 0 : config.adminCards.filter((c) => c.match.kind === 'ndef').length;
-  return cards + admins;
+/** Video cards a kiosk won't recognise: the ones paired by the other key. */
+export function unrecognisedCardCount(config: Config, key: CardMatch['kind']): number {
+  return config.cards.filter((c) => c.match.kind !== key).length;
 }

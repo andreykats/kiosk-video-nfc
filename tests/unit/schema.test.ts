@@ -99,9 +99,16 @@ describe('validateConfig', () => {
     expect(errorsOf({ ...valid(), cards: [{ fileName: 'lion.mp4', label: '' }] }).join()).toMatch(/match must be an object/);
   });
 
+  it('drops admin tags matched by card ID', () => {
+    const c = valid();
+    const ndefAdmin = { match: { kind: 'ndef', value: 'https://example.com/c/LION' }, label: 'Old' };
+    const r = validateConfig({ ...c, adminCards: [ndefAdmin, ...c.adminCards, { ...ndefAdmin, match: { kind: 'ndef', value: '' } }] });
+    expect(r).toEqual({ ok: true, value: c });
+  });
+
   it('allows a match in only one of cards or adminCards', () => {
     const c = valid();
-    c.adminCards[0]!.match = { ...c.cards[0]!.match };
+    c.adminCards[0]!.match = { kind: 'uid', value: c.cards[0]!.match.value };
     expect(errorsOf(c).join()).toMatch(/already used by cards\[0\]/);
     const d = valid();
     d.cards.push({ ...d.cards[0]! });

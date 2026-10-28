@@ -84,7 +84,7 @@ describe('matching scans to cards', () => {
     c = upsertVideo(c, 'tiger.mp4', 1);
     c = pairCard(c, { match: { kind: 'uid', value: '04A23B1C' }, fileName: 'lion.mp4', label: '' });
     c = pairCard(c, { match: { kind: 'ndef', value: ID }, fileName: 'tiger.mp4', label: '' });
-    return addAdminCard(c, { match: { kind: 'uid', value: 'ADADADAD' }, label: '' });
+    return addAdminCard(c, { match: { kind: 'uid', value: 'ADADADAD' }, label: '', otherId: { kind: 'ndef', value: 'STAFF' } });
   };
 
   it('lists the card ID before the UID', () => {
@@ -112,6 +112,9 @@ describe('matching scans to cards', () => {
   it('matches admin cards by UID whatever the card key, and lets them win over video cards', () => {
     expect(resolveScan(config(), { uid: 'ADADADAD', ndefKey: ID }, 'ndef')).toMatchObject({ kind: 'admin' });
     expect(resolveScan(config(), { uid: 'ADADADAD', ndefKey: null }, 'uid')).toMatchObject({ kind: 'admin' });
+    // Never by card ID, not even the admin tag's own.
+    expect(resolveScan(config(), { uid: '33333333', ndefKey: 'STAFF' }, 'ndef')).toBeNull();
+    expect(checkPairing(config(), { uid: '33333333', ndefKey: 'STAFF' }, 'ndef')).toMatchObject({ kind: 'ok' });
   });
 
   it('checks a scan before pairing it', () => {
@@ -131,10 +134,8 @@ describe('matching scans to cards', () => {
   });
 
   it('counts cards a kiosk will not recognise', () => {
-    const c = addAdminCard(config(), { match: { kind: 'ndef', value: 'STAFF' }, label: '' });
-    expect(unrecognisedCardCount(c, 'uid', true)).toBe(1); // the card-ID video card
-    expect(unrecognisedCardCount(c, 'ndef', true)).toBe(1); // the UID video card
-    expect(unrecognisedCardCount(c, 'uid', false)).toBe(2); // plus the card-ID admin card, without the bridge
+    expect(unrecognisedCardCount(config(), 'uid')).toBe(1); // the card-ID video card
+    expect(unrecognisedCardCount(config(), 'ndef')).toBe(1); // the UID video card
   });
 });
 

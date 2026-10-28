@@ -160,7 +160,7 @@ export class KeyboardScanner {
   }
 
   private emit(scan: KeyboardScan): void {
-    this.scans.emit({ ...scan, source: 'keyboard', ndefKey: null, records: [] });
+    this.scans.emit({ ...scan, source: 'keyboard', ndefKey: null, records: null });
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {

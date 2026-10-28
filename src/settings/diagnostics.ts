@@ -119,7 +119,7 @@ export function renderDiagnostics(ctx: AppContext): Section {
           : 'none yet — scan a tag to test the reader',
         'diag-last-scan',
       ),
-      scan?.source === 'bridge'
+      scan && scan.records !== null
         ? row(
             'Tag ID (NDEF)',
             h(

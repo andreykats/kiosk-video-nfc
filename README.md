@@ -4,7 +4,7 @@ A browser kiosk for Google Chrome on Windows and macOS. While idle it plays a lo
 
 - **Reader:** an ACS NFC reader (ACR1552U or ACR1255U-J1), read one of two ways, chosen per kiosk in Settings → **Card reader**:
   - **HID Keyboard:** the reader types the card UID and then Enter. Nothing to install.
-  - **NFC Browser Bridge:** the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge) app, running in the tray or menu bar, passes cards to the page. It also reads the card's **card ID** (NDEF), and taps work even when the kiosk window isn't focused.
+  - **NFC Browser Bridge:** the [NFC Browser Bridge](https://github.com/andreykats/nfc-browser-bridge) app, running in the tray or menu bar, passes cards to the page. On a kiosk that identifies cards by card ID it also reads the card's **card ID** (NDEF), and taps work even when the kiosk window isn't focused.
 - **Hosting:** GitHub Pages (see [Deployment](#deployment)). After the first load, the app works offline (it's an installable PWA). Below, `<url>` stands for the site's address, ending in `/`.
 - **Videos:** each kiosk imports its own copies into browser storage (the origin private file system). Videos are never uploaded to GitHub.
 - **Config:** a `config.json` file lists the videos, card pairings and admin cards. You set it up on one kiosk, export it, and import it on the others (see [Sharing config changes](#sharing-config-changes)).
@@ -97,7 +97,7 @@ Staff choose the **Card reader input method** and the **Card identifier** in Set
 1. Install the bridge app from its [Releases page](https://github.com/andreykats/nfc-browser-bridge/releases) and let it start at login (see its README).
 2. Keep the reader in its factory **CCID** mode. No ACS tool needed.
 3. In Settings → **Card reader**, choose **NFC Browser Bridge**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to the site's origin.
-4. Hold a card on the reader. Settings → Diagnostics shows its UID, card ID and NDEF records.
+4. Hold a card on the reader. Settings → Diagnostics shows its UID, and on a kiosk that identifies cards by card ID, also its card ID and NDEF records.
 
 On a Mac the bridge also watches for a reader that is plugged in but stopped working, and restarts it over USB as if it had been replugged. The kiosk screen says "The NFC reader isn’t responding. Restarting it…" meanwhile, and "Unplug it and plug it back in" if that didn't help. Reader changes, restarts and the screen notices are written to Settings → Diagnostics → log.
 
@@ -106,11 +106,11 @@ On a Mac the bridge also watches for a reader that is plugged in but stopped wor
 Each kiosk identifies video cards one way, chosen under **Card identifier** in Settings → **Card reader**. Pairing never asks; it uses this setting.
 
 - **NDEF payload (card ID):** the value of the card's first **URI** record (the full URL), or, if it has none, its first **Text** record (without the language code), compared exactly. Every card written with the same ID plays the same video. Use it for batches of identical cards. Needs the NFC Browser Bridge; cards without a URI or Text record can't be paired.
-- **UID:** only that physical card. HID Keyboard mode always uses the UID.
+- **UID:** only that physical card. HID Keyboard mode always uses the UID. Taps go straight to the video: the kiosk doesn't read the card's NDEF data.
 
-The Tags and Admin tags tables in settings have a **UID** and an **NDEF** column. When a tag is paired through the NFC Browser Bridge, the kiosk also records the identifier it doesn't pair by, just for display. Tags paired with an HID keyboard reader show a dash under NDEF.
+The Tags and Admin tags tables in settings have a **UID** and an **NDEF** column. The kiosk also records the identifier a tag isn't paired by, when it read it, just for display. UID kiosks and HID keyboard readers don't read card IDs, so tags added there show a dash under NDEF.
 
-A kiosk ignores pairings of the other kind, so a shared config can hold both. Settings → Card reader warns when the config has cards this kiosk won't recognise, and the Cards list marks them. Admin cards are always added by UID, so a card ID shared by visitor cards can never open settings; they win over video cards.
+A kiosk ignores pairings of the other kind, so a shared config can hold both. Settings → Card reader warns when the config has cards this kiosk won't recognise, and the Cards list marks them. Admin cards always match by UID, so a card ID shared by visitor cards can never open settings; they win over video cards. A config with admin cards matched by card ID loads without them.
 
 ### HID Keyboard mode on the ACR1552U
 

@@ -71,6 +71,7 @@ export class CardInput {
       }),
       this.bridge.changed.subscribe(() => this.changed.emit()),
     ];
+    this.bridge.readsCardIds = this.cardKey_ === 'ndef';
     this.apply();
     void this.watchPermission(deps.queryPermission ?? queryLoopbackPermission);
   }
@@ -113,6 +114,7 @@ export class CardInput {
     if (key === this.cardKey_) return;
     const before = this.cardKey;
     this.cardKey_ = key;
+    this.bridge.readsCardIds = key === 'ndef';
     this.saveCardKey(key);
     this.changed.emit();
     if (this.cardKey !== before) this.cardKeyChanged.emit();

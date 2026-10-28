@@ -73,18 +73,19 @@ describe('kiosk state machine', () => {
     expect(transition(initialKioskState, scan('11111111'), ctx)).toEqual({ state: initialKioskState, effects: [] });
   });
 
-  it('plays a card paired by card ID on a card-ID kiosk, and opens settings for an admin card ID', () => {
+  it('plays a card paired by card ID on a card-ID kiosk, and opens settings for an admin tag by UID only', () => {
     const withIds: KioskContext = {
       ...ctx,
       cardKey: 'ndef',
       config: {
         ...config,
         cards: [...config.cards, { match: { kind: 'ndef', value: 'https://example.com/c/LION' }, fileName: 'lion.mp4', label: '' }],
-        adminCards: [...config.adminCards, { match: { kind: 'ndef', value: 'STAFF' }, label: '' }],
+        adminCards: [{ ...config.adminCards[0]!, otherId: { kind: 'ndef', value: 'STAFF' } }],
       },
     };
     expect(transition(initialKioskState, scan('99999999', 'https://example.com/c/LION'), withIds).effects).toEqual([{ type: 'playFeature', fileName: 'lion.mp4' }]);
-    expect(transition(playing, scan('99999999', 'STAFF'), withIds).effects).toEqual([{ type: 'openSettings' }]);
+    expect(transition(playing, scan('ADADADAD', 'https://example.com/c/LION'), withIds).effects).toEqual([{ type: 'openSettings' }]);
+    expect(transition(playing, scan('99999999', 'STAFF'), withIds).effects).not.toContainEqual({ type: 'openSettings' });
     // UID pairings don't play on a kiosk that identifies cards by card ID.
     expect(transition(initialKioskState, scan('04A23B1C', 'https://example.com/other'), withIds).effects).toEqual([]);
     // Nor card-ID pairings on a UID kiosk.

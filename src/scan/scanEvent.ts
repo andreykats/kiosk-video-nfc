@@ -17,6 +17,6 @@ export interface ScanEvent {
   source: 'keyboard' | 'bridge';
   /** The card ID from the first URI or Text record. Only the bridge can read it. */
   ndefKey: string | null;
-  /** Every NDEF record on the card (bridge only; empty if the card has none). */
-  records: ScanRecord[];
+  /** Every NDEF record on the card (empty if it has none); null when it wasn't read. */
+  records: ScanRecord[] | null;
 }

@@ -204,11 +204,18 @@ test('keyboard mode never opens a connection to the bridge, and the mode and tag
   await expect(page.getByTestId('card-key')).toHaveValue('ndef');
 });
 
-test('diagnostics show the tag ID and records of the last bridge scan', async ({ page }) => {
+test('diagnostics show the tag ID and records of the last bridge scan, read only on an NDEF kiosk', async ({ page }) => {
   const { fake } = await useFakeBridge(page);
   await setUpKiosk(page);
   await setReaderMode(page, 'bridge');
   await expect(page.getByTestId('bridge-status')).toHaveAttribute('data-state', 'connected');
+  // A UID kiosk doesn't read the NDEF data.
+  await tap(page, fake, ntag().withNdef([uriRecord(CARD_ID)]));
+  await expect(page.getByTestId('diag-last-scan')).toContainText('via the bridge app');
+  await expect(page.getByTestId('diag-ndef')).toHaveCount(0);
+  expect(fake.apduLog).toEqual([]);
+
+  await page.getByTestId('card-key').selectOption('ndef');
   await tap(page, fake, ntag().withNdef([uriRecord(CARD_ID), textRecord('hello')]));
   await expect(page.getByTestId('diag-ndef')).toContainText(CARD_ID);
   await expect(page.getByTestId('diag-ndef')).toContainText('hello');

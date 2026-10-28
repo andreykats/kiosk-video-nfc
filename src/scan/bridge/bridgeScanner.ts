@@ -88,12 +88,15 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 /**
  * Card scans from the NFC Browser Bridge app (ws://127.0.0.1:38241). For each
- * new tap it reads the card's NDEF message and derives the card ID; a card that
- * can't be read in time still scans with its UID.
+ * new tap it reads the card's NDEF message and derives the card ID, unless
+ * `readsCardIds` is off; a card that can't be read in time still scans with its
+ * UID.
  */
 export class BridgeScanner {
   readonly scans = new Emitter<ScanEvent>();
   readonly changed = new Emitter<void>();
+  /** Off on kiosks that identify tags by UID: nothing there uses the NDEF data, so taps skip reading it. */
+  readsCardIds = true;
   private client: BridgeClient | null = null;
   private status_: BridgeStatus = { state: 'off' };
   private unreachableTimer: ReturnType<typeof setTimeout> | undefined;
@@ -193,6 +196,10 @@ export class BridgeScanner {
     this.lastUid = ev.uid;
     this.lastAt = at;
 
+    if (!this.readsCardIds) {
+      this.scans.emit({ uid: ev.uid, at, source: 'bridge', ndefKey: null, records: null });
+      return;
+    }
     let records: NdefRecord[] = [];
     if (isType2(ev.atr)) {
       try {

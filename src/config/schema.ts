@@ -30,8 +30,13 @@ export interface CardEntry {
   otherId?: CardMatch;
 }
 
+/** Admin cards always match by UID: a card ID may be shared by many visitor tags, and none of them may open settings. */
+export interface UidMatch extends CardMatch {
+  kind: 'uid';
+}
+
 export interface AdminCardEntry {
-  match: CardMatch;
+  match: UidMatch;
   label: string;
   /** As for CardEntry: display only, so a shared NDEF payload can't open settings. */
   otherId?: CardMatch;
@@ -264,11 +269,13 @@ export function validateConfig(json: unknown): Result<Config, string[]> {
     const at = `adminCards[${i}]`;
     if (!isObj(c)) return void errors.push(`${at} must be an object.`);
     const { match, label } = c;
+    // Admin cards match by UID only; ones matched by card ID are dropped.
+    if (isObj(match) && match.kind === 'ndef') return;
     if (!checkMatch(match, at)) return;
     if (typeof label !== 'string') return void errors.push(`${at}.label must be a string.`);
     const otherId = checkOtherId(c, match, at);
     if (otherId === false) return;
-    adminCards.push({ match: { kind: match.kind, value: match.value }, label, ...(otherId && { otherId }) });
+    adminCards.push({ match: { kind: 'uid', value: match.value }, label, ...(otherId && { otherId }) });
   });
 
   let loopVideo: string | null = null;

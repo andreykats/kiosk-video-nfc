@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Emitter } from '../../src/app/emitter';
 import { BridgeScanner } from '../../src/scan/bridge/bridgeScanner';
 import { FakeBridge, FakeTag } from '../../src/scan/bridge/vendor/fakeBridge';
+import { uriRecord } from '../../src/scan/bridge/vendor/ndef';
 import { CardInput, type PermissionStatusLike } from '../../src/scan/cardInput';
-import type { ReaderMode } from '../../src/scan/readerMode';
+import type { CardKey, ReaderMode } from '../../src/scan/readerMode';
 import type { ScanEvent } from '../../src/scan/scanEvent';
 
 const R = 'ACS ACR1255U-J1';
@@ -22,17 +23,17 @@ class FakePermission implements PermissionStatusLike {
   }
 }
 
-function setup(mode: ReaderMode, permission: PermissionState | null = 'prompt') {
+function setup(mode: ReaderMode, permission: PermissionState | null = 'prompt', cardKey: CardKey = 'ndef') {
   const fake = new FakeBridge();
   fake.addReader(R);
   const keyboard = { scans: new Emitter<ScanEvent>(), destroy: vi.fn() };
   const bridge = new BridgeScanner({ client: { WebSocket: fake.WebSocket } });
   const perm = permission === null ? null : new FakePermission(permission);
   const saved: ReaderMode[] = [];
-  const input = new CardInput({ keyboard, bridge, mode, saveMode: (m) => saved.push(m), queryPermission: async () => perm });
+  const input = new CardInput({ keyboard, bridge, mode, saveMode: (m) => saved.push(m), cardKey, saveCardKey: () => {}, queryPermission: async () => perm });
   const scans: ScanEvent[] = [];
   input.scans.subscribe((s) => scans.push(s));
-  const typeUid = (uid: string) => keyboard.scans.emit({ uid, at: 0, source: 'keyboard', ndefKey: null, records: [] });
+  const typeUid = (uid: string) => keyboard.scans.emit({ uid, at: 0, source: 'keyboard', ndefKey: null, records: null });
   return { fake, input, scans, typeUid, perm, saved, keyboard };
 }
 
@@ -110,6 +111,23 @@ describe('CardInput', () => {
     input.setMode('keyboard'); // still UID: no change
     expect(keyChanges).toBe(2);
     expect(savedKeys).toEqual(['uid']);
+    input.destroy();
+  });
+
+  it('reads NDEF only while the kiosk identifies cards by card ID', async () => {
+    const { fake, input, scans } = setup('bridge', 'prompt', 'uid');
+    await tick();
+    const ID = 'https://example.com/c/LION';
+    fake.placeCard(R, FakeTag.ntag('NTAG215', Uint8Array.from([4, 1, 2, 3, 4, 5, 1])).withNdef([uriRecord(ID)]));
+    await tick();
+    expect(scans[0]).toMatchObject({ uid: '04010203040501', ndefKey: null, records: null });
+    expect(fake.apduLog).toEqual([]);
+    fake.removeCard(R);
+    input.setCardKey('ndef');
+    fake.placeCard(R, FakeTag.ntag('NTAG215', Uint8Array.from([4, 1, 2, 3, 4, 5, 2])).withNdef([uriRecord(ID)]));
+    await tick();
+    expect(scans[1]).toMatchObject({ uid: '04010203040502', ndefKey: ID, records: [{ type: 'U' }] });
+    expect(fake.apduLog.length).toBeGreaterThan(0);
     input.destroy();
   });
 

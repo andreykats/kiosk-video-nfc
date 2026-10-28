@@ -114,7 +114,7 @@ export function renderReaderSection(ctx: AppContext): Section {
     warning,
     () => {
       const key = ctx.scanner.cardKey;
-      const count = unrecognisedCardCount(ctx.config.get(), key, ctx.scanner.mode === 'bridge');
+      const count = unrecognisedCardCount(ctx.config.get(), key);
       const other = key === 'uid' ? CARD_KEY_LABELS.ndef : CARD_KEY_LABELS.uid;
       replaceChildren(
         warning,
