@@ -38,7 +38,7 @@ export function bridgeStatusText(ctx: AppContext): string {
     case 'protocol-mismatch':
       return `${s.message}. Update the bridge app or reload the kiosk.`;
     case 'connected': {
-      const prefix = `Connected (bridge v${s.version})`;
+      const prefix = `Connected to bridge (v${s.version})`;
       if (s.recovery === 'failed') return `${prefix} — the reader isn’t responding; unplug it and plug it back in`;
       const readers = usableReaders(s.readers);
       if (readers.length > 0) return `${prefix} — ${readers.map((r) => r.name).join(', ')}`;
