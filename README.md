@@ -99,7 +99,7 @@ Staff choose the **Card reader input method** and the **Card identifier** in Set
 3. In Settings → **Card reader**, choose **NFC Browser Bridge**. The kiosk connects straight away, and Chrome asks to allow **Apps on device** for this site: choose **Allow**. Chrome remembers this for the Chrome profile. Managed machines can skip the prompt with the Chrome policy `LoopbackNetworkAllowedForUrls` set to the site's origin.
 4. Hold a card on the reader. Settings → Diagnostics shows its UID, card ID and NDEF records.
 
-On a Mac the bridge also watches for a reader that is plugged in but stopped working, and restarts it over USB as if it had been replugged. The kiosk screen says "The NFC reader isn’t responding. Restarting it…" meanwhile, and "Unplug it and plug it back in" if that didn't help. Staff can restart it by hand with **Reset reader** in Settings → **Tag reader**. Reader changes, restarts and the screen notices are written to Settings → Diagnostics → log.
+On a Mac the bridge also watches for a reader that is plugged in but stopped working, and restarts it over USB as if it had been replugged. The kiosk screen says "The NFC reader isn’t responding. Restarting it…" meanwhile, and "Unplug it and plug it back in" if that didn't help. Reader changes, restarts and the screen notices are written to Settings → Diagnostics → log.
 
 ### Card identifier
 

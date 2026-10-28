@@ -170,14 +170,6 @@ export class BridgeScanner {
     }, this.opts.unreachableAfterMs);
   }
 
-  /** Reset the readers over USB, as if unplugged and plugged back in. Returns the readers reset. */
-  async resetReaders(): Promise<string[]> {
-    if (!this.client) throw new Error('The tag reader bridge is off.');
-    const reset = await this.client.resetReaders();
-    log.info(`Reset the tag reader from settings: ${reset.join(', ') || 'no reader on USB'}.`);
-    return reset;
-  }
-
   private setStatus(status: BridgeStatus): void {
     this.status_ = status;
     const text = describeBridgeStatus(status);

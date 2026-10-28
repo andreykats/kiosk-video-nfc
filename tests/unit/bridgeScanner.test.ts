@@ -177,17 +177,4 @@ describe('BridgeScanner', () => {
       'info Tag reader bridge: connected (bridge v0.0.0-fake; readers: ACS ACR1255U-J1; on USB: ACS ACR1255U-J1).',
     ]);
   });
-
-  it('resets the readers through the bridge', async () => {
-    const { fake, scanner } = setup();
-    scanner.start();
-    await tick();
-    await expect(scanner.resetReaders()).rejects.toMatchObject({ code: 'unsupported' });
-    fake.setUsbReaders([R]);
-    await tick();
-    await expect(scanner.resetReaders()).resolves.toEqual([R]);
-    expect(fake.readerResets).toBe(1);
-    scanner.stop();
-    await expect(scanner.resetReaders()).rejects.toThrow('off');
-  });
 });

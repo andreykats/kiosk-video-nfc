@@ -98,11 +98,6 @@ export class CardInput {
     return s.state === 'connected' && s.service === 'ready' && usableReaders(s.readers).length > 0 && s.recovery !== 'failed';
   }
 
-  /** Reset the bridge's readers over USB, as if unplugged and plugged back in. Returns the readers reset. */
-  resetReaders(): Promise<string[]> {
-    return this.bridge.resetReaders();
-  }
-
   setMode(mode: ReaderMode): void {
     if (mode === this.mode_) return;
     const key = this.cardKey;
